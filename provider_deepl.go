@@ -35,7 +35,7 @@ type DeepLResponse struct {
 	} `json:"translations"`
 }
 
-func (p DeepLProvider) TranslateText(pt PendingTranslation) (string, error) {
+func (p DeepLProvider) TranslateText(pt PendingTranslation) (string, string, error) {
 	url := "https://api-free.deepl.com/v2/translate"
 
 	reqBody := DeepLRequest{
@@ -46,12 +46,12 @@ func (p DeepLProvider) TranslateText(pt PendingTranslation) (string, error) {
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("Error marshaling request body: %v", err)
+		return "", "", fmt.Errorf("Error marshaling request body: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("Error creating request: %v", err)
+		return "", "", fmt.Errorf("Error creating request: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -60,23 +60,23 @@ func (p DeepLProvider) TranslateText(pt PendingTranslation) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Error making request: %v", err)
+		return "", "", fmt.Errorf("Error making request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Error: received non-200 response code: %d", resp.StatusCode)
+		return "", "", fmt.Errorf("Error: received non-200 response code: %d", resp.StatusCode)
 	}
 
 	var deeplResp DeepLResponse
 	err = json.NewDecoder(resp.Body).Decode(&deeplResp)
 	if err != nil {
-		return "", fmt.Errorf("Error decoding response body: %v", err)
+		return "", "", fmt.Errorf("Error decoding response body: %v", err)
 	}
 
 	if len(deeplResp.Translations) == 0 {
-		return "", fmt.Errorf("Error: no translations found in response")
+		return "", "", fmt.Errorf("Error: no translations found in response")
 	}
 
-	return deeplResp.Translations[0].Text, nil
+	return deeplResp.Translations[0].Text, deeplResp.Translations[0].DetectedSourceLang, nil
 }

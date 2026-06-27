@@ -15,6 +15,7 @@ By default, no external dependencies are required.
 When running Linux with Wayland the following packge is required:
 
 `wl-clipboard` >= 2.3.0
+`libnotify` >= 0.8.8
 
 
 ## License
