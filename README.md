@@ -2,6 +2,12 @@
 
 Translate focused text anywhere with a single shortcut.
 
+## Provider
+
+### DeepL
+
+DeepL has two different APIs that allow translations. Currently only the free API is implemented. For the free API set the environment variable `DEEPL_AUTH_KEY` to the authorization token retrieved from the DeepL dashboard.
+
 ## Dependencies
 
 By default, no external dependencies are required.
