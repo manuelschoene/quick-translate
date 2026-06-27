@@ -1,65 +1,36 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"strings"
+	"embed"
+
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+//go:embed all:frontend/dist
+var assets embed.FS
+
 func main() {
-	cp, err := ClipboardInit()
+	// Create an instance of the app structure
+	app := NewApp()
+
+	// Create application with options
+	err := wails.Run(&options.App{
+		Title:  "quick-translate-gui",
+		Width:  1024,
+		Height: 768,
+		AssetServer: &assetserver.Options{
+			Assets: assets,
+		},
+		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		OnStartup:        app.startup,
+		Bind: []interface{}{
+			app,
+		},
+	})
+
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		println("Error:", err.Error())
 	}
-
-	content := GetTranslatableContent(cp)
-
-	pt := PendingTranslation{
-		Content:    content,
-		TargetLang: "de",
-	}
-
-	translation, sourceLang := translate(pt)
-
-	Notify(translation, sourceLang, strings.ToUpper(pt.TargetLang), cp)
-}
-
-func GetTranslatableContent(cp Clipboard) string {
-	out, err := cp.Read()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if out == "" {
-		fmt.Println("Error: Clipboard is empty")
-		os.Exit(1)
-	}
-
-	return out
-}
-
-type PendingTranslation struct {
-	Content, SourceLang, TargetLang string
-}
-
-type Provider interface {
-	TranslateText(PendingTranslation) (string, string, error)
-}
-
-func translate(pt PendingTranslation) (string, string) {
-	provider, err := InitDeepLProvider()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	translation, sourceLang, err := provider.TranslateText(pt)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	return translation, sourceLang
 }

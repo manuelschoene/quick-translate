@@ -1,4 +1,6 @@
 # Binaries for programs and plugins
+quick-translate
+quick-translate.exe
 *.exe
 *.exe~
 *.dll
@@ -14,16 +16,19 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
-.env
+# Wails specific
+build/bin/
+
+# Frontend specific
+frontend/node_modules/
+frontend/dist/
+frontend/dev/
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.vscode/
+.idea/
+.DS_Store
