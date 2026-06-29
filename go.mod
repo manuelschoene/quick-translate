@@ -1,4 +1,4 @@
-module quick-translate-gui
+module quick-translate
 
 go 1.23.0
 
