@@ -5,31 +5,58 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
+	"sync"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	// "github.com/wailsapp/wails/v2/pkg/runtime"
+	"quick-translate/internal/clipboard"
+	"quick-translate/internal/provider"
 )
 
 type App struct {
 	ctx context.Context
+	provider *provider.ProviderService
+	clipboard *clipboard.ClipboardService
+	translation *provider.Translation
+	tmux sync.Mutex
 }
 
-func NewApp() *App {
-	return &App{}
+func NewApp(ps *provider.ProviderService, cs *clipboard.ClipboardService) *App {
+	t := &provider.Translation{
+		SourceLang: &provider.Language{
+			Key: "en",
+			Name: "English",
+			Source: true,
+			Target: true,
+		},
+		TargetLang: &provider.Language{
+			Key: "de",
+			Name: "German",
+			Source: true,
+			Target: true,
+		},
+	}
+
+	return &App{
+		provider:  ps,
+		clipboard: cs,
+		translation: t,
+		tmux: sync.Mutex{},
+	}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	go a.listenForSignals()
-	a.start()
+
+	go a.listenOnSocket()
 }
 
-func (a *App) listenForSignals() {
+func (a *App) listenOnSocket() {
+	// Remove existing socket file if app was not shut down properly
 	os.Remove(socketPath)
 
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
-		fmt.Println("Could not start socket:", err.Error())
+		fmt.Println("Could not start socket: ", err.Error())
 		return
 	}
 	defer listener.Close()
@@ -45,71 +72,9 @@ func (a *App) listenForSignals() {
 		_, err = conn.Read(buf)
 		if err == nil && string(buf) == "show" {
 
-			runtime.WindowShow(a.ctx)
+			fmt.Println("Running translation...")
 
 		}
 		conn.Close()
 	}
-}
-
-func (a *App) start() {
-	cp, err := ClipboardInit()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	content := GetTranslatableContent(cp)
-
-	pt := PendingTranslation{
-		Content:    content,
-		TargetLang: "de",
-	}
-
-	translation, sourceLang := translate(pt)
-
-	runtime.WindowShow(a.ctx)
-
-	Notify(translation, sourceLang, strings.ToUpper(pt.TargetLang), cp)
-
-	runtime.WindowHide(a.ctx)
-}
-
-func GetTranslatableContent(cp Clipboard) string {
-	out, err := cp.Read()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if out == "" {
-		fmt.Println("Error: Clipboard is empty")
-		os.Exit(1)
-	}
-
-	return out
-}
-
-type PendingTranslation struct {
-	Content, SourceLang, TargetLang string
-}
-
-type Provider interface {
-	TranslateText(PendingTranslation) (string, string, error)
-}
-
-func translate(pt PendingTranslation) (string, string) {
-	provider, err := InitDeepLProvider()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	translation, sourceLang, err := provider.TranslateText(pt)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	return translation, sourceLang
 }
