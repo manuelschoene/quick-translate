@@ -2,7 +2,10 @@ module quick-translate
 
 go 1.23.0
 
-require github.com/wailsapp/wails/v2 v2.12.0
+require (
+	github.com/wailsapp/wails/v2 v2.12.0
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
+)
 
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect

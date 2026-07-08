@@ -2,80 +2,82 @@ package provider
 
 import (
 	"fmt"
+
+	"quick-translate/internal/models"
 )
 
-func NewService() (*ProviderService, error) {
-	p, err := initProvider("deepl")
+type provider interface {
+	languages() ([]*models.Language, error)
+	translate(*models.Translation) error
+}
+
+type Meta struct {
+	Slug, Name        string
+	LanguageDetection bool
+}
+
+type Service struct {
+	current  *Meta
+	all      []*Meta
+	provider provider
+}
+
+func NewService() (*Service, error) {
+	if err := initFile(); err != nil {
+		return nil, err
+	}
+
+	all, m, p, err := loadConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return &ProviderService{
+	return &Service{
+		current:  m,
+		all:      all,
 		provider: p,
 	}, nil
 }
 
-type ProviderService struct {
-	provider provider
+func (s *Service) Active() *Meta {
+	return s.current
 }
 
-type provider interface {
-	config() *providerConfig
-	translateText(*Translation) error
-	languages() ([]*Language, error)
+func (s *Service) List() []*Meta {
+	return s.all
 }
 
-type Language struct {
-	Key, Name string
-	Source, Target bool
-}
+func (s *Service) Use(slug string) error {
+	for _, m := range s.all {
+		if m.Slug == slug {
+			p, err := loadProvider(m)
+			if err != nil {
+				return err
+			}
 
-type Translation struct {
-	Text, Translation string
-	SourceLang, TargetLang *Language
-}
+			s.current = m
+			s.provider = p
 
-type providerConfig struct {
-	slug, name string
-}
-
-func (ps *ProviderService) ActiveProvider() string {
-	return ps.provider.config().slug
-}
-
-func (ps *ProviderService) ListProviders() map[string]string {
-	return map[string]string{
-		ps.provider.config().slug: ps.provider.config().name,
-	}
-}
-
-func (ps *ProviderService) UseProvider(pSlug string) error {
-	p, err := initProvider(pSlug)
-	if err != nil {
-		return err
-	}
-
-	ps.provider = p
-	return nil
-}
-
-func (ps *ProviderService) TranslateText(t *Translation) error {
-	return ps.provider.translateText(t)
-}
-
-func (ps *ProviderService) Languages() ([]*Language, error) {
-	return ps.provider.languages()
-}
-
-func initProvider(pSlug string) (provider, error) {
-	switch pSlug {
-	case "deepl":
-		p, err := newDeeplProvider()
-		if err != nil {
-			return nil, err
+			return nil
 		}
-		return p, nil
 	}
 
-	return nil, fmt.Errorf("Unknown provider slug: %s", pSlug)
+	return fmt.Errorf("Invalid provider: '%s'", slug)
+}
+
+func (s *Service) Languages() ([]*models.Language, error) {
+	return s.provider.languages()
+}
+
+func (s *Service) Translate(t *models.Translation) error {
+	return s.provider.translate(t)
+}
+
+func (m *Meta) provider() provider {
+	switch m.Slug {
+	case "deepl":
+		return &deepl{}
+	}
+
+	return nil
 }
