@@ -1,0 +1,16 @@
+# --- Line ending normalization ---
+* text=auto eol=lf
+
+# --- Wails build scaffolding (vendored, not project source) ---
+build/** linguist-vendored
+build/windows/installer/*.nsi linguist-language=NSIS
+build/windows/installer/*.nsh linguist-language=NSIS
+
+# --- Generated / lock files ---
+frontend/bun.lock linguist-generated
+frontend/package.json.md5 linguist-generated
+go.sum linguist-generated
+
+# --- Binary files ---
+build/appicon.png binary
+build/windows/icon.ico binary
