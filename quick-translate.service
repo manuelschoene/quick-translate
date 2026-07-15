@@ -5,7 +5,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/home/deinusername/.local/bin/quick-translate
+ExecStart=%h/.local/bin/quick-translate
 Restart=on-failure
 RestartSec=3
 
