@@ -45,9 +45,19 @@ The Wails CLI itself is not listed above, as it is installed as a Go tool rather
 go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 ```
 
-When running Linux with Wayland, the following additional package is required:
+### Clipboard access
 
-- `wl-clipboard` >= 2.3.0
+Quick Translate reads the text to translate from the clipboard and writes the translation back to it. How this is done depends on the operating system.
+
+**On Linux**, the text is read from the *primary selection*, which holds the text currently marked with the mouse, because a copy shortcut such as `Ctrl+C+C` cannot be bound reliably on Linux. The translation is written to the regular clipboard instead, so it can be pasted with `Ctrl+V`. Reading and writing are both done through an external program, so **one** of the following packages is required at runtime:
+
+- `wl-clipboard` >= 2.3.0, recommended for Wayland sessions
+- `xclip` >= 0.13, for X11 sessions and also usable under XWayland
+- `xsel` >= 1.2.1, as an alternative to `xclip`
+
+The session type is determined on startup from the `XDG_SESSION_TYPE`, `WAYLAND_DISPLAY` and `DISPLAY` environment variables, and the first installed program that fits the session is used. The programs of the other session type are kept as a fallback. If none of the three packages is installed, Quick Translate reports an error on startup.
+
+**On all other operating systems**, the regular clipboard is used for reading and writing, which is filled by the user pressing `Ctrl+C+C`. No extra packages are needed to be installed.
 
 ### Building
 
