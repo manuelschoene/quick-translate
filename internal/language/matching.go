@@ -50,6 +50,27 @@ func withoutLanguage(tag string, langs []*models.Language) []*models.Language {
 	return slices.Concat(langs[:i], langs[i+1:])
 }
 
+// Matches the language the provider detected against the available source languages and returns the tag of the match. Returns an empty tag if no detection is given, if it is not a valid BCP 47 tag or if it is not available as a source language, because a detection that cannot be resolved is dropped instead of being reported as an error.
+func matchDetectedSource(detectedSource string, sourceLangs []*models.Language) string {
+	if len(detectedSource) == 0 {
+		return ""
+	}
+
+	_, err := language.Parse(detectedSource)
+	if err != nil {
+		fmt.Printf("Detected source language '%s' is an invalid BCP 47 tag. Ignoring detection.\n", detectedSource)
+		return ""
+	}
+
+	match := matchLanguage(detectedSource, sourceLangs)
+	if match == nil {
+		fmt.Printf("Detected source language '%s' is not available as a source language. Ignoring detection.\n", detectedSource)
+		return ""
+	}
+
+	return match.Tag
+}
+
 // Parses the user language preferences and resolves them against the available languages. Returns a new LanguagePreferences instance with the resolved source and target language tags. If no match is found for a preference, it will be set to an empty string. Source and target languages are ensured to be different. If no preferences are provided, a new LanguagePreferences instance is created with empty source and target tags.
 func parsePreferences(pref *models.LanguagePreferences, langs []*models.Language) *models.LanguagePreferences {
 	if pref == nil {

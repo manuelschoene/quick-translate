@@ -3,8 +3,6 @@ package language
 import (
 	"fmt"
 	"quick-translate/internal/models"
-
-	"golang.org/x/text/language"
 )
 
 // The tag to be used for language detection. Can be returned by the Source() method and used as a parameter for the SetSource() method. It is not a real language and will not be included in the list of available languages.
@@ -175,25 +173,8 @@ func (c *Collection) setLanguageDetection(detectedSource string) error {
 	}
 
 	c.source = LanguageDetectionTag
-	c.detectedSource = ""
+	c.detectedSource = matchDetectedSource(detectedSource, c.sourceLangs)
 
-	if len(detectedSource) == 0 {
-		return nil
-	}
-
-	_, err := language.Parse(detectedSource)
-	if err != nil {
-		fmt.Printf("Detected source language '%s' is an invalid BCP 47 tag. Ignoring detection.\n", detectedSource)
-		return nil
-	}
-
-	matchDetectedSource := matchLanguage(detectedSource, c.sourceLangs)
-	if matchDetectedSource == nil {
-		fmt.Printf("Detected source language '%s' is not available as a source language. Ignoring detection.\n", detectedSource)
-		return nil
-	}
-
-	c.detectedSource = matchDetectedSource.Tag
 	return nil
 }
 

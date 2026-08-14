@@ -6,9 +6,9 @@ import (
 )
 
 type CollectionBuilder struct {
-	languageDetection bool
-	preferences       *models.LanguagePreferences
-	source, target    string
+	languageDetection              bool
+	preferences                    *models.LanguagePreferences
+	source, detectedSource, target string
 }
 
 // Creates a new CollectionBuilder instance for building a Collection.
@@ -16,9 +16,10 @@ func NewBuilder() *CollectionBuilder {
 	return &CollectionBuilder{}
 }
 
-// Sets the source language tag for the Collection.
-func (b *CollectionBuilder) SetSource(source string) *CollectionBuilder {
+// Sets the source language tag for the Collection. The tag of the language the provider detected for the previous translation can be passed as well. It is only kept if the Collection ends up using language detection and if the tag is available as a source language. Otherwise it is dropped.
+func (b *CollectionBuilder) SetSource(source string, detectedSource string) *CollectionBuilder {
 	b.source = source
+	b.detectedSource = detectedSource
 	return b
 }
 
@@ -60,6 +61,12 @@ func (b *CollectionBuilder) Build(providerSlug string, provider models.Provider,
 	sourceLangs, targetLangs := prioritySplit(pref, langs)
 	source, target := resolveInitialLanguages(b.source, b.target, b.languageDetection, pref, sourceLangs, targetLangs)
 
+	// The detected language only belongs to a source language that is detected by the provider. It is matched against the source languages of the new provider and dropped when it cannot be resolved.
+	var detectedSource string
+	if source == LanguageDetectionTag {
+		detectedSource = matchDetectedSource(b.detectedSource, sourceLangs)
+	}
+
 	return &Collection{
 		languageDetection: b.languageDetection,
 		provider:          provider,
@@ -67,6 +74,7 @@ func (b *CollectionBuilder) Build(providerSlug string, provider models.Provider,
 		providerSlug:      providerSlug,
 		source:            source,
 		target:            target,
+		detectedSource:    detectedSource,
 		sourceLangs:       sourceLangs,
 		targetLangs:       targetLangs,
 	}, nil
