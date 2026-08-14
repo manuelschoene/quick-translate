@@ -1,80 +1,46 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"net"
-	"os"
-	"sync"
+	"embed"
+	"log"
 
-	// "github.com/wailsapp/wails/v2/pkg/runtime"
-	"quick-translate/internal/clipboard"
-	"quick-translate/internal/provider"
+	"quick-translate/internal/transport"
+
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
 
-type App struct {
-	ctx context.Context
-	provider *provider.ProviderService
-	clipboard *clipboard.ClipboardService
-	translation *provider.Translation
-	tmux sync.Mutex
-}
+//go:embed all:frontend/dist
+var assets embed.FS
 
-func NewApp(ps *provider.ProviderService, cs *clipboard.ClipboardService) *App {
-	t := &provider.Translation{
-		SourceLang: &provider.Language{
-			Key: "en",
-			Name: "English",
-			Source: true,
-			Target: true,
+// Runs the application with the adapter registered as the only bridge between the frontend and the application. Blocks until the application is stopped and ends the process if it can not be started.
+func runApp(adapter *transport.Adapter) {
+	err := wails.Run(&options.App{
+		Title:             "Quick Translate",
+		Width:             400,
+		Height:            250,
+		DisableResize:     true,
+		Frameless:         true,
+		StartHidden:       true,
+		AlwaysOnTop:       true,
+		HideWindowOnClose: true,
+		AssetServer: &assetserver.Options{
+			Assets: assets,
 		},
-		TargetLang: &provider.Language{
-			Key: "de",
-			Name: "German",
-			Source: true,
-			Target: true,
+		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
+		OnStartup:        adapter.StartUp,
+		OnShutdown:       adapter.Shutdown,
+		Bind: []interface{}{
+			adapter,
 		},
-	}
+		Linux: &linux.Options{
+			WindowIsTranslucent: true,
+		},
+	})
 
-	return &App{
-		provider:  ps,
-		clipboard: cs,
-		translation: t,
-		tmux: sync.Mutex{},
-	}
-}
-
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-
-	go a.listenOnSocket()
-}
-
-func (a *App) listenOnSocket() {
-	// Remove existing socket file if app was not shut down properly
-	os.Remove(socketPath)
-
-	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
-		fmt.Println("Could not start socket: ", err.Error())
-		return
-	}
-	defer listener.Close()
-
-	// Wait for incoming signal from other instance
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
-		}
-
-		buf := make([]byte, 4)
-		_, err = conn.Read(buf)
-		if err == nil && string(buf) == "show" {
-
-			fmt.Println("Running translation...")
-
-		}
-		conn.Close()
+		log.Fatalf("Could not start the application: %v", err)
 	}
 }
