@@ -82,7 +82,10 @@ func (c *cache) read() error {
 	return nil
 }
 
-// Write to the cache by encoding this cache struct. Adds or updates the TTL. Returns an error if writing fails.
+// The time the languages of a provider are kept before they are fetched again.
+const cacheTtl = 7 * 24 * time.Hour
+
+// Write to the cache by encoding this cache struct. Sets the TTL to the full lifetime, because the languages that are written are the ones that were just fetched. Returns an error if writing fails.
 func (c *cache) write() error {
 	if c.Languages == nil {
 		fmt.Println("Did not find any languages to write to the cache. Skipping cache write.")
@@ -109,13 +112,8 @@ func (c *cache) write() error {
 	}
 	defer file.Close()
 
-	if c.Ttl == nil {
-		c.Ttl = new(time.Time)
-	}
-	if c.Ttl.Before(time.Now()) {
-		*c.Ttl = time.Now()
-	}
-	c.Ttl.Add(time.Hour * 24 * 7)
+	ttl := time.Now().Add(cacheTtl)
+	c.Ttl = &ttl
 
 	err = gob.NewEncoder(file).Encode(c)
 	if err != nil {

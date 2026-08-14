@@ -75,7 +75,9 @@ func (b *CollectionBuilder) Build(providerSlug string, provider models.Provider,
 // Retrieves languages for the current provider. Tries to read from the cache first. If the cache does not exist or is expired, it fetches languages from the provider and updates the cache. This function also invalidates caches for other providers in a separate goroutine.
 func retrieveLanguages(providerSlug string, provider models.Provider, providerSlugs []string) ([]*models.Language, error) {
 	cache := newCache(providerSlug)
-	go cache.invalidateOtherCaches(providerSlugs)
+
+	// The housekeeping runs on its own cache instance, because reading the cache below overwrites the struct it works with.
+	go newCache(providerSlug).invalidateOtherCaches(providerSlugs)
 
 	if cache.exists() {
 		err := cache.read()
@@ -83,8 +85,9 @@ func retrieveLanguages(providerSlug string, provider models.Provider, providerSl
 			return nil, err
 		}
 
+		// The refresh runs on its own cache instance, because it would otherwise write the languages that are returned below while they are being read.
 		if cache.isExpired() {
-			go fetchProviderLanguages(cache, provider)
+			go fetchProviderLanguages(newCache(providerSlug), provider)
 		}
 
 		return cache.Languages, nil

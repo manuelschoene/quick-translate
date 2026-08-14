@@ -37,17 +37,17 @@ func validateAndSortLanguages(langs []*models.Language) ([]*models.Language, err
 	return validLangs, nil
 }
 
-// Finds a language by its tag in a sorted list of languages. Returns the language and its index if found, otherwise returns nil and 0.
-func findLanguageByTag(tag string, langs []*models.Language) (*models.Language, int) {
-	i, found := slices.BinarySearchFunc(langs, tag, func(lang *models.Language, tag string) int {
-		return strings.Compare(lang.Tag, tag)
+// Returns a copy of the languages without the language with the given tag. The list is copied instead of shortened in place, because the collection hands the same list out to its callers. Returns the languages unchanged if the tag is not in the list.
+func withoutLanguage(tag string, langs []*models.Language) []*models.Language {
+	i := slices.IndexFunc(langs, func(lang *models.Language) bool {
+		return lang.Tag == tag
 	})
 
-	if found {
-		return langs[i], i
+	if i < 0 {
+		return langs
 	}
 
-	return nil, 0
+	return slices.Concat(langs[:i], langs[i+1:])
 }
 
 // Parses the user language preferences and resolves them against the available languages. Returns a new LanguagePreferences instance with the resolved source and target language tags. If no match is found for a preference, it will be set to an empty string. Source and target languages are ensured to be different. If no preferences are provided, a new LanguagePreferences instance is created with empty source and target tags.
@@ -104,7 +104,7 @@ func parsePreferences(pref *models.LanguagePreferences, langs []*models.Language
 	return pref
 }
 
-// Splits the available languages into two separate slices: one for source languages and one for target languages. Orders the preferred tags first, followed by the remaining tags in ascending order.
+// Splits the available languages into two separate slices: one for source languages and one for target languages. Orders the preferred tags first, followed by the remaining tags in ascending order. Preferences that could not be matched against the available languages are skipped.
 func prioritySplit(pref *models.LanguagePreferences, langs []*models.Language) ([]*models.Language, []*models.Language) {
 	var prefSource, prefTarget *models.Language
 	var source []*models.Language
@@ -127,7 +127,15 @@ func prioritySplit(pref *models.LanguagePreferences, langs []*models.Language) (
 		}
 	}
 
-	return append([]*models.Language{prefSource}, source...), append([]*models.Language{prefTarget}, target...)
+	if prefSource != nil {
+		source = append([]*models.Language{prefSource}, source...)
+	}
+
+	if prefTarget != nil {
+		target = append([]*models.Language{prefTarget}, target...)
+	}
+
+	return source, target
 }
 
 // Resolves the initial source and target languages based on the values of the previous provider and the languages from the new provider. Tries to find the best match for both languages, ensuring that they are different and supported by the new provider. Provide the previous source and target language tags, the new provider's language detection setting, the user's language preferences, and the new provider's available languages. Returns the resolved source and target language tags. Assumes that the languages are sorted ascending by tag.
@@ -171,9 +179,7 @@ func rematchSource(matchedTag string, initialTag string, pref *models.LanguagePr
 		prefSource = pref.Source
 	}
 
-	_, i := findLanguageByTag(matchedTag, sourceLangs)
-
-	newSource, _ := sourceFallback(initialTag, prefSource, append(sourceLangs[:i], sourceLangs[i+1:]...), languageDetection)
+	newSource, _ := sourceFallback(initialTag, prefSource, withoutLanguage(matchedTag, sourceLangs), languageDetection)
 	return newSource
 }
 
@@ -184,9 +190,7 @@ func rematchTarget(matchedTag string, initialTag string, pref *models.LanguagePr
 		prefTarget = pref.Target
 	}
 
-	_, i := findLanguageByTag(matchedTag, targetLangs)
-
-	newTarget, _ := targetFallback(initialTag, prefTarget, append(targetLangs[:i], targetLangs[i+1:]...))
+	newTarget, _ := targetFallback(initialTag, prefTarget, withoutLanguage(matchedTag, targetLangs))
 	return newTarget
 }
 
