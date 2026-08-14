@@ -1,9 +1,12 @@
 package provider
 
+// The slug the DeepL provider is identified by in the configuration file and in the history.
+const SlugDeepl = "deepl"
+
 // Returns a map of all supported provider slugs and if the provider supports language detection.
 func All() map[string]bool {
 	return map[string]bool{
-		"deepl":  true,
+		SlugDeepl: true,
 	}
 }
 

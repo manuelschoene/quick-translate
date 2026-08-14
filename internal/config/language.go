@@ -6,7 +6,7 @@ import (
 )
 
 type preferenceConfig struct {
-	LanguagePreferences struct{
+	LanguagePreferences struct {
 		Source string `yaml:"source"`
 		Target string `yaml:"target"`
 	} `yaml:"language_preferences"`
