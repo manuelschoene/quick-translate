@@ -1,0 +1,286 @@
+classDiagram
+    namespace models {
+        class Translation {
+            +int ID
+            +time.Time CreatedAt
+            +string Source
+            +string Target
+            +string Text
+            +string Translation
+            +string DetectedSource
+            +string Provider
+        }
+
+        class Language {
+            +string Tag
+            +string Name
+            +bool Source
+            +bool Target
+            +bool Stable
+        }
+
+        class LanguagePreferences {
+            +string Source
+            +string Target
+        }
+
+        class Provider <<interface>> {
+            +Translate(source string, target string, text string) (string, string, error)
+            +Languages() ([]*Language, error)
+        }
+    }
+
+    namespace provider {
+        class ProviderPackage {
+            +SlugDeepl string
+            +All() map~string, bool~
+            +NewDeepl() *Deepl
+        }
+
+        class Deepl {
+            +string AuthKey
+            +bool FreeVersion
+            +bool FastMode
+            +string Formality
+
+            +Translate(source string, target string, text string) (string, string, error)
+            +Languages() ([]*Language, error)
+        }
+    }
+
+    Deepl ..|> Provider
+    Provider ..> Language
+
+    namespace language {
+        class LanguagePackage {
+            +LanguageDetectionTag string
+            +NewBuilder() *CollectionBuilder
+        }
+
+        class CollectionBuilder {
+            -languageDetection bool
+            -preferences *LanguagePreferences
+            -source string
+            -detectedSource string
+            -target string
+
+            +SetLanguageDetection(languageDetection bool) *CollectionBuilder
+            +SetPreferences(preferences *LanguagePreferences) *CollectionBuilder
+            +SetSource(source string, detectedSource string) *CollectionBuilder
+            +SetTarget(target string) *CollectionBuilder
+            +Build(providerSlug string, provider Provider, providerSlugs []string) (*Collection, error)
+        }
+
+        class Collection {
+            -languageDetection bool
+            -provider Provider
+            -preferences *LanguagePreferences
+            -providerSlug string
+            -source string
+            -target string
+            -detectedSource string
+            -sourceLangs []*Language
+            -targetLangs []*Language
+
+            +SourceLanguages() []*Language
+            +TargetLanguages() []*Language
+            +Source() string
+            +Target() string
+            +DetectedSource() string
+            +SwitchLanguages() error
+            +SetSource(source string, detectedSource string) error
+            +SetTarget(target string) error
+        }
+    }
+
+    CollectionBuilder ..> Provider
+    CollectionBuilder ..> LanguagePreferences
+    Collection ..> Provider
+    Collection ..> LanguagePreferences
+    Collection ..> Language
+
+    namespace history {
+        class HistoryPackage {
+            +ErrDisabled error
+            +NewHistory(limit int) *History
+        }
+
+        class History {
+            -limit int
+            -database *db
+            -mutex sync.Mutex
+
+            +Enabled() bool
+            +Append(translation *Translation) (int, error)
+            +Previous(id int) (*Translation, error)
+            +Next(id int) (*Translation, error)
+            +HasPrevious(id int) (bool, error)
+            +HasNext(id int) (bool, error)
+            +Close()
+        }
+    }
+
+    History ..> Translation
+
+    namespace clipboard {
+        class ClipboardPackage {
+            +ErrNoTool error
+            +NewClipboard() (*Clipboard, error)
+        }
+
+        class backend <<interface>> {
+            -read() (string, error)
+            -write(text string) error
+            -name() string
+        }
+
+        class Clipboard {
+            -backend backend
+            -mutex sync.Mutex
+
+            +Read() (string, error)
+            +Write(text string) error
+            +Backend() string
+        }
+    }
+
+    Clipboard ..> backend
+
+    namespace config {
+        class ConfigPackage {
+            +DefaultProvider() (string, error)
+            +ListProviders(slugs []string) ([]string, error)
+            +LoadProvider~T~(slug string, config *T) error
+            +PreferredLanguages() (*LanguagePreferences, error)
+            +HistoryLimit() (int, error)
+        }
+    }
+
+    ConfigPackage ..> LanguagePreferences
+    ConfigPackage ..> Provider
+
+    namespace core {
+        class CorePackage {
+            +ErrNothingSelected error
+            +ErrNoTranslation error
+            +ErrNoTargetLanguage error
+            +ErrNoSourceLanguage error
+            +NewCore() (*Core, error)
+        }
+
+        class clip <<interface>> {
+            +Read() (string, error)
+            +Write(text string) error
+        }
+
+        class Core {
+            -clipboard clip
+            -factory func(slug string) (Provider, error)
+            -history *History
+            -langs *Collection
+            -preferences *LanguagePreferences
+            -detection map~string, bool~
+            -providerList []string
+            -providerSlug string
+            -provider Provider
+            -translation *Translation
+            -mutex sync.Mutex
+
+            +Close()
+            +Providers() []string
+            +CurrentProvider() string
+            +SetProvider(slug string) error
+            +SourceLanguages() []*Language
+            +TargetLanguages() []*Language
+            +LanguageDetection() bool
+            +Source() string
+            +Target() string
+            +DetectedSource() string
+            +SetSource(tag string) error
+            +SetTarget(tag string) error
+            +SwitchLanguages() error
+            +TranslateFromClipboard() (*Translation, error)
+            +TranslateFromHistory() (*Translation, error)
+            +CopyTranslation() error
+            +CurrentTranslation() *Translation
+            +HistoryEnabled() bool
+            +Navigation() (bool, bool, error)
+            +PreviousTranslation() (*Translation, bool, bool, error)
+            +NextTranslation() (*Translation, bool, bool, error)
+        }
+    }
+
+    Core ..> clip
+    Core ..> Provider
+    Core ..> LanguagePreferences
+    Core ..> Language
+    Core ..> Translation
+    Core ..> Collection
+    Core ..> History
+    Clipboard ..|> clip
+
+    namespace transport {
+        class TransportPackage {
+            +NewAdapter() (*Adapter, error)
+            +Connect() bool
+        }
+
+        class TranslationDto {
+            +string Source
+            +string Target
+            +string DetectedSource
+            +string Text
+            +string Translation
+            +bool HasPrevious
+            +bool HasNext
+        }
+
+        class LanguageDto {
+            +string Source
+            +string Target
+            +bool Detection
+            +[]*Language SourceLanguages
+            +[]*Language TargetLanguages
+        }
+
+        class ProviderDto {
+            +string Current
+            +[]string Providers
+        }
+
+        class FullDto {
+            +string Provider
+            +*LanguageDto Languages
+            +*TranslationDto Translation
+        }
+
+        class Adapter {
+            -ctx context.Context
+            -core *Core
+            -listener net.Listener
+            -mutex sync.Mutex
+
+            +StartUp(ctx context.Context)
+            +Shutdown(ctx context.Context)
+            +Hide()
+            +Providers() *ProviderDto
+            +Languages() *LanguageDto
+            +Translation() *TranslationDto
+            +ChangeProvider(slug string) (*FullDto, error)
+            +ChangeSource(tag string) (*TranslationDto, error)
+            +ChangeTarget(tag string) (*TranslationDto, error)
+            +SwitchLanguages() (*TranslationDto, error)
+            +PreviousTranslation() (*FullDto, error)
+            +NextTranslation() (*FullDto, error)
+            +CopyTranslation() error
+        }
+    }
+
+    Adapter ..> Core
+    Adapter ..> TranslationDto
+    Adapter ..> LanguageDto
+    Adapter ..> ProviderDto
+    Adapter ..> FullDto
+    FullDto ..> TranslationDto
+    FullDto ..> LanguageDto
+    LanguageDto ..> Language
