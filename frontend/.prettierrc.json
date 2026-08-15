@@ -1,0 +1,24 @@
+{
+    "experimentalOperatorPosition": "start",
+    "printWidth": 120,
+    "tabWidth": 4,
+    "singleQuote": true,
+    "useTabs": false,
+    "plugins": [
+        "prettier-plugin-organize-imports",
+        "prettier-plugin-organize-attributes",
+        "prettier-plugin-tailwindcss"
+    ],
+    "tailwindStylesheet": "src/style.css",
+    "tailwindFunctions": ["clsx", "cn", "twMerge", "twJoin"],
+    "attributeGroups": ["^class$", "^(id|name)$", "$DEFAULT", "^aria-"],
+    "attributeSort": "ASC",
+    "overrides": [
+        {
+            "files": "**/*.yml",
+            "options": {
+                "tabWidth": 2
+            }
+        }
+    ]
+}
