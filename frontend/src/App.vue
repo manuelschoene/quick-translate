@@ -1,5 +1,17 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import { useApplication } from '@use/useApplication';
+import { useView } from '@use/useView';
+import { onMounted, onUnmounted } from 'vue';
+
+const { start, stop } = useApplication();
+const { layout, view } = useView();
+
+onMounted(start);
+onUnmounted(stop);
+</script>
 
 <template>
-    <p>Hello World!</p>
+    <component :is="layout">
+        <component :is="view" />
+    </component>
 </template>

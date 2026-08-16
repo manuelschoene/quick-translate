@@ -10,10 +10,12 @@ export default defineConfig({
             '@': '/src',
             '@assets': '/src/assets',
             '@comp': '/src/components',
+            '@data': '/src/data',
             '@lay': '/src/layouts',
             '@use': '/src/composables',
             '@utils': '/src/utils',
             '@views': '/src/views',
+            '@wails': '/wailsjs',
         },
     },
 });
