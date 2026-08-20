@@ -1,148 +1,104 @@
 @import 'tailwindcss';
 
-/* Variable fonts */
-@font-face {
-    font-family: 'Google Sans Variable';
-    src: url('./assets/fonts/GoogleSans-VariableFont_GRAD,opsz,wght.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 100 900;
-    font-display: swap;
+@theme {
+    --color-accent-50: oklch(97% 0.041 195);
+    --color-accent-100: oklch(88.7% 0.069 195);
+    --color-accent-200: oklch(80.4% 0.086 195);
+    --color-accent-300: oklch(72.1% 0.1 195);
+    --color-accent-400: oklch(63.8% 0.103 195);
+    --color-accent-500: oklch(55.5% 0.09 195);
+    --color-accent-600: oklch(47.2% 0.076 195);
+    --color-accent-700: oklch(38.9% 0.063 195);
+    --color-accent-800: oklch(30.6% 0.05 195);
+    --color-accent-900: oklch(22.3% 0.036 195);
+    --color-accent-950: oklch(14% 0.023 195);
+
+    --color-gray-50: oklch(97% 0.008 195);
+    --color-gray-100: oklch(82.6% 0.01 195);
+    --color-gray-200: oklch(69.2% 0.012 195);
+    --color-gray-300: oklch(57% 0.014 195);
+    --color-gray-400: oklch(45.9% 0.014 195);
+    --color-gray-500: oklch(36.1% 0.013 195);
+    --color-gray-600: oklch(27.5% 0.012 195);
+    --color-gray-700: oklch(20.4% 0.011 195);
+    --color-gray-800: oklch(14.7% 0.01 195);
+    --color-gray-900: oklch(10.8% 0.009 195);
+    --color-gray-950: oklch(9% 0.009 195);
+
+    --color-error-50: oklch(97% 0.014 25);
+    --color-error-100: oklch(88.7% 0.056 25);
+    --color-error-200: oklch(80.4% 0.102 25);
+    --color-error-300: oklch(72.1% 0.118 25);
+    --color-error-400: oklch(63.8% 0.128 25);
+    --color-error-500: oklch(55.5% 0.13 25);
+    --color-error-600: oklch(47.2% 0.123 25);
+    --color-error-700: oklch(38.9% 0.109 25);
+    --color-error-800: oklch(30.6% 0.09 25);
+    --color-error-900: oklch(22.3% 0.07 25);
+    --color-error-950: oklch(14% 0.051 25);
+
+    --color-warning-50: oklch(97% 0.024 78);
+    --color-warning-100: oklch(88.7% 0.096 78);
+    --color-warning-200: oklch(80.4% 0.125 78);
+    --color-warning-300: oklch(72.1% 0.143 78);
+    --color-warning-400: oklch(63.8% 0.126 78);
+    --color-warning-500: oklch(55.5% 0.11 78);
+    --color-warning-600: oklch(47.2% 0.094 78);
+    --color-warning-700: oklch(38.9% 0.077 78);
+    --color-warning-800: oklch(30.6% 0.061 78);
+    --color-warning-900: oklch(22.3% 0.045 78);
+    --color-warning-950: oklch(14% 0.029 78);
+
+    --color-success-50: oklch(97% 0.047 148);
+    --color-success-100: oklch(88.7% 0.082 148);
+    --color-success-200: oklch(80.4% 0.102 148);
+    --color-success-300: oklch(72.1% 0.118 148);
+    --color-success-400: oklch(63.8% 0.128 148);
+    --color-success-500: oklch(55.5% 0.13 148);
+    --color-success-600: oklch(47.2% 0.123 148);
+    --color-success-700: oklch(38.9% 0.107 148);
+    --color-success-800: oklch(30.6% 0.084 148);
+    --color-success-900: oklch(22.3% 0.062 148);
+    --color-success-950: oklch(14% 0.04 148);
 }
 
-@font-face {
-    font-family: 'Google Sans Variable';
-    src: url('./assets/fonts/GoogleSans-Italic-VariableFont_GRAD,opsz,wght.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 100 900;
-    font-display: swap;
+:root {
+    color-scheme: dark;
+
+    --bg-base: var(--color-gray-950);
+    --bg-surface: var(--color-gray-900);
+    --bg-elevated: var(--color-gray-800);
+    --bg-hover: var(--color-gray-700);
+
+    --border-subtle: var(--color-gray-800);
+    --border-strong: var(--color-gray-600);
+
+    --text-primary: var(--color-gray-50);
+    --text-secondary: var(--color-gray-200);
+    --text-muted: var(--color-gray-400);
+
+    --accent-default: var(--color-accent-400);
+    --accent-hover: var(--color-accent-300);
+    --accent-active: var(--color-accent-200);
+    --accent-on: var(--color-accent-950);
+
+    --bg-error: var(--color-error-950);
+    --text-error: var(--color-error-300);
+    --border-error: var(--color-error-700);
+
+    --bg-warning: var(--color-warning-950);
+    --text-warning: var(--color-warning-300);
+    --border-warning: var(--color-warning-700);
+
+    --bg-success: var(--color-success-950);
+    --text-success: var(--color-success-300);
+    --border-success: var(--color-success-700);
+
+    --font-ui:
+        system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol';
 }
 
-/* Static fonts */
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-Regular.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-Italic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-Medium.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-MediumItalic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 500;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-SemiBold.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-SemiBoldItalic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 600;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-Bold.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans';
-    src: url('./assets/fonts/static/GoogleSans-BoldItalic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 700;
-    font-display: swap;
-}
-
-/* Static fonts: Google Sans 17pt */
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-Regular.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-Italic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-Medium.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-MediumItalic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 500;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-SemiBold.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-SemiBoldItalic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 600;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-Bold.ttf') format('truetype');
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Google Sans 17pt';
-    src: url('./assets/fonts/static/GoogleSans_17pt-BoldItalic.ttf') format('truetype');
-    font-style: italic;
-    font-weight: 700;
-    font-display: swap;
+* {
+    font-family: var(--font-ui);
 }
