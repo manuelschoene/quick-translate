@@ -1,5 +1,5 @@
+import { showError } from '@data/navigation';
 import { errorState } from '@data/state';
-import { showError } from '@data/views';
 
 /**
  * Takes a call that failed and brings it in front of the user. Both sources end up here, a call that

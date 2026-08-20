@@ -1,7 +1,7 @@
 import { applyTranslation } from '@data/apply';
+import { showTranslation } from '@data/navigation';
 import { report } from '@data/report';
 import { begin, finish } from '@data/request';
-import { showTranslation } from '@data/views';
 import type { transport } from '@wails/go/models';
 import { EventsOff, EventsOn } from '@wails/runtime/runtime';
 

@@ -15,3 +15,11 @@ export function showTranslation(): void {
 export function showError(): void {
     viewState.current = 'error';
 }
+
+/**
+ * Shows the language selection for either the source or the target language. Called by the language selection
+ * buttons in the translation view.
+ */
+export function showLanguageSelection(): void {
+    viewState.current = 'languageSelection';
+}

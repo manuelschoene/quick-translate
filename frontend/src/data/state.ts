@@ -5,8 +5,8 @@ import { reactive } from 'vue';
  * The state of the whole application, split by what it describes and held once per module. A single
  * window works on a single core, so there is nothing to keep apart per component.
  *
- * The state is written by `apply.ts`, `views.ts` and `report.ts` and read through the composables,
- * which hand it out read only.
+ * The state is written by `apply.ts`, `navigation.ts` and `report.ts` and read through the
+ * composables, which hand it out read only.
  */
 
 export const providerState = reactive({

@@ -1,6 +1,6 @@
+import { showTranslation } from '@data/navigation';
 import { errorState } from '@data/state';
 import { view } from '@data/view';
-import { showTranslation } from '@data/views';
 
 const error = view(errorState);
 
