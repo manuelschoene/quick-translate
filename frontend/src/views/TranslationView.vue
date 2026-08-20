@@ -1,17 +1,15 @@
-<!--
-    A placeholder that shows the state of the translation as it is. It stands in for the interface
-    until that one is built and only proves that the data arrives.
--->
 <script lang="ts" setup>
+import LanguageSelector from '@comp/LanguageSelector.vue';
+import LoadingTextarea from '@comp/LoadingTextarea.vue';
 import { useTranslation } from '@use/useTranslation';
+import LayoutFull from '@lay/LayoutFull.vue';
 
-const { text, translation, pending } = useTranslation();
+const { pending, translation } = useTranslation();
 </script>
 
 <template>
-    <p v-if="pending">Translating …</p>
-    <template v-else>
-        <p>{{ text }}</p>
-        <p>{{ translation }}</p>
-    </template>
+    <LayoutFull>
+        <LanguageSelector class="shrink-0" />
+        <LoadingTextarea class="flex-1" :content="translation" :loading="pending"></LoadingTextarea>
+    </LayoutFull>
 </template>
