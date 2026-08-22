@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { onMounted, ref, useTemplateRef, watch } from 'vue';
 import { X } from '@lucide/vue';
 
 const props = defineProps<{
@@ -23,6 +23,9 @@ watch(local, (newValue) => {
 });
 
 const clear = () => (local.value = '');
+
+const input = useTemplateRef<HTMLInputElement>('input');
+onMounted(() => input.value?.focus());
 </script>
 
 <template>
@@ -35,9 +38,9 @@ const clear = () => (local.value = '');
             :class="{ 'pr-8': local }"
             :placeholder="placeholder"
             :title="label ?? 'Search'"
+            ref="input"
             type="text"
             v-model="local"
-            autofocus
         />
 
         <button

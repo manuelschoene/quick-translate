@@ -24,7 +24,7 @@ const selectLanguage = (lang: Language) => {
     props.changeFn(lang.tag);
     showTranslation();
 };
-</script>x
+</script>
 
 <template>
     <LayoutLabelled :back-action="showTranslation" :label="label">
