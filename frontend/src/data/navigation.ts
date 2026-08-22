@@ -17,9 +17,17 @@ export function showError(): void {
 }
 
 /**
- * Shows the language selection for either the source or the target language. Called by the language selection
- * buttons in the translation view.
+ * Shows the language selection for the source language. Called by the language selector in the
+ * translation view.
  */
-export function showLanguageSelection(): void {
-    viewState.current = 'languageSelection';
+export function showSourceSelection(): void {
+    viewState.current = 'sourceSelection';
+}
+
+/**
+ * Shows the language selection for the target language. Called by the language selector in the
+ * translation view.
+ */
+export function showTargetSelection(): void {
+    viewState.current = 'targetSelection';
 }

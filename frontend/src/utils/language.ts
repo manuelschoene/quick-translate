@@ -2,6 +2,14 @@ import type { Language } from '@data/types';
 import { useLanguages } from '@use/useLanguages';
 import { computed, type ComputedRef, type DeepReadonly } from 'vue';
 
+export const auto = {
+    tag: 'auto',
+    name: 'Auto',
+    source: true,
+    target: false,
+    stable: true,
+} as Language;
+
 /**
  * Gives the text the source language button shows. The tag alone is user-unfriendly, so the name
  * of the language is looked up. If the source language is set to auto, the detected language is

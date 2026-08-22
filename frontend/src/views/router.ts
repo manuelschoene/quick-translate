@@ -1,6 +1,7 @@
 import type { ViewName } from '@data/types';
 import ErrorView from '@views/ErrorView.vue';
-import LanguageSelectionView from '@views/LanguageSelectionView.vue';
+import SelectionSourceView from '@views/SelectionSourceView.vue';
+import SelectionTargetView from '@views/SelectionTargetView.vue';
 import TranslationView from '@views/TranslationView.vue';
 import type { Component } from 'vue';
 
@@ -16,5 +17,6 @@ import type { Component } from 'vue';
 export const router: Record<ViewName, Component> = {
     translation: TranslationView,
     error: ErrorView,
-    languageSelection: LanguageSelectionView,
+    sourceSelection: SelectionSourceView,
+    targetSelection: SelectionTargetView,
 };

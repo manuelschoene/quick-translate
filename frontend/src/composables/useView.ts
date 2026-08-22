@@ -1,4 +1,4 @@
-import { showError, showTranslation } from '@data/navigation';
+import { showError, showSourceSelection, showTargetSelection, showTranslation } from '@data/navigation';
 import { viewState } from '@data/state';
 import { router } from '@views/router';
 import { computed } from 'vue';
@@ -13,5 +13,5 @@ const view = computed(() => router[viewState.current]);
  * backend reports a translation or an error on its own.
  */
 export function useView() {
-    return { view, showTranslation, showError };
+    return { view, showTranslation, showError, showSourceSelection, showTargetSelection };
 }

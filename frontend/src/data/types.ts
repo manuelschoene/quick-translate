@@ -14,4 +14,4 @@ export interface Language {
  * The views the window can show. The data layer works with the name alone and leaves it to
  * `views/router.ts` to say which component belongs to it.
  */
-export type ViewName = 'translation' | 'error' | 'languageSelection';
+export type ViewName = 'translation' | 'error' | 'sourceSelection' | 'targetSelection';

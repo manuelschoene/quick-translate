@@ -5,18 +5,21 @@ import ButtonSelect from '@comp/ButtonSelect.vue';
 import ButtonIcon from '@comp/ButtonIcon.vue';
 import { useLanguages } from '@use/useLanguages.ts';
 import { displaySourceLanguage, displayTargetLanguage } from '@utils/language.ts';
+import { useView } from '@use/useView';
 
 const { switchLanguages } = useLanguages();
+const { showSourceSelection, showTargetSelection } = useView();
+
 const source = displaySourceLanguage();
 const target = displayTargetLanguage();
 </script>
 
 <template>
     <Panel class="flex justify-between gap-2 border-b">
-        <ButtonSelect :action="() => {}" label="Select Source Language">{{ source }}</ButtonSelect>
+        <ButtonSelect :action="showSourceSelection" label="Select Source Language">{{ source }}</ButtonSelect>
 
         <ButtonIcon :action="switchLanguages" :icon="ArrowRightLeft" label="Switch Languages" />
 
-        <ButtonSelect :action="() => {}" label="Select Target Language">{{ target }}</ButtonSelect>
+        <ButtonSelect :action="showTargetSelection" label="Select Target Language">{{ target }}</ButtonSelect>
     </Panel>
 </template>
