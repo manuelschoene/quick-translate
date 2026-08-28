@@ -1,9 +1,5 @@
 package transport
 
-import (
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-)
-
 // Returns the providers that can be chosen together with the one that is in use.
 func (a *Adapter) Providers() *ProviderDto {
 	a.mutex.Lock()
@@ -124,8 +120,6 @@ func (a *Adapter) CopyTranslation() error {
 	if err := a.core.CopyTranslation(); err != nil {
 		return err
 	}
-
-	runtime.WindowHide(a.ctx)
 
 	return nil
 }

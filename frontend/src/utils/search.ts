@@ -1,4 +1,4 @@
-import { DeepReadonly } from 'vue';
+import type { DeepReadonly } from 'vue';
 
 /**
  * Filters a list of items based on a search string and a filter function.

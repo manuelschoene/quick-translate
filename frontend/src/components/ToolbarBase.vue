@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import Panel from '@comp/Panel.vue';
-import ButtonIcon from '@comp/ButtonIcon.vue';
+import Button from '@comp/Button.vue';
 import { X } from '@lucide/vue';
 import { useApplication } from '@use/useApplication';
 
@@ -15,7 +15,7 @@ const { hide } = useApplication();
 
         <div class="flex gap-2">
             <slot name="right" />
-            <ButtonIcon :action="hide" :icon="X" label="Close Window" style="--wails-draggable: no-drag" />
+            <Button :action="hide" :icon="X" style="--wails-draggable: no-drag" title="Close Window" />
         </div>
     </Panel>
 </template>

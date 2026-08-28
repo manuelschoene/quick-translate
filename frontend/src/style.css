@@ -60,6 +60,36 @@
     --color-success-800: oklch(30.6% 0.084 148);
     --color-success-900: oklch(22.3% 0.062 148);
     --color-success-950: oklch(14% 0.04 148);
+
+    --animate-check: check 300ms ease-out;
+    --animate-check-out: check-out 500ms ease-in forwards;
+
+    @keyframes check {
+        0% {
+            opacity: 0;
+            transform: scale(0.4) rotate(-25deg);
+        }
+
+        60% {
+            opacity: 1;
+            transform: scale(1.2) rotate(0deg);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+    }
+
+    @keyframes check-out {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0;
+        }
+    }
 }
 
 :root {
@@ -83,7 +113,7 @@
     --accent-on: var(--color-accent-950);
 
     --bg-error: var(--color-error-950);
-    --text-error: var(--color-error-300);
+    --text-error: var(--color-error-500);
     --border-error: var(--color-error-700);
 
     --bg-warning: var(--color-warning-950);
@@ -94,11 +124,55 @@
     --text-success: var(--color-success-300);
     --border-success: var(--color-success-700);
 
+    --control-height: calc(2rem + 2px);
+
     --font-ui:
         system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol';
 }
 
+::selection {
+    background-color: color-mix(in oklch, var(--accent-default) 30%, transparent);
+}
+
 * {
     font-family: var(--font-ui);
+}
+
+/*
+ * The scrollbars are drawn twice over: once with the WebKit pseudo elements, which every engine
+ * Wails puts the window in understands (WebKitGTK on Linux, WKWebView on macOS, the Chromium of
+ * WebView2 on Windows), and once with the standardised properties for an engine that does not.
+ * The fallback is guarded, because an engine that knows both would otherwise drop the pseudo
+ * elements as soon as `scrollbar-color` is set and lose the hover of the thumb with them.
+ */
+
+::-webkit-scrollbar {
+    width: 0.5rem;
+    height: 0.5rem;
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-500);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-gray-400);
+}
+
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner {
+    display: none;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-gray-500) transparent;
+    }
 }

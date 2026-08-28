@@ -21,6 +21,7 @@
         "jsx": "preserve",
         "sourceMap": true,
         "isolatedModules": true,
+        "verbatimModuleSyntax": true,
         "esModuleInterop": true,
         "lib": ["ESNext", "DOM"],
         "skipLibCheck": true
