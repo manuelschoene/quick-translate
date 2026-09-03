@@ -1,12 +1,12 @@
 <script lang="ts" setup>
+import LanguageSelection from '@comp/LanguageSelection.vue';
 import { useLanguages } from '@use/useLanguages';
-import SelectionBaseView from '@views/SelectionBaseView.vue';
 
 const { source, sourceOptions, pinnedSource, changeSource } = useLanguages();
 </script>
 
 <template>
-    <SelectionBaseView
+    <LanguageSelection
         :change-fn="changeSource"
         :current-tag="source"
         :langs="sourceOptions"

@@ -2,13 +2,14 @@ import ErrorView from '@views/ErrorView.vue';
 import SelectionSourceView from '@views/SelectionSourceView.vue';
 import SelectionTargetView from '@views/SelectionTargetView.vue';
 import TranslationView from '@views/TranslationView.vue';
-import { ref, type Component } from 'vue';
+import { shallowRef, type Component } from 'vue';
 
-/**
- * Represents the different views that the application can display. Each view name corresponds to a specific component that will be rendered when the application routes to that view.
- */
 export type ViewName = 'translation' | 'error' | 'sourceSelection' | 'targetSelection';
 
+/**
+ * The only place that decides which component a view name stands for. Typed against `ViewName`, so a
+ * name without a component does not compile.
+ */
 const routes: Record<ViewName, Component> = {
     translation: TranslationView,
     error: ErrorView,
@@ -17,14 +18,15 @@ const routes: Record<ViewName, Component> = {
 };
 
 /**
- * Holds the current component to be displayed as a view in the window.
+ * The view that is on screen. It starts on the translation, which is what the window is opened for,
+ * and there is no state without one. Shallow, because a component definition is held as it is and
+ * not turned into a reactive proxy.
  */
-export const component = ref<Component | null>(TranslationView);
+export const component = shallowRef<Component>(TranslationView);
 
 /**
- * Routes the application to the specified view. The component will be mounted newly and not be cached.
- * This ensures that each time a view is navigated to, it is freshly instantiated.
- * @param name The view name to route to.
+ * Takes the user to the given view. The component is mounted anew and not kept around, so a view
+ * always starts fresh.
  */
 export function route(name: ViewName): void {
     component.value = routes[name];

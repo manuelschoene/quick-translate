@@ -2,7 +2,12 @@
 import Button, { type ButtonProps } from '@comp/Button.vue';
 import { cn } from '@lib/cn';
 
-defineProps<{
+/**
+ * The buttons are keyed by their position, which holds as long as a call site writes the group out
+ * as a fixed list. A group whose buttons are ever added, removed or reordered needs an identity of
+ * its own on `ButtonProps` instead.
+ */
+const props = defineProps<{
     buttons: ButtonProps[];
 }>();
 </script>
@@ -23,11 +28,11 @@ defineProps<{
             :class-text="button.classText"
             :disabled="button.disabled"
             :icon="button.icon"
-            :key="button.title"
+            :key="index"
             :text="button.text"
             :title="button.title"
             inline
-            v-for="button in buttons"
+            v-for="(button, index) in props.buttons"
         />
     </div>
 </template>

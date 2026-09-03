@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { CircleX } from '@lucide/vue';
-import LayoutLabelled from '@lay/LayoutLabelled.vue';
-import { useError } from '@use/useError';
-import { onKey } from '@lib/keyboard';
 import { route } from '@/router';
+import LayoutLabelled from '@lay/LayoutLabelled.vue';
+import { onKey } from '@lib/keyboard';
+import { CircleX } from '@lucide/vue';
+import { useError } from '@use/useError';
 
 const { message } = useError();
 

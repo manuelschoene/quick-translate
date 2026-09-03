@@ -1,14 +1,14 @@
 <script lang="ts" setup>
+import { route } from '@/router';
 import Button from '@comp/Button.vue';
 import LoadingTextarea from '@comp/LoadingTextarea.vue';
 import Panel from '@comp/Panel.vue';
 import LayoutFull from '@lay/LayoutFull.vue';
+import { onKey } from '@lib/keyboard';
 import { ArrowRightLeft, Pencil } from '@lucide/vue';
 import { useApplication } from '@use/useApplication';
 import { useLanguages } from '@use/useLanguages';
 import { useTranslation } from '@use/useTranslation';
-import { onKey } from '@lib/keyboard';
-import { route } from '@/router';
 
 const { pending, translation } = useTranslation();
 const { sourceLabel, targetLabel, switchLanguages } = useLanguages();

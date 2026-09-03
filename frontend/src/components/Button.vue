@@ -1,14 +1,4 @@
 <script lang="ts">
-/**
- * Everything a button of the application is built from. A button carries a text, an icon or both,
- * and `inline` drops the frame it draws around itself so that it can be placed inside a container
- * that already brings the height, the border and the background along. `class`, `classText` and
- * `classIcon` are merged onto the button, onto its text and onto its icon by the call site, which is
- * how the few buttons that need to stretch, truncate, fade or animate are told apart from the rest.
- *
- * Exported here and not from a file of its own, because a container that lays out buttons describes
- * them with the same type the button itself is declared with.
- */
 export interface ButtonProps {
     action: () => void;
     title: string;
@@ -28,6 +18,10 @@ import { computed, type Component } from 'vue';
 
 const props = defineProps<ButtonProps>();
 
+/**
+ * The classes of the button itself. `inline` drops the frame it draws around itself, so the button
+ * can sit in a container that already brings the height, the border and the background along.
+ */
 const buttonClass = computed(() =>
     cn(
         'group flex items-center justify-center px-2 py-2 hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-(--accent-default) focus-visible:outline-none focus-visible:ring-inset disabled:cursor-not-allowed disabled:hover:cursor-not-allowed',
@@ -39,6 +33,10 @@ const buttonClass = computed(() =>
     ),
 );
 
+/**
+ * The classes of the label. `classText` is merged last and wins, which is how the few buttons that
+ * have to stretch or truncate are told apart from the rest.
+ */
 const textClass = computed(() =>
     cn(
         'text-sm text-(--text-secondary) transition-colors group-hover:text-(--text-primary) group-hover:[text-shadow:0.25px_0_currentColor,-0.25px_0_currentColor] group-disabled:text-(--text-muted) group-disabled:group-hover:[text-shadow:none]',
@@ -46,6 +44,10 @@ const textClass = computed(() =>
     ),
 );
 
+/**
+ * The classes of the icon. `classIcon` is merged last and wins, which is how the copy button fades
+ * its check mark in and out.
+ */
 const iconClass = computed(() =>
     cn(
         'size-4 shrink-0 stroke-2 transition-transform group-hover:scale-125 group-disabled:scale-100 group-disabled:text-(--text-muted)',

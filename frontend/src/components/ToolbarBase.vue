@@ -1,14 +1,19 @@
 <script lang="ts" setup>
-import Panel from '@comp/Panel.vue';
 import Button from '@comp/Button.vue';
+import Panel from '@comp/Panel.vue';
+import { cn } from '@lib/cn';
 import { X } from '@lucide/vue';
 import { useApplication } from '@use/useApplication';
+
+const props = defineProps<{
+    class?: string;
+}>();
 
 const { hide } = useApplication();
 </script>
 
 <template>
-    <Panel class="flex items-center justify-between border-t" style="--wails-draggable: drag">
+    <Panel :class="cn('flex items-center justify-between border-t', props.class)" style="--wails-draggable: drag">
         <div class="flex">
             <slot name="left" />
         </div>

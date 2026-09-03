@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import { onMounted, ref, useTemplateRef, watch } from 'vue';
-import { X } from '@lucide/vue';
 import Button from '@comp/Button.vue';
+import { X } from '@lucide/vue';
+import { onMounted, ref, useTemplateRef, watch } from 'vue';
 
 const props = defineProps<{
     placeholder?: string;
     modelValue: string;
-    label?: string;
+    title?: string;
 }>();
 
 const emit = defineEmits<{
@@ -14,9 +14,31 @@ const emit = defineEmits<{
     submit: [];
 }>();
 
-const local = ref(props.modelValue);
+/**
+ * What is currently in the box, which runs ahead of the value that was handed out.
+ */
+const local = ref('');
+
 let timeout: ReturnType<typeof setTimeout>;
 
+/**
+ * Follows the value that is handed in, which is also what fills the box the first time.
+ *
+ * Registered before the watcher below, so the first run happens while there is nothing listening yet
+ * and a value that arrives with the component is not sent straight back.
+ */
+watch(
+    () => props.modelValue,
+    (value) => {
+        local.value = value;
+    },
+    { immediate: true },
+);
+
+/**
+ * Hands what was typed back out, but not on every keystroke: the list that is searched is rebuilt
+ * for every value, so the box waits until the typing pauses.
+ */
 watch(local, (newValue) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => {
@@ -24,17 +46,26 @@ watch(local, (newValue) => {
     }, 100);
 });
 
-const submit = (): void => {
+/**
+ * Hands the value out right away and asks for it to be acted on, which is what pressing enter means.
+ * Cancels the pending debounce, so the value is not sent a second time.
+ */
+function submit(): void {
     clearTimeout(timeout);
     emit('update:modelValue', local.value);
     emit('submit');
-};
+}
 
-const clear = (): void => {
+/**
+ * Empties the box. The value leaves debounced like any other change.
+ */
+function clear(): void {
     local.value = '';
-};
+}
 
 const input = useTemplateRef<HTMLInputElement>('input');
+
+// The box is the reason its view was opened, so the user can type without reaching for it first.
 onMounted(() => input.value?.focus());
 </script>
 
@@ -44,10 +75,9 @@ onMounted(() => input.value?.focus());
     >
         <input
             class="h-full w-full bg-transparent p-2 text-sm outline-none placeholder:text-(--text-muted)"
-            id="search-input"
             :class="{ 'pr-8': local }"
-            :placeholder="placeholder"
-            :title="label ?? 'Search'"
+            :placeholder="props.placeholder"
+            :title="props.title ?? 'Search'"
             @keydown.enter="submit"
             ref="input"
             type="text"

@@ -3,13 +3,6 @@ import { historyState, languageState, providerState, translationState } from '@/
 import type { models, transport } from '@wails/go/models';
 
 /**
- * The only place in the project that knows the wire format. It takes the DTOs apart and hands each
- * part to the state group it belongs to, which is why it stays one module although the state is
- * split by domain: a `TranslationDto` carries the chosen languages, the translated text and the
- * history flags at once, so whoever unpacks it has to reach into three groups anyway.
- */
-
-/**
  * Takes over the configured providers together with the one that is in use.
  */
 export function applyProviders(dto: transport.ProviderDto): void {
@@ -20,12 +13,10 @@ export function applyProviders(dto: transport.ProviderDto): void {
 }
 
 /**
- * Takes over what the current provider offers. Sent whenever the provider changes, because the
- * languages that can be chosen belong to it. Which of them are chosen is not part of this, it
- * arrives with the translation.
+ * Takes over what the current provider offers. Which of the languages are chosen is not part of it,
+ * that arrives with the translation.
  *
- * The lists come in no promised order, so whoever shows them sorts them. Detection is missing for a
- * provider that does not detect the source language on its own.
+ * The lists come in no promised order, so whoever shows them sorts them.
  */
 export function applyLanguages(dto: transport.LanguageDto): void {
     languageState.preferredSource = dto.PreferredSource;
@@ -36,9 +27,9 @@ export function applyLanguages(dto: transport.LanguageDto): void {
 }
 
 /**
- * Takes over the answer of a translation, which reaches further than the translated text alone. It
- * also carries the languages, because the core adjusts one of them when it collides with the other,
- * and the navigation flags, because a translation that was made is one more step to go back to.
+ * Takes over the answer of a translation, which reaches further than the translated text alone: the
+ * backend adjusts a language when it collides with the other, and a translation that was made is one
+ * more step to go back to.
  */
 export function applyTranslation(dto: transport.TranslationDto): void {
     languageState.source = dto.Source;
@@ -52,9 +43,8 @@ export function applyTranslation(dto: transport.TranslationDto): void {
 }
 
 /**
- * Takes over the whole state, which is sent for the first render, when the provider changes and when
- * stepping through the history, as a stored translation brings its own provider and languages with
- * it.
+ * Takes over everything at once, which is what the first render and every step through the history
+ * need: a stored translation brings its own provider and languages with it.
  */
 export function applyFull(dto: transport.FullDto): void {
     if (dto.Provider) {
@@ -80,7 +70,8 @@ function toLanguages(languages: models.Language[]): Language[] {
 }
 
 /**
- * Maps a language of the backend to the shape the frontend works with.
+ * Maps a language of the backend to the shape the frontend works with. Together with the functions
+ * above, this file is the only one that knows the Go field names.
  */
 function toLanguage(language: models.Language): Language {
     return {

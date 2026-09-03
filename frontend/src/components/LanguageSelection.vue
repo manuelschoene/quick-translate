@@ -1,14 +1,14 @@
 <script lang="ts" setup>
+import { route } from '@/router';
+import type { Language } from '@/state';
 import Button from '@comp/Button.vue';
 import Panel from '@comp/Panel.vue';
 import SearchBox from '@comp/SearchBox.vue';
-import type { Language } from '@/state';
 import LayoutLabelled from '@lay/LayoutLabelled.vue';
 import { cn } from '@lib/cn';
 import { onKey } from '@lib/keyboard';
 import { searchFilter } from '@lib/search';
 import { computed, onMounted, ref, useTemplateRef, type DeepReadonly } from 'vue';
-import { route } from '@/router';
 
 const props = defineProps<{
     currentTag: string;
@@ -18,12 +18,14 @@ const props = defineProps<{
     changeFn: (tag: string) => void;
 }>();
 
-const search = ref<string>('');
+const search = ref('');
 
 /**
- * The languages as they are listed. The pinned ones are only kept in front while nothing is typed:
- * whoever searches is looking for a certain language and not for the one they usually take, so from
- * the first character on everything is filtered and shown in the order it was handed over.
+ * The languages as they are listed.
+ *
+ * The pinned ones are only kept in front while nothing is typed: whoever searches is looking for a
+ * certain language and not for the one they usually take, so from the first character on everything
+ * is filtered and shown in the order it was handed over.
  */
 const listedLanguages = computed(() => {
     if (search.value.length === 0) {
@@ -35,21 +37,27 @@ const listedLanguages = computed(() => {
 
 const list = useTemplateRef<HTMLElement>('list');
 
-const selectLanguage = (lang: Language): void => {
+/**
+ * Takes the language over and returns to the translation. Picking the one that is already set is not
+ * caught here, the backend answers an unchanged combination from its cache.
+ */
+function selectLanguage(lang: Language): void {
     props.changeFn(lang.tag);
     route('translation');
-};
-
-const selectFirstLanguage = (): void => {
-    const first = listedLanguages.value.at(0);
-    if (first) selectLanguage(first);
-};
+}
 
 /**
- * Puts the languages of the given tags in front of the rest, in the order the tags are given, and
- * leaves the order of everything else alone. A pinned language is moved, not copied, so it shows up
- * once. Tags that are not in the list are skipped, so the preferred language of a provider that does
- * not offer it simply does not show up in front.
+ * Takes the first language that is listed, which is what pressing enter in the search box means.
+ */
+function selectFirstLanguage(): void {
+    const first = listedLanguages.value.at(0);
+    if (first) selectLanguage(first);
+}
+
+/**
+ * Puts the languages of the given tags in front of the rest and leaves the order of everything else
+ * alone. A pinned language is moved and not copied, so it shows up once, and a tag that is not in
+ * the list is skipped.
  */
 function pinLanguages(languages: DeepReadonly<Language[]>, tags: readonly string[]): DeepReadonly<Language>[] {
     const pinned = tags
@@ -59,6 +67,7 @@ function pinLanguages(languages: DeepReadonly<Language[]>, tags: readonly string
     return [...pinned, ...languages.filter((language) => !pinned.includes(language))];
 }
 
+// The language that is set can sit anywhere in a list of some thirty entries, so it is scrolled to.
 onMounted(() => list.value?.querySelector('[data-current]')?.scrollIntoView({ block: 'center' }));
 
 onKey('Escape', () => {
@@ -67,13 +76,13 @@ onKey('Escape', () => {
 </script>
 
 <template>
-    <LayoutLabelled :back-action="() => route('translation')" :label="label">
+    <LayoutLabelled :back-action="() => route('translation')" :label="props.label">
         <Panel class="border-b" style="--wails-draggable: drag">
             <SearchBox
                 @submit="selectFirstLanguage"
-                label="Search for language"
                 placeholder="Search..."
                 style="--wails-draggable: no-drag"
+                title="Search for language"
                 v-model="search"
             />
         </Panel>
@@ -89,11 +98,11 @@ onKey('Escape', () => {
                     :class="
                         cn(
                             'min-h-(--control-height) py-2.5 hover:bg-linear-to-br hover:from-gray-500 hover:to-gray-600',
-                            lang.tag === currentTag
+                            lang.tag === props.currentTag
                                 && 'bg-linear-to-br from-accent-800 to-accent-900 hover:from-accent-700 hover:to-accent-800',
                         )
                     "
-                    :data-current="lang.tag === currentTag ? '' : undefined"
+                    :data-current="lang.tag === props.currentTag ? '' : undefined"
                     :key="lang.tag"
                     :text="lang.name"
                     :title="lang.name"

@@ -55,6 +55,7 @@ classDiagram
         class LanguagePackage {
             +LanguageDetectionTag string
             +NewBuilder() *CollectionBuilder
+            +DetectionLanguage() *Language
         }
 
         class CollectionBuilder {
@@ -84,6 +85,8 @@ classDiagram
 
             +SourceLanguages() []*Language
             +TargetLanguages() []*Language
+            +PreferredSource() string
+            +PreferredTarget() string
             +Source() string
             +Target() string
             +DetectedSource() string
@@ -192,7 +195,9 @@ classDiagram
             +SetProvider(slug string) error
             +SourceLanguages() []*Language
             +TargetLanguages() []*Language
-            +LanguageDetection() bool
+            +LanguageDetection() *Language
+            +PreferredSource() string
+            +PreferredTarget() string
             +Source() string
             +Target() string
             +DetectedSource() string
@@ -229,16 +234,15 @@ classDiagram
             +string Source
             +string Target
             +string DetectedSource
-            +string Text
             +string Translation
             +bool HasPrevious
             +bool HasNext
         }
 
         class LanguageDto {
-            +string Source
-            +string Target
-            +bool Detection
+            +string PreferredSource
+            +string PreferredTarget
+            +*Language Detection
             +[]*Language SourceLanguages
             +[]*Language TargetLanguages
         }
@@ -249,7 +253,7 @@ classDiagram
         }
 
         class FullDto {
-            +string Provider
+            +*ProviderDto Provider
             +*LanguageDto Languages
             +*TranslationDto Translation
         }
@@ -263,9 +267,7 @@ classDiagram
             +StartUp(ctx context.Context)
             +Shutdown(ctx context.Context)
             +Hide()
-            +Providers() *ProviderDto
-            +Languages() *LanguageDto
-            +Translation() *TranslationDto
+            +State() *FullDto
             +ChangeProvider(slug string) (*FullDto, error)
             +ChangeSource(tag string) (*TranslationDto, error)
             +ChangeTarget(tag string) (*TranslationDto, error)
@@ -281,6 +283,7 @@ classDiagram
     Adapter ..> LanguageDto
     Adapter ..> ProviderDto
     Adapter ..> FullDto
+    FullDto ..> ProviderDto
     FullDto ..> TranslationDto
     FullDto ..> LanguageDto
     LanguageDto ..> Language

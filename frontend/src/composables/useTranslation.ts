@@ -10,8 +10,7 @@ const exposed = { ...translation, pending, copyTranslation };
 
 /**
  * Gives the components the text that came back for the last translation, whether one is being made
- * right now and the way to take the result over. The text is empty until the first translation was
- * made.
+ * right now and the way to take the result over.
  */
 export function useTranslation(): typeof exposed {
     return exposed;

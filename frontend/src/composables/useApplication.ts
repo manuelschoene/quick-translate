@@ -3,14 +3,14 @@ import { request, requestQuietly } from '@services/request';
 import { applyFull } from '@services/wire';
 import { Hide, State } from '@wails/go/transport/Adapter';
 
-const application = { start, stop, hide };
+const exposed = { start, stop, hide };
 
 /**
  * Gives the components what belongs to the application as a whole: the ways to bring it up and take
  * it down again and the way to dismiss it.
  */
-export function useApplication(): typeof application {
-    return application;
+export function useApplication(): typeof exposed {
+    return exposed;
 }
 
 /**
@@ -29,18 +29,17 @@ function stop(): void {
 }
 
 /**
- * Loads the whole state of the application. Meant for the first render and for a frontend that was
- * reloaded while a translation was on screen. Nothing is translated by this, the language lists come
- * from the cache of the backend.
+ * Fetches the whole state. Meant for the first render and for a frontend that was reloaded while a
+ * translation was on screen. Nothing is translated by it, the language lists come from the cache of
+ * the backend.
  */
 async function load(): Promise<void> {
     await request(State, applyFull);
 }
 
 /**
- * Hides the window without stopping the application, which is what dismissing it does. Asked for
- * quietly: a window that refuses to go away is worth a message on the console, but not the error
- * view in the window that is still standing.
+ * Hides the window without stopping the application. Asked for quietly: a window that refuses to go
+ * away is worth a message on the console, but not the error view in the window that is still there.
  */
 async function hide(): Promise<void> {
     await requestQuietly(Hide);

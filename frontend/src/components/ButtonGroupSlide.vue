@@ -5,6 +5,10 @@ import { computed } from 'vue';
 
 const { provider, alternatives, changeProvider } = useProviders();
 
+/**
+ * Whether there is anything to switch to. A single configured provider leaves the button as a label
+ * that does not react, instead of sliding open on an empty list.
+ */
 const hasAlternatives = computed(() => alternatives.value.length > 0);
 </script>
 

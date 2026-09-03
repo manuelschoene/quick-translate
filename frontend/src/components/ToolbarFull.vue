@@ -1,29 +1,48 @@
 <script lang="ts" setup>
-import { Check, ChevronLeft, ChevronRight, Clipboard } from '@lucide/vue';
-import ToolbarBase from '@comp/ToolbarBase.vue';
-import { useTranslation } from '@use/useTranslation';
-import { useHistory } from '@use/useHistory';
-import ButtonGroupSlide from '@comp/ButtonGroupSlide.vue';
 import Button, { type ButtonProps } from '@comp/Button.vue';
 import ButtonGroup from '@comp/ButtonGroup.vue';
+import ButtonGroupSlide from '@comp/ButtonGroupSlide.vue';
+import ToolbarBase from '@comp/ToolbarBase.vue';
+import { Check, ChevronLeft, ChevronRight, Clipboard } from '@lucide/vue';
+import { useHistory } from '@use/useHistory';
+import { useTranslation } from '@use/useTranslation';
 import { computed, onUnmounted, ref } from 'vue';
+
+const props = defineProps<{
+    class?: string;
+}>();
 
 const { copyTranslation, translation } = useTranslation();
 const { previousTranslation, nextTranslation, hasPrevious, hasNext } = useHistory();
 
+/**
+ * How long the check mark stands after copying, and how long it takes to fade out afterwards.
+ */
 const checkDuration = 1500;
 const checkFadeDuration = 500;
 
+/**
+ * Whether the check mark is shown at all, and whether it is on its way out. Two flags and not one
+ * state, because the icon stays in place while it fades and only then turns back into the clipboard.
+ */
 const copied = ref(false);
 const fading = ref(false);
+
 let copiedTimeout: ReturnType<typeof setTimeout>;
 
+/**
+ * The classes that animate the check mark, or nothing at all while the clipboard icon is shown.
+ */
 const copyIconClass = computed(() => {
     if (!copied.value) return undefined;
 
     return fading.value ? 'animate-check-out text-(--text-success)' : 'animate-check text-(--text-success)';
 });
 
+/**
+ * Copies the translation and confirms it on the button. Restarts the confirmation when it is pressed
+ * again while the check mark is still standing.
+ */
 async function copy(): Promise<void> {
     await copyTranslation();
 
@@ -45,6 +64,9 @@ onUnmounted(() => {
     clearTimeout(copiedTimeout);
 });
 
+/**
+ * The two buttons for stepping through the history, each turned off when there is nothing to step to.
+ */
 const navigationButtons = computed<ButtonProps[]>(() => [
     {
         action: previousTranslation,
@@ -62,7 +84,7 @@ const navigationButtons = computed<ButtonProps[]>(() => [
 </script>
 
 <template>
-    <ToolbarBase>
+    <ToolbarBase :class="props.class">
         <template #left>
             <ButtonGroupSlide style="--wails-draggable: no-drag" />
         </template>

@@ -2,7 +2,7 @@
 import ToolbarLabelled from '@comp/ToolbarLabelled.vue';
 import LayoutBase from '@lay/LayoutBase.vue';
 
-defineProps<{
+const props = defineProps<{
     label: string;
     backAction: () => void;
 }>();
@@ -14,6 +14,6 @@ defineProps<{
             <slot />
         </div>
 
-        <ToolbarLabelled class="shrink-0" :back-action="backAction" :label="label" />
+        <ToolbarLabelled class="shrink-0" :back-action="props.backAction" :label="props.label" />
     </LayoutBase>
 </template>

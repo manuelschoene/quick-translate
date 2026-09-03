@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import { component } from '@/router';
 import { useApplication } from '@use/useApplication';
 import { onMounted, onUnmounted } from 'vue';
-import { component } from '@/router';
 
 const { start, stop } = useApplication();
 
