@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { cn } from '@/utils/cn.ts';
-import Button from './Button.vue';
-import type { ButtonProps } from '@utils/types';
+import Button, { type ButtonProps } from '@comp/Button.vue';
+import { cn } from '@lib/cn';
 
-const props = defineProps<{
+defineProps<{
     buttons: ButtonProps[];
 }>();
 </script>

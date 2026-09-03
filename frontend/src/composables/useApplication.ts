@@ -1,16 +1,47 @@
-import { hide, start, stop } from '@data/actions';
-import { requestState } from '@data/state';
-import { view } from '@data/view';
+import { listen, silence } from '@services/events';
+import { request, requestQuietly } from '@services/request';
+import { applyFull } from '@services/wire';
+import { Hide, State } from '@wails/go/transport/Adapter';
 
-const { pending } = view(requestState);
+const application = { start, stop, hide };
 
 /**
- * Gives the components what belongs to the application as a whole: whether it is waiting for the
- * backend, the ways to bring it up and take it down again and the way to dismiss it.
- *
- * The pending state is shared by every composable, because the backend works through one request at
- * a time.
+ * Gives the components what belongs to the application as a whole: the ways to bring it up and take
+ * it down again and the way to dismiss it.
  */
-export function useApplication() {
-    return { pending, start, stop, hide };
+export function useApplication(): typeof application {
+    return application;
+}
+
+/**
+ * Brings the application up: listen to the events first, then fill it with the current state.
+ */
+async function start(): Promise<void> {
+    listen();
+    await load();
+}
+
+/**
+ * Takes it down again, as far as there is anything to take down in the frontend.
+ */
+function stop(): void {
+    silence();
+}
+
+/**
+ * Loads the whole state of the application. Meant for the first render and for a frontend that was
+ * reloaded while a translation was on screen. Nothing is translated by this, the language lists come
+ * from the cache of the backend.
+ */
+async function load(): Promise<void> {
+    await request(State, applyFull);
+}
+
+/**
+ * Hides the window without stopping the application, which is what dismissing it does. Asked for
+ * quietly: a window that refuses to go away is worth a message on the console, but not the error
+ * view in the window that is still standing.
+ */
+async function hide(): Promise<void> {
+    await requestQuietly(Hide);
 }

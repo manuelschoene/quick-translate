@@ -8,6 +8,16 @@ import (
 // The tag to be used for language detection. Can be returned by the Source() method and used as a parameter for the SetSource() method. It is not a real language and will not be included in the list of available languages.
 const LanguageDetectionTag string = "auto"
 
+// Returns the virtual language that stands for language detection, so it can be offered next to the source languages of a provider that detects on its own. It is built anew for every call, because it is handed out of the package and must not be shared. It is deliberately not part of any language list, as its tag is not a well formed BCP 47 tag and would be dropped or silently turned into the undefined language by the matcher.
+func DetectionLanguage() *models.Language {
+	return &models.Language{
+		Tag:    LanguageDetectionTag,
+		Name:   "Auto",
+		Source: true,
+		Stable: true,
+	}
+}
+
 type Collection struct {
 	languageDetection                            bool
 	provider                                     models.Provider
@@ -31,14 +41,24 @@ func (c *Collection) DetectedSource() string {
 	return c.detectedSource
 }
 
-// Returns the list of available languages for the Collection. The list does not include the LanguageDetectionTag, as it is virtually computed and not a real language. The list is sorted in ascending order by tag with the preferred language first.
+// Returns the list of available languages for the Collection. The list does not include the LanguageDetectionTag, as it is virtually computed and not a real language. No order is promised, so a caller that shows the list has to bring it into the order it wants.
 func (c *Collection) SourceLanguages() []*models.Language {
 	return c.sourceLangs
 }
 
-// Returns the list of available target languages for the Collection. The list is sorted in ascending order by tag with the preferred language first.
+// Returns the list of available target languages for the Collection. No order is promised, so a caller that shows the list has to bring it into the order it wants.
 func (c *Collection) TargetLanguages() []*models.Language {
 	return c.targetLangs
+}
+
+// Returns the tag of the source language the user prefers, already resolved against the languages of the provider. Returns an empty tag when no preference is configured or the preferred language is not available as a source language.
+func (c *Collection) PreferredSource() string {
+	return c.preferences.Source
+}
+
+// Returns the tag of the target language the user prefers, already resolved against the languages of the provider. Returns an empty tag when no preference is configured or the preferred language is not available as a target language.
+func (c *Collection) PreferredTarget() string {
+	return c.preferences.Target
 }
 
 // Switches the source and target languages. When language detection is used, the detected source language will be switched with the target language. If the languages are not available for switching, an error will be returned.

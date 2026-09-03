@@ -7,18 +7,13 @@ import { ArrowRightLeft, Pencil } from '@lucide/vue';
 import { useApplication } from '@use/useApplication';
 import { useLanguages } from '@use/useLanguages';
 import { useTranslation } from '@use/useTranslation';
-import { useView } from '@use/useView';
-import { onKey } from '@utils/keyboard';
-import { displaySourceLanguage, displayTargetLanguage } from '@utils/language';
+import { onKey } from '@lib/keyboard';
+import { route } from '@/router';
 
 const { pending, translation } = useTranslation();
-const { switchLanguages } = useLanguages();
-const { showSourceSelection, showTargetSelection } = useView();
+const { sourceLabel, targetLabel, switchLanguages } = useLanguages();
 
 const { hide } = useApplication();
-
-const source = displaySourceLanguage();
-const target = displayTargetLanguage();
 
 onKey('Escape', hide);
 </script>
@@ -28,9 +23,9 @@ onKey('Escape', hide);
         <Panel class="flex shrink-0 justify-between gap-2 border-b" style="--wails-draggable: drag">
             <Button
                 class="w-full"
-                :action="showSourceSelection"
+                :action="() => route('sourceSelection')"
                 :icon="Pencil"
-                :text="source"
+                :text="sourceLabel"
                 class-text="truncate"
                 style="--wails-draggable: no-drag"
                 title="Select Source Language"
@@ -45,9 +40,9 @@ onKey('Escape', hide);
 
             <Button
                 class="w-full"
-                :action="showTargetSelection"
+                :action="() => route('targetSelection')"
                 :icon="Pencil"
-                :text="target"
+                :text="targetLabel"
                 class-text="truncate"
                 style="--wails-draggable: no-drag"
                 title="Select Target Language"

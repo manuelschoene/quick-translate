@@ -9,13 +9,17 @@ import { onMounted, onUnmounted } from 'vue';
  * element is better handled on that element, which is why `Enter` in the search box is not done here.
  */
 export function onKey(key: string, action: () => void): void {
-    const handle = (event: KeyboardEvent) => {
+    const handle = (event: KeyboardEvent): void => {
         if (event.key !== key) return;
 
         event.preventDefault();
         action();
     };
 
-    onMounted(() => window.addEventListener('keydown', handle));
-    onUnmounted(() => window.removeEventListener('keydown', handle));
+    onMounted(() => {
+        window.addEventListener('keydown', handle);
+    });
+    onUnmounted(() => {
+        window.removeEventListener('keydown', handle);
+    });
 }

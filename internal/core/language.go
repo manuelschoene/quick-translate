@@ -7,7 +7,7 @@ import (
 	"quick-translate/internal/models"
 )
 
-// Returns the languages the current provider can translate from, sorted by tag with the preferred language first. The list does not contain language detection, because it is not a real language. Use LanguageDetection to find out whether it should be offered on top of this list.
+// Returns the languages the current provider can translate from, in no promised order. The list does not contain language detection, because it is not a real language. Use LanguageDetection to find out whether it should be offered on top of this list.
 func (c *Core) SourceLanguages() []*models.Language {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -15,7 +15,7 @@ func (c *Core) SourceLanguages() []*models.Language {
 	return slices.Clone(c.langs.SourceLanguages())
 }
 
-// Returns the languages the current provider can translate into, sorted by tag with the preferred language first.
+// Returns the languages the current provider can translate into, in no promised order.
 func (c *Core) TargetLanguages() []*models.Language {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -23,12 +23,32 @@ func (c *Core) TargetLanguages() []*models.Language {
 	return slices.Clone(c.langs.TargetLanguages())
 }
 
-// Checks if the current provider detects the source language on its own, which means language detection can be offered besides the source languages.
-func (c *Core) LanguageDetection() bool {
+// Returns the virtual language that stands for language detection when the current provider detects the source language on its own, and nil when it does not. It is not part of the source languages, so a caller that offers it has to place it next to them.
+func (c *Core) LanguageDetection() *models.Language {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	return c.detection[c.providerSlug]
+	if !c.detection[c.providerSlug] {
+		return nil
+	}
+
+	return language.DetectionLanguage()
+}
+
+// Returns the tag of the source language the user prefers, already resolved against the languages of the current provider. Returns an empty tag when no preference is configured or the preferred language is not available.
+func (c *Core) PreferredSource() string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.langs.PreferredSource()
+}
+
+// Returns the tag of the target language the user prefers, already resolved against the languages of the current provider. Returns an empty tag when no preference is configured or the preferred language is not available.
+func (c *Core) PreferredTarget() string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.langs.PreferredTarget()
 }
 
 // Returns the tag of the current source language. Returns the tag for language detection when the source language is detected by the provider, and an empty tag when no source language is set.

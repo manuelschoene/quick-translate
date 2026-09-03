@@ -1,13 +1,12 @@
-import { showTranslation } from '@data/navigation';
-import { errorState } from '@data/state';
-import { view } from '@data/view';
+import { errorState } from '@/state';
+import { readonlyRefs } from '@lib/reactivity';
 
-const error = view(errorState);
+const error = readonlyRefs(errorState);
 
 /**
- * Gives the message of the error that was reported last and the way back out of it. The message
- * stays until the next error, so the view can be left and reached again without losing it.
+ * Gives the message of the error that was reported last. The message stays until the next error, so
+ * the view can be left and reached again without losing it.
  */
-export function useError() {
-    return { ...error, showTranslation };
+export function useError(): typeof error {
+    return error;
 }

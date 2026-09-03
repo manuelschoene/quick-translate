@@ -1,7 +1,7 @@
-import { applyTranslation } from '@data/apply';
-import { showTranslation } from '@data/navigation';
-import { report } from '@data/report';
-import { begin, finish } from '@data/request';
+import { route } from '@/router';
+import { report } from '@services/report';
+import { beginShortcut, endShortcut } from '@services/request';
+import { applyTranslation } from '@services/wire';
 import type { transport } from '@wails/go/models';
 import { EventsOff, EventsOn } from '@wails/runtime/runtime';
 
@@ -40,8 +40,8 @@ export function silence(): void {
  * the pending state for it, and a translation that fails leaves the previous one to return to.
  */
 function onTranslating(): void {
-    begin();
-    showTranslation();
+    beginShortcut();
+    route('translation');
 }
 
 /**
@@ -50,15 +50,15 @@ function onTranslating(): void {
  * be seen.
  */
 function onTranslation(dto: transport.TranslationDto): void {
+    endShortcut();
     applyTranslation(dto);
-    finish();
-    showTranslation();
+    route('translation');
 }
 
 /**
  * Takes a translation by shortcut that failed. Reporting it is what brings up the error view.
  */
 function onError(message: string): void {
-    finish();
+    endShortcut();
     report(message);
 }

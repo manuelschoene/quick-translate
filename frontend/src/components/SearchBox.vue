@@ -24,13 +24,15 @@ watch(local, (newValue) => {
     }, 100);
 });
 
-const submit = () => {
+const submit = (): void => {
     clearTimeout(timeout);
     emit('update:modelValue', local.value);
     emit('submit');
 };
 
-const clear = () => (local.value = '');
+const clear = (): void => {
+    local.value = '';
+};
 
 const input = useTemplateRef<HTMLInputElement>('input');
 onMounted(() => input.value?.focus());

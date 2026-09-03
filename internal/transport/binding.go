@@ -1,27 +1,11 @@
 package transport
 
-// Returns the providers that can be chosen together with the one that is in use.
-func (a *Adapter) Providers() *ProviderDto {
+// Returns the whole state of the application in one call. Meant for the first render and for a frontend that was reloaded while a translation was on screen, so nothing has to be assembled from several calls that could answer out of order.
+func (a *Adapter) State() *FullDto {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	return a.providers()
-}
-
-// Returns the languages of the current provider together with the ones that are chosen.
-func (a *Adapter) Languages() *LanguageDto {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-
-	return a.languages()
-}
-
-// Returns the translation that is currently shown. Meant for the first render and for a frontend that was reloaded while a translation was on screen.
-func (a *Adapter) Translation() *TranslationDto {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-
-	return a.translation()
+	return a.full()
 }
 
 // Switches to the given provider and translates the current text with it. Returns the whole state, because the languages that can be chosen belong to the provider and change with it. Returns an error if the provider can not be used, which leaves the previous one in place.
@@ -112,7 +96,7 @@ func (a *Adapter) NextTranslation() (*FullDto, error) {
 	return a.full(), nil
 }
 
-// Writes the current translation to the clipboard and hides the window, because the translation is on its way into another application at that point. Returns an error if there is nothing to copy or the clipboard can not be written, which keeps the window open.
+// Writes the current translation to the clipboard. The window stays as it is, because the user decides when it goes away. Returns an error if there is nothing to copy or the clipboard can not be written.
 func (a *Adapter) CopyTranslation() error {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()

@@ -2,48 +2,72 @@
 import Button from '@comp/Button.vue';
 import Panel from '@comp/Panel.vue';
 import SearchBox from '@comp/SearchBox.vue';
-import { showTranslation } from '@data/navigation';
-import type { Language } from '@data/types';
+import type { Language } from '@/state';
 import LayoutLabelled from '@lay/LayoutLabelled.vue';
-import { cn } from '@utils/cn';
-import { onKey } from '@utils/keyboard';
-import { searchFilter } from '@utils/search';
+import { cn } from '@lib/cn';
+import { onKey } from '@lib/keyboard';
+import { searchFilter } from '@lib/search';
 import { computed, onMounted, ref, useTemplateRef, type DeepReadonly } from 'vue';
+import { route } from '@/router';
 
 const props = defineProps<{
     currentTag: string;
     langs: DeepReadonly<Language[]>;
+    pinned: readonly string[];
     label: string;
     changeFn: (tag: string) => void;
 }>();
 
-const sortedLanguages = props.langs.slice().sort((a, b) => a.name.localeCompare(b.name));
-
 const search = ref<string>('');
-const filteredLanguages = computed(() => searchFilter(search.value, sortedLanguages, (lang: Language) => lang.name));
+
+/**
+ * The languages as they are listed. The pinned ones are only kept in front while nothing is typed:
+ * whoever searches is looking for a certain language and not for the one they usually take, so from
+ * the first character on everything is filtered and shown in the order it was handed over.
+ */
+const listedLanguages = computed(() => {
+    if (search.value.length === 0) {
+        return pinLanguages(props.langs, props.pinned);
+    }
+
+    return searchFilter(search.value, props.langs, (lang) => lang.name);
+});
 
 const list = useTemplateRef<HTMLElement>('list');
 
-const selectLanguage = (lang: Language) => {
-    if (props.currentTag !== lang.tag) {
-        props.changeFn(lang.tag);
-    }
-
-    showTranslation();
+const selectLanguage = (lang: Language): void => {
+    props.changeFn(lang.tag);
+    route('translation');
 };
 
-const selectFirstLanguage = () => {
-    const first = filteredLanguages.value[0];
+const selectFirstLanguage = (): void => {
+    const first = listedLanguages.value.at(0);
     if (first) selectLanguage(first);
 };
 
+/**
+ * Puts the languages of the given tags in front of the rest, in the order the tags are given, and
+ * leaves the order of everything else alone. A pinned language is moved, not copied, so it shows up
+ * once. Tags that are not in the list are skipped, so the preferred language of a provider that does
+ * not offer it simply does not show up in front.
+ */
+function pinLanguages(languages: DeepReadonly<Language[]>, tags: readonly string[]): DeepReadonly<Language>[] {
+    const pinned = tags
+        .map((tag) => languages.find((language) => language.tag === tag))
+        .filter((language) => language !== undefined);
+
+    return [...pinned, ...languages.filter((language) => !pinned.includes(language))];
+}
+
 onMounted(() => list.value?.querySelector('[data-current]')?.scrollIntoView({ block: 'center' }));
 
-onKey('Escape', showTranslation);
+onKey('Escape', () => {
+    route('translation');
+});
 </script>
 
 <template>
-    <LayoutLabelled :back-action="showTranslation" :label="label">
+    <LayoutLabelled :back-action="() => route('translation')" :label="label">
         <Panel class="border-b" style="--wails-draggable: drag">
             <SearchBox
                 @submit="selectFirstLanguage"
@@ -58,7 +82,7 @@ onKey('Escape', showTranslation);
             <div
                 class="grid h-full auto-rows-min grid-cols-3 content-start overflow-y-auto"
                 ref="list"
-                v-if="filteredLanguages.length > 0"
+                v-if="listedLanguages.length > 0"
             >
                 <Button
                     :action="() => selectLanguage(lang)"
@@ -75,7 +99,7 @@ onKey('Escape', showTranslation);
                     :title="lang.name"
                     class-text="text-center leading-tight"
                     inline
-                    v-for="lang in filteredLanguages"
+                    v-for="lang in listedLanguages"
                 />
             </div>
 

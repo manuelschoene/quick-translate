@@ -1,24 +1,16 @@
 <script lang="ts" setup>
-import { useLanguages } from '@use/useLanguages.ts';
+import { useLanguages } from '@use/useLanguages';
 import SelectionBaseView from '@views/SelectionBaseView.vue';
-import { computed } from 'vue';
-import { auto } from '@utils/language.ts';
 
-const { source, changeSource, detection, sourceLanguages } = useLanguages();
-
-const allLanguages = computed(() => {
-    if (detection.value) {
-        return [auto, ...sourceLanguages.value];
-    }
-    return sourceLanguages.value;
-});
+const { source, sourceOptions, pinnedSource, changeSource } = useLanguages();
 </script>
 
 <template>
     <SelectionBaseView
         :change-fn="changeSource"
         :current-tag="source"
-        :langs="allLanguages"
+        :langs="sourceOptions"
+        :pinned="pinnedSource"
         label="Select Source Language"
     />
 </template>

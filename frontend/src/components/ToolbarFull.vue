@@ -4,9 +4,8 @@ import ToolbarBase from '@comp/ToolbarBase.vue';
 import { useTranslation } from '@use/useTranslation';
 import { useHistory } from '@use/useHistory';
 import ButtonGroupSlide from '@comp/ButtonGroupSlide.vue';
-import Button from './Button.vue';
-import ButtonGroup from './ButtonGroup.vue';
-import type { ButtonProps } from '@utils/types';
+import Button, { type ButtonProps } from '@comp/Button.vue';
+import ButtonGroup from '@comp/ButtonGroup.vue';
 import { computed, onUnmounted, ref } from 'vue';
 
 const { copyTranslation, translation } = useTranslation();
@@ -42,7 +41,9 @@ async function copy(): Promise<void> {
     }, checkDuration);
 }
 
-onUnmounted(() => clearTimeout(copiedTimeout));
+onUnmounted(() => {
+    clearTimeout(copiedTimeout);
+});
 
 const navigationButtons = computed<ButtonProps[]>(() => [
     {

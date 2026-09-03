@@ -1,15 +1,16 @@
 <script lang="ts" setup>
-import { useLanguages } from '@use/useLanguages.ts';
+import { useLanguages } from '@use/useLanguages';
 import SelectionBaseView from '@views/SelectionBaseView.vue';
 
-const { target, changeTarget, targetLanguages } = useLanguages();
+const { target, targetOptions, pinnedTarget, changeTarget } = useLanguages();
 </script>
 
 <template>
     <SelectionBaseView
         :change-fn="changeTarget"
         :current-tag="target"
-        :langs="targetLanguages"
+        :langs="targetOptions"
+        :pinned="pinnedTarget"
         label="Select Target Language"
     />
 </template>
