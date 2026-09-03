@@ -65,8 +65,18 @@ function clear(): void {
 
 const input = useTemplateRef<HTMLInputElement>('input');
 
+/**
+ * Puts the caret back into the box. Handed out so that a view which took the focus away can give it
+ * back without reaching into the input itself.
+ */
+function focus(): void {
+    input.value?.focus();
+}
+
 // The box is the reason its view was opened, so the user can type without reaching for it first.
-onMounted(() => input.value?.focus());
+onMounted(focus);
+
+defineExpose({ focus });
 </script>
 
 <template>

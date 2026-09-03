@@ -38,9 +38,10 @@ async function load(): Promise<void> {
 }
 
 /**
- * Hides the window without stopping the application. Asked for quietly: a window that refuses to go
- * away is worth a message on the console, but not the error view in the window that is still there.
+ * Hides the window without stopping the application and answers whether it worked. Asked for
+ * quietly: a window that refuses to go away is worth a message on the console, but not the error
+ * view in the window that is still standing.
  */
-async function hide(): Promise<void> {
-    await requestQuietly(Hide);
+async function hide(): Promise<boolean> {
+    return await requestQuietly(Hide);
 }

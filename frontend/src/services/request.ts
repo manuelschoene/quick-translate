@@ -39,13 +39,20 @@ export async function request<T>(call: () => Promise<T>, apply?: (result: T) => 
  * Runs a call beside the translation, which neither shows that it is working nor takes the user to
  * the error view when it fails. Meant for copying and dismissing: both leave what is on screen as it
  * is, so a failure is worth a message but not the view.
+ *
+ * Answers whether it went through, because a failure that is kept out of the error view has to be
+ * shown somewhere else — on the button that was pressed.
  */
-export async function requestQuietly<T>(call: () => Promise<T>, apply?: (result: T) => void): Promise<void> {
+export async function requestQuietly<T>(call: () => Promise<T>, apply?: (result: T) => void): Promise<boolean> {
     try {
         const result = await call();
         apply?.(result);
+
+        return true;
     } catch (error) {
         reportQuietly(error);
+
+        return false;
     }
 }
 

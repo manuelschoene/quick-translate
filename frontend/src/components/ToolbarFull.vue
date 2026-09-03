@@ -3,10 +3,11 @@ import Button, { type ButtonProps } from '@comp/Button.vue';
 import ButtonGroup from '@comp/ButtonGroup.vue';
 import ButtonGroupSlide from '@comp/ButtonGroupSlide.vue';
 import ToolbarBase from '@comp/ToolbarBase.vue';
-import { Check, ChevronLeft, ChevronRight, Clipboard } from '@lucide/vue';
+import { feedback } from '@lib/feedback';
+import { Check, ChevronLeft, ChevronRight, Clipboard, X } from '@lucide/vue';
 import { useHistory } from '@use/useHistory';
 import { useTranslation } from '@use/useTranslation';
-import { computed, onUnmounted, ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps<{
     class?: string;
@@ -15,54 +16,43 @@ const props = defineProps<{
 const { copyTranslation, translation } = useTranslation();
 const { previousTranslation, nextTranslation, hasPrevious, hasNext } = useHistory();
 
-/**
- * How long the check mark stands after copying, and how long it takes to fade out afterwards.
- */
-const checkDuration = 1500;
-const checkFadeDuration = 500;
+const { outcome: copyOutcome, iconClass: copyIconClass, show: showCopyOutcome } = feedback();
 
 /**
- * Whether the check mark is shown at all, and whether it is on its way out. Two flags and not one
- * state, because the icon stays in place while it fades and only then turns back into the clipboard.
+ * The icon of the copy button, which answers the last press before it turns back into the clipboard.
  */
-const copied = ref(false);
-const fading = ref(false);
-
-let copiedTimeout: ReturnType<typeof setTimeout>;
-
-/**
- * The classes that animate the check mark, or nothing at all while the clipboard icon is shown.
- */
-const copyIconClass = computed(() => {
-    if (!copied.value) return undefined;
-
-    return fading.value ? 'animate-check-out text-(--text-success)' : 'animate-check text-(--text-success)';
+const copyIcon = computed(() => {
+    switch (copyOutcome.value) {
+        case 'success':
+            return Check;
+        case 'failure':
+            return X;
+        default:
+            return Clipboard;
+    }
 });
 
 /**
- * Copies the translation and confirms it on the button. Restarts the confirmation when it is pressed
- * again while the check mark is still standing.
+ * What the copy button says it does, or what it made of the last press.
+ */
+const copyTitle = computed(() => {
+    switch (copyOutcome.value) {
+        case 'success':
+            return 'Copied to Clipboard';
+        case 'failure':
+            return 'Could Not Copy to Clipboard';
+        default:
+            return 'Copy to Clipboard';
+    }
+});
+
+/**
+ * Copies the translation and answers on the button, because a failure is reported quietly and would
+ * otherwise leave the press looking like it worked.
  */
 async function copy(): Promise<void> {
-    await copyTranslation();
-
-    clearTimeout(copiedTimeout);
-    copied.value = true;
-    fading.value = false;
-
-    copiedTimeout = setTimeout(() => {
-        fading.value = true;
-
-        copiedTimeout = setTimeout(() => {
-            copied.value = false;
-            fading.value = false;
-        }, checkFadeDuration);
-    }, checkDuration);
+    showCopyOutcome(await copyTranslation());
 }
-
-onUnmounted(() => {
-    clearTimeout(copiedTimeout);
-});
 
 /**
  * The two buttons for stepping through the history, each turned off when there is nothing to step to.
@@ -95,8 +85,8 @@ const navigationButtons = computed<ButtonProps[]>(() => [
                 :action="copy"
                 :class-icon="copyIconClass"
                 :disabled="!translation"
-                :icon="copied ? Check : Clipboard"
-                :title="copied ? 'Copied to Clipboard' : 'Copy to Clipboard'"
+                :icon="copyIcon"
+                :title="copyTitle"
                 style="--wails-draggable: no-drag"
             />
         </template>

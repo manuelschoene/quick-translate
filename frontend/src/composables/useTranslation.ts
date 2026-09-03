@@ -17,9 +17,9 @@ export function useTranslation(): typeof exposed {
 }
 
 /**
- * Writes the current translation to the clipboard. Asked for quietly, because a clipboard that
- * refuses to take the text leaves the translation on screen to try again.
+ * Writes the current translation to the clipboard and answers whether it worked. Asked for quietly,
+ * because a clipboard that refuses to take the text leaves the translation on screen to try again.
  */
-async function copyTranslation(): Promise<void> {
-    await requestQuietly(CopyTranslation);
+async function copyTranslation(): Promise<boolean> {
+    return await requestQuietly(CopyTranslation);
 }

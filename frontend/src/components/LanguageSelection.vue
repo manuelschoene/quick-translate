@@ -36,6 +36,47 @@ const listedLanguages = computed(() => {
 });
 
 const list = useTemplateRef<HTMLElement>('list');
+const searchBox = useTemplateRef<{ focus: () => void }>('searchBox');
+
+/**
+ * How many entries a row of the list holds. Has to match the `grid-cols-*` class of the list below,
+ * otherwise the arrow keys walk a grid of a different shape than the one on screen.
+ */
+const columns = 3;
+
+/**
+ * Moves the focus through the list by the given number of entries, so the arrow keys walk it the way
+ * it is laid out. Enter needs nothing of its own: a language is a real button and answers it itself.
+ *
+ * Stepping down out of the search box lands on the first entry, and stepping back off the front of
+ * the list returns to it, so the user can go on typing without reaching for the mouse.
+ */
+function moveFocus(step: number): void {
+    const buttons = [...(list.value?.querySelectorAll('button') ?? [])];
+    const current = buttons.findIndex((button) => button === document.activeElement);
+
+    if (current === -1) {
+        buttons.at(0)?.focus();
+        return;
+    }
+
+    const next = current + step;
+
+    if (next < 0) {
+        searchBox.value?.focus();
+        return;
+    }
+
+    buttons.at(next)?.focus();
+}
+
+/**
+ * Whether the focus sits on one of the languages. The horizontal arrows only belong to the list; as
+ * long as the user is still in the search box they move the caret, as they should.
+ */
+function listFocused(): boolean {
+    return list.value?.contains(document.activeElement) ?? false;
+}
 
 /**
  * Takes the language over and returns to the translation. Picking the one that is already set is not
@@ -73,6 +114,27 @@ onMounted(() => list.value?.querySelector('[data-current]')?.scrollIntoView({ bl
 onKey('Escape', () => {
     route('translation');
 });
+
+onKey('ArrowDown', () => {
+    moveFocus(columns);
+});
+onKey('ArrowUp', () => {
+    moveFocus(-columns);
+});
+onKey(
+    'ArrowRight',
+    () => {
+        moveFocus(1);
+    },
+    listFocused,
+);
+onKey(
+    'ArrowLeft',
+    () => {
+        moveFocus(-1);
+    },
+    listFocused,
+);
 </script>
 
 <template>
@@ -81,6 +143,7 @@ onKey('Escape', () => {
             <SearchBox
                 @submit="selectFirstLanguage"
                 placeholder="Search..."
+                ref="searchBox"
                 style="--wails-draggable: no-drag"
                 title="Search for language"
                 v-model="search"
