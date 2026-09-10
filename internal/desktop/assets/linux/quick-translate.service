@@ -5,9 +5,9 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/quick-translate
-Restart=on-failure
+ExecStart={{.Exec}}
 RestartSec=3
+Restart=on-failure
 
 [Install]
 WantedBy=graphical-session.target

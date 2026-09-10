@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -20,7 +19,13 @@ const messageTimeout = 2 * time.Second
 
 // Checks if the application is already running and asks it to show itself. Returns true if another instance has taken the request over, which means this instance is not needed and should stop before it initializes anything.
 func Connect() bool {
-	conn, err := net.Dial("unix", socketPath())
+	path, err := socketPath()
+	if err != nil {
+		fmt.Printf("Could not determine the path of the instance socket: %v\n", err)
+		return false
+	}
+
+	conn, err := net.Dial("unix", path)
 	if err != nil {
 		return false
 	}
@@ -38,19 +43,12 @@ func Connect() bool {
 	return true
 }
 
-// Returns the path of the socket the running instance listens on. The runtime directory of the user is preferred, because it belongs to the session alone and is cleaned up on logout. Falls back to the temporary directory for systems that do not set it.
-func socketPath() string {
-	dir, ok := os.LookupEnv("XDG_RUNTIME_DIR")
-	if !ok || len(dir) == 0 {
-		dir = os.TempDir()
-	}
-
-	return filepath.Join(dir, socketName)
-}
-
 // Starts listening for the instances that are started by the shortcut. The socket file of an instance that did not shut down properly is removed first, which is safe because connecting to it has just failed. Returns an error if the socket can not be created.
 func (a *Adapter) listenOnSocket() error {
-	path := socketPath()
+	path, err := socketPath()
+	if err != nil {
+		return fmt.Errorf("Could not determine the path of the instance socket: %w", err)
+	}
 
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("Could not remove the socket of a previous instance: %w", err)

@@ -3,10 +3,7 @@ package language
 import (
 	"cmp"
 	"fmt"
-	"os"
-	"os/exec"
 	"quick-translate/internal/models"
-	"runtime"
 	"slices"
 	"strings"
 
@@ -263,25 +260,9 @@ func targetFallback(target string, prefTarget string, targetLangs []*models.Lang
 	return "", 0
 }
 
-// Detects the system locale and returns it as a language tag. If the locale cannot be determined, an error is returned.
-func locale() (string, error) {
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command("powershell", "Get-Culture | select -exp Name")
-
-		out, err := cmd.Output()
-		if err != nil {
-			return "", fmt.Errorf("Cannot determine system locale: %w", err)
-		}
-
-		return strings.Trim(string(out), "\r\n"), nil
-	}
-
-	locale, ok := os.LookupEnv("LANG")
-	if !ok {
-		return "", fmt.Errorf("Cannot determine system locale: LANG environment variable not set")
-	}
-
-	s, _, _ := strings.Cut(locale, ".")
+// Strips the encoding suffix a raw locale value may carry (e.g. "de_DE.UTF-8") and parses the remainder as a BCP 47 tag. Shared by every operating system's locale() implementation, which only differ in how they obtain the raw value. Returns an error if the remainder is not a valid tag.
+func normalizeLocale(raw string) (string, error) {
+	s, _, _ := strings.Cut(raw, ".")
 
 	tag, err := language.Parse(s)
 	if err != nil {

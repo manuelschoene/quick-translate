@@ -9,7 +9,7 @@
 		<img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-blue.svg">
 	</a>
 	<a href="https://go.dev">
-		<img alt="Go" src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white">
+		<img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white">
 	</a>
 	<a href="https://vuejs.org">
 		<img alt="Vue.js" src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js">
@@ -23,11 +23,13 @@
 
 Quick Translate is a lightweight desktop utility that translates clipboard or selected text on demand, triggered by a single global keyboard shortcut. Translation is performed by a configurable provider, described below.
 
-Quick Translate is currently built and tested for Linux with KDE Plasma. Other desktop environments and operating systems are not yet fully supported.
+Quick Translate is currently built and tested on Linux. It installs itself into any freedesktop-compliant desktop, and KDE Plasma additionally gets the global shortcut and the window rules set up for it. macOS and Windows are not supported yet.
 
 ## Installation
 
-Installation is managed through the provided `Makefile`, which builds the application with Wails and installs the binary, a desktop entry, and an optional systemd user service. All targets are written for Linux.
+Installation happens in two steps. The provided `Makefile` builds the application with Wails and copies the binary into place; the binary then registers itself with the desktop, which is why the desktop integration works the same way no matter how the binary got onto the machine.
+
+Run `make help` for the full list of targets and variables.
 
 ### Prerequisites
 
@@ -35,9 +37,9 @@ Installation is managed through the provided `Makefile`, which builds the applic
 - `Bun` >= 1.3.14, used to install and build the frontend
 - `gcc` >= 16.1.1, required to build the CGO-based WebKit bindings used by Wails
 - `pkgconf` >= 2.5.1, used by Wails to locate the GTK and WebKit libraries
-- `webkit2gtk-4.1` >= 2.52.5, used by Wails to render the frontend on Linux (corresponds to the `webkit2_41` build tag used in the `Makefile`)
+- `webkit2gtk`, used by Wails to render the frontend on Linux. Both `webkit2gtk-4.1` >= 2.52.5 and the older `webkit2gtk-4.0` work; the `Makefile` asks `pkg-config` which one is installed and sets the `webkit2_41` build tag for the newer one
 - `gtk3` >= 3.24.52, used by Wails on Linux
-- `upx` >= 5.2.0, used to compress the built binary
+- `upx` >= 5.2.0, used to compress the built binary. Optional: a missing UPX is skipped, and `make build UPX=0` skips it on purpose, which is noticeably faster while developing
 
 The Wails CLI itself is not listed above, as it is installed as a Go tool rather than a system dependency:
 
@@ -67,11 +69,11 @@ From the project root, run:
 make build
 ```
 
-This builds the frontend, compiles the application with Wails, and produces the binary at `build/bin/quick-translate`.
+This builds the frontend, compiles the application with Wails, and produces the binary at `build/bin/quick-translate`. Pass `UPX=0` to skip the compression while developing.
 
 ### Installing
 
-To build and install the binary, the systemd user service, and the desktop entry in one step, run:
+To build the application, install the binary and register it with the desktop in one step, run:
 
 ```sh
 make install
@@ -79,13 +81,29 @@ make install
 
 This chains the following targets, which can also be run individually:
 
-- `make install-binary` builds the application and copies the binary to `~/.local/bin`.
-- `make install-service` installs `quick-translate.service` to `~/.config/systemd/user` and enables it via `systemctl --user`.
-- `make install-desktop` installs the application icon and a `.desktop` entry to `~/.local/share/applications`.
+- `make build` compiles the application.
+- `make install-binary` copies the binary to `~/.local/bin`. It does not build, so a binary from a release can be installed the same way. Set `PREFIX` to install somewhere else.
+- `make install-desktop` runs `quick-translate --install`, which registers the installed binary with the desktop: the application icon in eight sizes, a desktop entry, and a systemd user service that starts the application with the graphical session. Where no systemd user manager answers, an autostart entry is written instead.
+
+The desktop environment is detected from the session. Pass `DESKTOP=kde` or `DESKTOP=generic` to choose it by hand:
+
+```sh
+make install DESKTOP=kde
+```
+
+On **KDE Plasma**, the desktop entry carries a global shortcut, so the application is bound to `Meta+T` right away, and window rules are merged into `~/.config/kwinrulesrc` so the frameless window stays on top and is kept out of the task bar and the window switcher. The shortcut can be changed under *System Settings > Keyboard > Shortcuts*.
+
+On **every other desktop**, there is no portable way to bind a global shortcut, so this step is left to you: bind `~/.local/bin/quick-translate` to a key in the keyboard settings of your desktop. Everything else is installed the same way.
+
+To see where the application has installed itself and whether it is running, use:
+
+```sh
+make status
+```
 
 ### Uninstalling
 
-To remove the binary, the systemd service, and the desktop entry, run:
+To remove the desktop entry, the icon, the autostart, the window rules, and the binary itself, run:
 
 ```sh
 make uninstall

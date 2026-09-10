@@ -287,3 +287,32 @@ classDiagram
     FullDto ..> TranslationDto
     FullDto ..> LanguageDto
     LanguageDto ..> Language
+
+    namespace desktop {
+        class DesktopPackage {
+            +EnvironmentGeneric string
+            +EnvironmentKDE string
+            +ErrUnsupported error
+            +Install(environment string) error
+            +Uninstall() error
+            +Status() (*Report, error)
+        }
+
+        class File {
+            +string Purpose
+            +string Path
+            +bool Present
+        }
+
+        class Report {
+            +string Environment
+            +string Executable
+            +string Autostart
+            +[]File Files
+
+            +String() string
+        }
+    }
+
+    DesktopPackage ..> Report
+    Report ..> File
