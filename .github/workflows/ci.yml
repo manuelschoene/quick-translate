@@ -48,11 +48,17 @@ jobs:
         with:
           write: "true"
 
-      # A pull request from a fork hands this workflow a read-only token, so the push would fail. Skipping
-      # it keeps the job green; the test job still reports what is unformatted, and the contributor fixes
-      # it with 'bun run format' as CONTRIBUTING describes.
+      # Three cases where the push would fail rather than help, so it is skipped and the job stays green:
+      # 'main' is protected and everything on it came through a reviewed pull request already, a tag ref
+      # cannot be pushed to at all (the release workflow calls this one on a tag), and a pull request from a
+      # fork hands this workflow a read-only token. In all three the test job still reports what is
+      # unformatted, and the contributor fixes it with 'bun run format' as CONTRIBUTING describes.
+      #
+      # Only this step is guarded, not the job: the test job needs it, and a skipped job would skip the
+      # tests along with it.
       - name: Commit changes
         if: >-
+          github.ref_name != 'main' &&
           github.ref_type != 'tag' &&
           (github.event_name != 'pull_request' ||
            github.event.pull_request.head.repo.full_name == github.repository)

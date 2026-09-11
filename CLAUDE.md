@@ -41,13 +41,32 @@ auto-formats and commits the result back, and one that checks: gofmt, `go vet`, 
 a `go mod tidy` that must change nothing, `govulncheck`, the frontend checks, a full `make build`, and
 `desktop-file-validate` over the entry the binary generates.
 
-`.github/workflows/release.yml` runs when a release is published: it calls the CI workflow, then builds
-twice on `ubuntu-22.04` — once with `WEBKIT_TAGS=webkit2_41` and once with `WEBKIT_TAGS=` — and attaches
-both archives plus a `SHA256SUMS` file. The old runner is for glibc, not WebKit: glibc is not forward
-compatible, so a binary built on 24.04 will not start on Debian 12. It also refuses to build when the tag
-disagrees with `wails.json`'s `productVersion`. Note that the binary Wails produces has no section headers,
-so neither `ldd` nor `strings` can tell you which WebKitGTK it links — the pinned `WEBKIT_TAGS` and a build
-that fails on a missing pkg-config package are the only guarantee there is.
+`.github/workflows/release.yml` runs on every push to `main` and starts with `release-please`, which either
+keeps the release pull request in step with the conventional commits that have landed or, once that pull
+request is merged, tags the release and creates it. Only the second case sets `release_created`, which gates
+the rest: the CI workflow again, then a build twice on `ubuntu-22.04` — once with `WEBKIT_TAGS=webkit2_41`
+and once with `WEBKIT_TAGS=` — and both archives plus a `SHA256SUMS` file attached to the release. The old
+runner is for glibc, not WebKit: glibc is not forward compatible, so a binary built on 24.04 will not start
+on Debian 12. Note that the binary Wails produces has no section headers, so neither `ldd` nor `strings` can
+tell you which WebKitGTK it links — the pinned `WEBKIT_TAGS` and a build that fails on a missing pkg-config
+package are the only guarantee there is.
+
+Versions come from `release-please-config.json`, never by hand:
+
+- `initial-version` is what the very first release becomes. Without it release-please would start at
+  `1.0.0`.
+- `extra-files` writes the version into `wails.json`'s `info.productVersion` through a JSON path, which is
+  the single source the Makefile and the Windows resource read.
+- The `v` prefix is deliberately split: it is left on where GitHub displays it and stripped everywhere the
+  version is data. Tag and release name keep it (`v0.1.0-alpha`, release-please's default), while
+  `wails.json`, the asset names, `INSTALL.txt` and the version the binary reports read `0.1.0-alpha`. Two
+  things make that work and must not be "simplified": the `extra-files` updater and the action's `version`
+  output both carry the bare semver — only `tag_name` has the prefix — and the Makefile strips a leading
+  `v` from `git describe`. Never name an asset after `tag_name`.
+- The default versioning strategy **keeps a prerelease label while bumping the numbers before it**, so
+  `0.1.0-alpha` goes to `0.1.1-alpha` on a `fix:` and `0.2.0-alpha` on a `feat:`. Do not set
+  `versioning: prerelease` — that bumps a counter *after* the label (`0.1.0-alpha.1`) instead.
+- `bump-minor-pre-major` keeps a breaking change inside `0.x` until the project declares 1.0.
 
 Frontend (from `frontend/`, package manager is **bun**, not npm):
 

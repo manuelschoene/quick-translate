@@ -20,7 +20,7 @@ COMPRESS = $(if $(filter-out 0,$(UPX)),$(if $(UPX_FOUND),-upx,),)
 
 # The version stamped into the binary. 'wails.json' is the single source, so the packaging metadata and the
 # binary always agree; a build made on an exact git tag names itself after that tag instead.
-VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || sed -n 's/.*"productVersion"[^"]*"\([^"]*\)".*/\1/p' wails.json)
+VERSION ?= $(shell (git describe --tags --exact-match 2>/dev/null || sed -n 's/.*"productVersion"[^"]*"\([^"]*\)".*/\1/p' wails.json) | sed 's/^v//')
 LDFLAGS = -X main.version=$(VERSION)
 
 # The icon set the installation ships is rendered from the master artwork and checked in, so building the

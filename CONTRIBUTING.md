@@ -146,7 +146,9 @@ request from a fork gets a read-only token. It is skipped rather than failing, s
 `gofmt -s -w .` and `bun run format` yourself before opening the pull request.
 
 **Use [Conventional Commits](https://www.conventionalcommits.org/) in the pull request title.** This is the
-one hard requirement, because the titles are what release notes will be generated from:
+one hard requirement, and not a stylistic one: the titles are what `release-please` reads off `main` to
+decide the next version and to write the changelog. A `fix:` becomes a patch, a `feat:` a minor bump, and a
+`!` a breaking change — so a mislabelled title ends up as a wrong version number:
 
 ```
 <type>: <description>

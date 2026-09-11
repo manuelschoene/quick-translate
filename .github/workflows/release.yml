@@ -1,21 +1,47 @@
 name: Release
 on:
-    release:
-        types: [published]
+    push:
+        branches: [main]
 
 permissions:
     contents: write
+    pull-requests: write
 
 jobs:
+    # Runs on every push to main and does one of two things: keep the release pull request up to date with
+    # the conventional commits that have landed, or — once that pull request is merged — tag the release and
+    # create it. Only the second case sets 'release_created', which is what gates everything below.
+    release-please:
+        name: Prepare the release
+        runs-on: ubuntu-latest
+        outputs:
+            created: ${{ steps.release.outputs.release_created }}
+            tag: ${{ steps.release.outputs.tag_name }}
+            version: ${{ steps.release.outputs.version }}
+
+        steps:
+            # The release type, the version inside wails.json and the first version this repository releases
+            # are all configured in release-please-config.json, because the extra-files updater for
+            # wails.json can only be expressed there. The action therefore takes no inputs of its own.
+            - name: Run release-please
+              id: release
+              uses: googleapis/release-please-action@v4
+
+    # Nothing is published from a tree that does not pass. Merging the release pull request runs the CI
+    # workflow on its own as a push to main, so this repeats it once per release — worth it for the
+    # guarantee that the artefacts and the checks come from the same commit.
     verify:
         name: Verify
+        needs: release-please
+        if: needs.release-please.outputs.created == 'true'
         uses: ./.github/workflows/ci.yml
         permissions:
             contents: write
 
     build:
         name: Build for WebKitGTK ${{ matrix.webkit }}
-        needs: verify
+        needs: [release-please, verify]
+        if: needs.release-please.outputs.created == 'true'
         # Built on the oldest available runner on purpose, and the reason is glibc rather than WebKit: glibc
         # is backward but not forward compatible, so a binary built on 24.04 refuses to start on Ubuntu 22.04
         # or Debian 12. Both development packages exist on jammy, so one runner covers both variants and the
@@ -40,11 +66,12 @@ jobs:
                       tags: ""
 
         steps:
-            # The full history is fetched because the Makefile takes the version from 'git describe
-            # --tags --exact-match', which needs the tag this release was published from.
-            - name: Checkout code
+            # Checked out at the tag release-please has just created, with the full history because the
+            # Makefile takes the version from 'git describe --tags --exact-match'.
+            - name: Checkout the release
               uses: actions/checkout@v7
               with:
+                  ref: ${{ needs.release-please.outputs.tag }}
                   fetch-depth: 0
 
             - name: Setup Bun
@@ -53,15 +80,17 @@ jobs:
             - name: Setup Go
               uses: ./.github/actions/setup-go
 
-            # A tag that does not match the version in wails.json would ship a binary whose '--version'
-            # disagrees with the packaging metadata, so it is caught before anything is built.
-            - name: Check the tag against wails.json
+            # release-please writes the version into wails.json through its extra-files updater. If that ever
+            # stops matching the release, the binary would report a different version than the packaging
+            # metadata, so the two are compared before anything is built.
+            - name: Check wails.json against the release
               shell: bash
+              env:
+                  RELEASED: ${{ needs.release-please.outputs.version }}
               run: |
                   declared=$(jq -r '.info.productVersion' wails.json)
-                  tagged=${GITHUB_REF_NAME#v}
-                  if [[ "$declared" != "$tagged" ]]; then
-                    echo "::error::Tag '$GITHUB_REF_NAME' does not match wails.json's productVersion '$declared'. Bump one of them."
+                  if [[ "$declared" != "$RELEASED" ]]; then
+                    echo "::error::wails.json says '$declared' but the release is '$RELEASED'. Check the extra-files updater in release-please-config.json."
                     exit 1
                   fi
 
@@ -90,13 +119,15 @@ jobs:
             # inspecting the artifact afterwards.
             - name: Assemble the archive
               shell: bash
+              env:
+                  VERSION: ${{ needs.release-please.outputs.version }}
               run: |
-                  name="quick-translate-${GITHUB_REF_NAME}-linux-amd64-${{ matrix.suffix }}"
+                  name="quick-translate-${VERSION}-linux-amd64-${{ matrix.suffix }}"
                   mkdir -p "dist/$name"
                   cp build/bin/quick-translate LICENSE README.md "dist/$name/"
 
                   cat > "dist/$name/INSTALL.txt" <<EOF
-                  Quick Translate ${GITHUB_REF_NAME} — linux/amd64, built against WebKitGTK ${{ matrix.webkit }}
+                  Quick Translate ${VERSION} — linux/amd64, built against WebKitGTK ${{ matrix.webkit }}
 
                   This build needs WebKitGTK ${{ matrix.webkit }} and GTK 3 at runtime. If it does not start,
                   check which version your distribution ships and take the other archive instead:
@@ -133,7 +164,8 @@ jobs:
 
     publish:
         name: Publish the release assets
-        needs: build
+        needs: [release-please, build]
+        if: needs.release-please.outputs.created == 'true'
         runs-on: ubuntu-latest
 
         steps:
@@ -156,4 +188,5 @@ jobs:
               working-directory: dist
               env:
                   GH_TOKEN: ${{ github.token }}
-              run: gh release upload "$GITHUB_REF_NAME" *.tar.gz SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"
+                  TAG: ${{ needs.release-please.outputs.tag }}
+              run: gh release upload "$TAG" *.tar.gz SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"
