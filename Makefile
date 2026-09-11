@@ -18,6 +18,11 @@ UPX ?= 1
 UPX_FOUND := $(shell command -v upx >/dev/null 2>&1 && echo yes)
 COMPRESS = $(if $(filter-out 0,$(UPX)),$(if $(UPX_FOUND),-upx,),)
 
+# The version stamped into the binary. 'wails.json' is the single source, so the packaging metadata and the
+# binary always agree; a build made on an exact git tag names itself after that tag instead.
+VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || sed -n 's/.*"productVersion"[^"]*"\([^"]*\)".*/\1/p' wails.json)
+LDFLAGS = -X main.version=$(VERSION)
+
 # The icon set the installation ships is rendered from the master artwork and checked in, so building the
 # application needs no image tooling at all. Only 'make icons' does, and only after the artwork changed.
 ICON_MASTER = art/quick-translate.png
@@ -28,6 +33,11 @@ ICON_SIZES = 16 22 24 32 48 64 128 256
 # set; pass DESKTOP=kde for the Plasma installation or DESKTOP=generic to force the portable one.
 DESKTOP ?=
 DESKTOP_FLAG = $(if $(DESKTOP),--desktop=$(DESKTOP),)
+
+# The uninstall keeps the configuration, the history and the cached language lists. Pass PURGE=1 to delete
+# them as well, which can not be undone.
+PURGE ?=
+PURGE_FLAG = $(if $(filter-out 0,$(PURGE)),--purge,)
 
 # The install targets build on each other through the file system rather than through prerequisites, so
 # they must never overlap: 'install-desktop' runs the binary that 'install-binary' has just put in place.
@@ -46,18 +56,20 @@ help:
 	@printf "  make install-desktop  Register the installed binary with the desktop.\n"
 	@printf "  make status           Show where the application has installed itself.\n"
 	@printf "  make uninstall        Remove the application from the desktop and delete the binary.\n"
+	@printf "                        Your configuration and history are kept; PURGE=1 deletes them too.\n"
 	@printf "  make clean            Delete the built binary.\n"
 	@printf "  make icons            Re-render the icon set from $(ICON_MASTER) (needs ImageMagick).\n\n"
-	@printf "Variables: PREFIX=$(PREFIX)  DESKTOP=<kde|generic>  UPX=<1|0>\n"
+	@printf "Variables: PREFIX=$(PREFIX)  DESKTOP=<kde|generic>  UPX=<1|0>  PURGE=<0|1>  VERSION=$(VERSION)\n"
+	@printf "           WEBKIT_TAGS=$(WEBKIT_TAGS) (detected; set to webkit2_41 or empty to force a version)\n"
 
 dev:
 	wails dev $(TAGS)
 
 build:
-	@printf "==> Compiling Quick Translate...\n"
+	@printf "==> Compiling Quick Translate $(VERSION)...\n"
 	@$(if $(WEBKIT_TAGS),,printf "    webkit2gtk-4.1 was not found, building against webkit2gtk-4.0.\n")
 	@$(if $(filter-out 0,$(UPX)),$(if $(UPX_FOUND),,printf "    upx is not installed, the binary is not compressed.\n"),)
-	wails build $(TAGS) $(COMPRESS)
+	wails build $(TAGS) $(COMPRESS) -ldflags "$(LDFLAGS)"
 
 icons:
 	@command -v magick >/dev/null || { printf "ImageMagick is required to render the icon set.\n"; exit 1; }
@@ -87,7 +99,7 @@ status:
 	@$(INSTALLED) --status
 
 uninstall:
-	@test -x $(INSTALLED) && $(INSTALLED) --uninstall || printf "'$(INSTALLED)' is not installed.\n"
+	@test -x $(INSTALLED) && $(INSTALLED) --uninstall $(PURGE_FLAG) || printf "'$(INSTALLED)' is not installed.\n"
 	@printf "\n==> Removing the binary from $(BIN_DIR)...\n"
 	rm -f $(INSTALLED)
 

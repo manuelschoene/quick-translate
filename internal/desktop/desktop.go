@@ -60,6 +60,11 @@ func Uninstall() error {
 	return uninstall()
 }
 
+// Removes the files the application has written for the user: the configuration, the history of everything that was translated and the cached language lists. Deliberately separate from Uninstall, which never touches them, so that reinstalling or rebuilding keeps everything the user has set up and only an explicit request throws it away. Returns an error if the directories can not be determined or the operating system has no installation of its own yet.
+func Purge() error {
+	return purge()
+}
+
 // Reports where the application has installed itself and what starts it with the session. Returns an error if the directories of the desktop can not be determined or the operating system has no installation of its own yet.
 func Status() (*Report, error) {
 	return status()

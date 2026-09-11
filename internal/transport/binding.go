@@ -1,17 +1,25 @@
 package transport
 
-// Returns the whole state of the application in one call. Meant for the first render and for a frontend that was reloaded while a translation was on screen, so nothing has to be assembled from several calls that could answer out of order.
-func (a *Adapter) State() *FullDto {
+// Returns the whole state of the application in one call. Meant for the first render and for a frontend that was reloaded while a translation was on screen, so nothing has to be assembled from several calls that could answer out of order. Returns an error while the application can not translate yet, which is how a configuration that is not finished reaches the user instead of an empty window.
+func (a *Adapter) State() (*FullDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	return a.full()
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+
+	return a.full(), nil
 }
 
 // Switches to the given provider and translates the current text with it. Returns the whole state, because the languages that can be chosen belong to the provider and change with it. Returns an error if the provider can not be used, which leaves the previous one in place.
 func (a *Adapter) ChangeProvider(slug string) (*FullDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
+
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
 
 	if err := a.core.SetProvider(slug); err != nil {
 		return nil, err
@@ -29,6 +37,10 @@ func (a *Adapter) ChangeSource(tag string) (*TranslationDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+
 	if err := a.core.SetSource(tag); err != nil {
 		return nil, err
 	}
@@ -44,6 +56,10 @@ func (a *Adapter) ChangeSource(tag string) (*TranslationDto, error) {
 func (a *Adapter) ChangeTarget(tag string) (*TranslationDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
+
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
 
 	if err := a.core.SetTarget(tag); err != nil {
 		return nil, err
@@ -61,6 +77,10 @@ func (a *Adapter) SwitchLanguages() (*TranslationDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+
 	if err := a.core.SwitchLanguages(); err != nil {
 		return nil, err
 	}
@@ -77,6 +97,10 @@ func (a *Adapter) PreviousTranslation() (*FullDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+
 	if _, _, _, err := a.core.PreviousTranslation(); err != nil {
 		return nil, err
 	}
@@ -89,6 +113,10 @@ func (a *Adapter) NextTranslation() (*FullDto, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+
 	if _, _, _, err := a.core.NextTranslation(); err != nil {
 		return nil, err
 	}
@@ -100,6 +128,10 @@ func (a *Adapter) NextTranslation() (*FullDto, error) {
 func (a *Adapter) CopyTranslation() error {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
+
+	if err := a.ready(); err != nil {
+		return err
+	}
 
 	if err := a.core.CopyTranslation(); err != nil {
 		return err

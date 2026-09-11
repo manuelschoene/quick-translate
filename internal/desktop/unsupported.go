@@ -12,6 +12,11 @@ func uninstall() error {
 	return ErrUnsupported
 }
 
+// Removes the files the application has written for the user. Answers with ErrUnsupported for the same reason as install.
+func purge() error {
+	return ErrUnsupported
+}
+
 // Reports where the application has installed itself. Answers with ErrUnsupported for the same reason as install.
 func status() (*Report, error) {
 	return nil, ErrUnsupported

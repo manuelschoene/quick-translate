@@ -3,6 +3,7 @@ package history
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"quick-translate/internal/models"
 
 	_ "github.com/glebarez/go-sqlite"
@@ -35,6 +36,13 @@ func newDb(path string) (*db, error) {
 	if err := db.migrate(); err != nil {
 		conn.Close()
 		return nil, err
+	}
+
+	// SQLite creates the database with the permissions of the process, which would leave every text that was
+	// ever translated readable for the other users of the machine. The write-ahead log beside it is created
+	// the same way and is covered by the directory, which is narrow already.
+	if err := os.Chmod(path, 0600); err != nil {
+		fmt.Printf("Could not narrow the permissions of the history database: %v\n", err)
 	}
 
 	return db, nil

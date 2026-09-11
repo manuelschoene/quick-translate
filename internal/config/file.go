@@ -57,6 +57,14 @@ default_provider: ""
 provider: {}
 `
 
+// The permissions the configuration file and the directory around it are kept at. The file holds the
+// authentication keys of the providers and the directory also holds the history database, which holds every
+// text that was ever translated, so neither belongs to the other users of the machine.
+const (
+	fileMode = 0600
+	dirMode  = 0700
+)
+
 // Builds the path to the config file inside the user's config directory.
 func filePath() (string, error) {
 	dir, err := os.UserConfigDir()
@@ -88,7 +96,7 @@ func createFile() error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Dir(path), 0755)
+	err = os.MkdirAll(filepath.Dir(path), dirMode)
 	if err != nil {
 		return err
 	}
@@ -96,7 +104,7 @@ func createFile() error {
 	buf := new(bytes.Buffer)
 	buf.WriteString(defaultYml)
 
-	err = os.WriteFile(path, buf.Bytes(), 0644)
+	err = os.WriteFile(path, buf.Bytes(), fileMode)
 	if err != nil {
 		return err
 	}
@@ -117,7 +125,9 @@ func initFile() error {
 	}
 
 	if exists {
-		fmt.Println("Found config file at: " + path)
+		narrow(filepath.Dir(path), dirMode)
+		narrow(path, fileMode)
+
 		return nil
 	}
 
@@ -129,6 +139,28 @@ func initFile() error {
 	}
 
 	return nil
+}
+
+// Narrows the permissions of a path that an earlier version has created readable for everyone else on the
+// machine. A path that is already narrow enough is left alone and never reported, which is the normal case.
+// Failing to narrow only costs the narrowing itself, so it is reported and swallowed rather than keeping the
+// application from starting.
+func narrow(path string, mode os.FileMode) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+
+	if info.Mode().Perm()&0077 == 0 {
+		return
+	}
+
+	if err := os.Chmod(path, mode); err != nil {
+		fmt.Printf("Could not narrow the permissions of '%s': %v\n", path, err)
+		return
+	}
+
+	fmt.Printf("Narrowed the permissions of '%s', which is not meant to be readable by other users.\n", path)
 }
 
 // Reads a struct from the config file. The struct must have YAML tags from the "go.yaml.in/yaml/v4" package. The function will return an error if the file does not exist or if the struct cannot be decoded from the file.

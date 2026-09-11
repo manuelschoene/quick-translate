@@ -141,12 +141,11 @@ func (p Deepl) buildTranslateBody(source string, target string, text string) ([]
 	return json, nil
 }
 
-// Fires an HTTP request and returns the response. If the response code is not 200, an error is returned with a message based on the response code. The request body is not closed in this function, it is the caller's responsibility to close it after use.
+// Fires an HTTP request and returns the response. If the response code is not 200, an error is returned with a message based on the response code. The request body is not closed in this function, it is the caller's responsibility to close it after use. A request that is not answered within the timeout of the shared client counts as a failure, so a provider that stops answering can not hold up the application.
 func makeRequest(req *http.Request) (*http.Response, error) {
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %v", err)
+		return nil, fmt.Errorf("The request to the provider failed: %v. Please check your internet connection and try again.", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {

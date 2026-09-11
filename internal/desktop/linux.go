@@ -62,6 +62,14 @@ type paths struct {
 	systemd      string
 	autostart    string
 	kwinRules    string
+
+	// The directories the application writes its own files into, which the purge removes. They are named
+	// after the application in the three freedesktop base directories, which is how 'config', 'history' and
+	// 'language' build their paths as well. A package that ever moves its files elsewhere has to be followed
+	// here, because this is the only place that knows about all three of them at once.
+	appConfig string
+	appData   string
+	appCache  string
 }
 
 // The values the templates are rendered with: the binary the desktop entry and the service start, the name the icon is looked up under in the theme, the window class KWin matches its rules against and the shortcut the KDE entry is bound to.
@@ -84,6 +92,11 @@ func newPaths() (*paths, error) {
 		return nil, err
 	}
 
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return nil, fmt.Errorf("Could not determine the cache directory: %w", err)
+	}
+
 	theme := filepath.Join(data, "icons", "hicolor")
 
 	return &paths{
@@ -92,6 +105,10 @@ func newPaths() (*paths, error) {
 		systemd:      filepath.Join(config, "systemd", "user"),
 		autostart:    filepath.Join(config, "autostart"),
 		kwinRules:    filepath.Join(config, "kwinrulesrc"),
+
+		appConfig: filepath.Join(config, appName),
+		appData:   filepath.Join(data, appName),
+		appCache:  filepath.Join(cache, appName),
 	}, nil
 }
 
@@ -427,6 +444,41 @@ func removeService(dirs *paths) {
 	if err := runService("daemon-reload"); err != nil {
 		fmt.Println(err)
 	}
+}
+
+// Removes the directories the application has written its own files into: the configuration, the history of everything that was translated and the cached language lists. Never part of an uninstall on its own, because a reinstall is far more common than a farewell and nobody expects their history to go with the binary. Returns an error only if the directories can not be determined; a directory that can not be removed is reported and the rest are still tried.
+func purge() error {
+	dirs, err := newPaths()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("==> Removing the files Quick Translate has written...")
+
+	for _, dir := range []string{dirs.appConfig, dirs.appData, dirs.appCache} {
+		removeDirectory(dir)
+	}
+
+	return nil
+}
+
+// Removes one of the directories the application owns, with everything below it. A directory that is not there is the normal state of an installation that never wrote anything, so it is passed over in silence. The name is checked before the removal, because a base directory that resolved to something unexpected must not take a whole home directory with it.
+func removeDirectory(dir string) {
+	if filepath.Base(dir) != appName {
+		fmt.Printf("Refusing to remove '%s', which is not a directory of Quick Translate.\n", dir)
+		return
+	}
+
+	if _, err := os.Stat(dir); err != nil {
+		return
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		fmt.Printf("Could not remove '%s': %v\n", dir, err)
+		return
+	}
+
+	fmt.Printf("    Removed       %s\n", dir)
 }
 
 // Reports where the application has installed itself, which files are in place and what starts it with the session. Returns an error if the directories of the desktop or the running binary can not be determined.

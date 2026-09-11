@@ -141,20 +141,35 @@ func (h *History) initialize() error {
 	return nil
 }
 
-// Returns the path to the database file inside the user's config directory and creates the directory if it does not exist.
+// Returns the path to the database file inside the user's data directory and creates the directory if it does not exist. The history is data the user has produced and can not be fetched again, so it belongs neither next to the configuration they write themselves nor in the cache, which cleanup tools are allowed to empty. The directory is narrowed to the user alone, because the history holds every text that was ever translated.
 func filePath() (string, error) {
-	dir, err := os.UserConfigDir()
+	dir, err := dataDir()
 	if err != nil {
 		return "", err
 	}
 
-	dir = dir + "/quick-translate"
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		fmt.Printf("Path to the history directory doesn't exists. Creating directories: %s\n", dir)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return "", err
-		}
+	dir = filepath.Join(dir, "quick-translate")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+
+	if err := os.Chmod(dir, 0700); err != nil {
+		fmt.Printf("Could not narrow the permissions of '%s': %v\n", dir, err)
 	}
 
 	return filepath.Join(dir, dbPath), nil
+}
+
+// Returns the directory user-specific data files are stored in, which is what XDG_DATA_HOME points at when it is set and '~/.local/share' otherwise. The standard library has a helper for the configuration and the cache directory but none for this one, so the freedesktop rule is applied here. Returns an error if the home directory can not be determined.
+func dataDir() (string, error) {
+	if dir, ok := os.LookupEnv("XDG_DATA_HOME"); ok && len(dir) > 0 {
+		return dir, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("Could not determine the home directory: %w", err)
+	}
+
+	return filepath.Join(home, ".local", "share"), nil
 }
