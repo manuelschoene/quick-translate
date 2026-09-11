@@ -1,6 +1,6 @@
 module quick-translate
 
-go 1.26.0
+go 1.26.8
 
 require (
 	github.com/glebarez/go-sqlite v1.23.0

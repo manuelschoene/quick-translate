@@ -9,7 +9,7 @@
 		<img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-blue.svg">
 	</a>
 	<a href="https://go.dev">
-		<img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white">
+		<img alt="Go" src="https://img.shields.io/badge/Go-1.26.8-00ADD8?logo=go&logoColor=white">
 	</a>
 	<a href="https://vuejs.org">
 		<img alt="Vue.js" src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js">
@@ -62,7 +62,7 @@ Building from source, described in the rest of this section, is the other route 
 
 ### Prerequisites
 
-- `Go` >= 1.26
+- `Go` >= 1.26.8, the floor declared in `go.mod`. Earlier 1.26 patches carry standard library vulnerabilities that this project reaches through its HTTPS calls, and the build refuses them. A newer toolchain is downloaded automatically unless you have set `GOTOOLCHAIN=local`
 - `Bun` >= 1.3.14, used to install and build the frontend
 - `gcc` >= 16.1.1, required to build the CGO-based WebKit bindings used by Wails
 - `pkgconf` >= 2.5.1, used by Wails to locate the GTK and WebKit libraries
