@@ -333,7 +333,7 @@ func installAutostart(dirs *paths, vals *values) error {
 	return installAutostartEntry(dirs, vals)
 }
 
-// Installs the systemd user service and starts it right away, so the application is available for the shortcut without a logout. Returns an error if the unit can not be written or systemd refuses to enable it.
+// Installs the systemd user service and starts it right away, so the application is available for the shortcut without a logout. Whether systemd accepts the unit is not decided here: the manager reads its unit search path when it starts, so a session whose XDG_CONFIG_HOME differs from the one the manager saw can not find a unit written here at all. That costs the autostart and nothing else — the icon and the desktop entry installed before it keep working and the window rules still follow — so a refusal is reported together with the commands to repeat by hand instead of ending the installation. Returns an error only if the unit itself can not be written.
 func installService(dirs *paths, vals *values) error {
 	body, err := render(serviceTemplate, vals)
 	if err != nil {
@@ -345,17 +345,25 @@ func installService(dirs *paths, vals *values) error {
 		return err
 	}
 
+	fmt.Printf("    Autostart     %s\n", target)
+
+	if err := enableService(); err != nil {
+		fmt.Printf("\n%v\n", err)
+		fmt.Printf("The unit is in place, so only the autostart is missing. Set it up with:\n\n")
+		fmt.Printf("    systemctl --user daemon-reload\n")
+		fmt.Printf("    systemctl --user enable --now %s\n\n", serviceFile)
+	}
+
+	return nil
+}
+
+// Asks systemd to read its units again and to start the service now and with every session that follows. Returns the error systemd reported, which carries the reason the caller passes on to the user.
+func enableService() error {
 	if err := runService("daemon-reload"); err != nil {
 		return err
 	}
 
-	if err := runService("enable", "--now", serviceFile); err != nil {
-		return err
-	}
-
-	fmt.Printf("    Autostart     %s\n", target)
-
-	return nil
+	return runService("enable", "--now", serviceFile)
 }
 
 // Installs an autostart entry as the fallback for a session without a systemd user manager. The application is not restarted when it fails in this case, which is the price for an autostart that works on every desktop. Returns an error if the entry can not be rendered or written.
@@ -534,6 +542,12 @@ func autostartState(dirs *paths) string {
 
 	enabled := serviceProperty("is-enabled")
 	if enabled == "not-found" || len(enabled) == 0 {
+		// The unit being on disk while systemd does not know it means the manager searches somewhere else,
+		// which is worth saying apart from the unit simply never having been installed.
+		if _, err := os.Stat(filepath.Join(dirs.systemd, serviceFile)); err == nil {
+			return "the systemd unit is installed but the user manager does not see it"
+		}
+
 		return "systemd user service is not installed"
 	}
 

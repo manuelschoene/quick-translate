@@ -179,11 +179,22 @@ jobs:
             exit 1
           fi
 
-      - name: Validate the desktop entry
+      # The installation is sandboxed with the XDG variables, but systemd is not: its user manager reads the
+      # unit search path when it starts, so it looks straight past the sandbox and refuses a unit written
+      # into it. A shim that reports no user manager picks the portable autostart path instead, which is
+      # both hermetic and the path most non-KDE users get anyway.
+      - name: Validate the desktop entries
         shell: bash
         run: |
           ./build/bin/quick-translate --version
+
+          shim=$(mktemp -d)
+          printf '#!/bin/sh\nexit 1\n' > "$shim/systemctl"
+          chmod +x "$shim/systemctl"
+
           entry=$(mktemp -d)
-          XDG_DATA_HOME="$entry" XDG_CONFIG_HOME="$entry" XDG_CURRENT_DESKTOP=KDE \
-            ./build/bin/quick-translate --install > /dev/null
+          PATH="$shim:$PATH" XDG_DATA_HOME="$entry" XDG_CONFIG_HOME="$entry" XDG_CURRENT_DESKTOP=KDE \
+            ./build/bin/quick-translate --install
+
           desktop-file-validate "$entry/applications/quick-translate.desktop"
+          desktop-file-validate "$entry/autostart/quick-translate.desktop"

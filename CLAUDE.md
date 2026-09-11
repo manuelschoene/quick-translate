@@ -105,7 +105,10 @@ Written by `quick-translate --install`, all resolved through the freedesktop bas
   Breeze's unrelated `quick` icon before hicolor is ever reached. Verify a change with `kiconfinder6
   quicktranslate`, which is the loader Plasma itself uses.
 - Autostart: `~/.config/systemd/user/quick-translate.service`, or `~/.config/autostart/quick-translate.desktop`
-  when no systemd user manager answers.
+  when no systemd user manager answers. Systemd refusing the unit does not fail the install — the manager
+  fixes its unit search path when it starts, so a session whose `XDG_CONFIG_HOME` differs from the one it
+  saw cannot see a unit written now. That costs only the autostart, so it is reported with the commands to
+  repeat by hand, and `--status` reports that state separately from a unit that was never installed.
 - Window rules (KDE only): merged into `~/.config/kwinrulesrc`, which has no drop-in directory.
 
 ## Backend architecture
