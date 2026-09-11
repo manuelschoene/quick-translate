@@ -1,0 +1,33 @@
+name: Run ESLint
+author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+description: Runs ESLint over the frontend, with its cache restored.
+
+inputs:
+  write:
+    description: Whether to write changes back to the working tree instead of only reporting them.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # The cache location lives in the script in package.json, so it is read from there rather than
+    # repeated here and left to drift out of step with it.
+    - name: Extract ESLint cache file
+      id: eslint-cache
+      shell: bash
+      run: |
+        CACHE_FILE=$(jq -r '.scripts["lint:fix"]' frontend/package.json | grep -oP "(?<=--cache-location=')[^']+" | tr -d "'")
+        echo "path=$CACHE_FILE" >> "$GITHUB_OUTPUT"
+
+    - name: Cache ESLint cache file
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-eslint-${{ hashFiles('frontend/bun.lock') }}
+        path: ${{ steps.eslint-cache.outputs.path }}
+        restore-keys: ${{ runner.os }}-eslint-
+
+    - name: Run ESLint
+      shell: bash
+      working-directory: frontend
+      run: bun run lint:${{ inputs.write == 'true' && 'fix' || 'check' }}

@@ -19,17 +19,46 @@
 # Quick Translate
 
 > [!WARNING]
-> Quick Translate is under active development. Features, configuration, and behavior may change without notice, and the project is not yet ready for production use.
+> **Quick Translate is in alpha.** Everything described below works, but the application has seen little use outside its own development. Expect rough edges, and expect the configuration format to change without a migration path.
+>
+> - **Supported:** Linux, on any freedesktop-compliant desktop, with additional integration for KDE Plasma.
+> - **Not yet supported:** macOS and Windows.
+> - **Installation:** a prebuilt binary from the releases page, or from source. Every release ships two Linux binaries, one for each WebKitGTK version, because a binary linked against one does not start on a system that ships the other.
+>
+> Problems are very welcome as [GitHub issues](https://github.com/manuelschoene/quick-translate/issues/new/choose) — the bug report form asks for the handful of details that make one reproducible, including the output of `quick-translate --status`.
 
 Quick Translate is a lightweight desktop utility that translates clipboard or selected text on demand, triggered by a single global keyboard shortcut. Translation is performed by a configurable provider, described below.
 
-Quick Translate is currently built and tested on Linux. It installs itself into any freedesktop-compliant desktop, and KDE Plasma additionally gets the global shortcut and the window rules set up for it. macOS and Windows are not supported yet.
+On Linux it installs itself into any freedesktop-compliant desktop: an icon, a desktop entry and a systemd user service that keeps it running in the background. KDE Plasma additionally gets the global shortcut and the window rules for the popup set up for it.
 
 ## Installation
 
-Installation happens in two steps. The provided `Makefile` builds the application with Wails and copies the binary into place; the binary then registers itself with the desktop, which is why the desktop integration works the same way no matter how the binary got onto the machine.
+There are two ways in: download a release archive, or build from source. Both end the same way — the binary registers itself with the desktop, which is why the desktop integration behaves identically no matter how the binary got onto the machine.
 
 Run `make help` for the full list of targets and variables.
+
+`main` is the development state and changes as work lands, so what you build from it is effectively a nightly. To build a released version instead, take its source archive from the [releases page](https://github.com/manuelschoene/quick-translate/releases) or check out its tag (`git checkout v0.1.0-alpha`). Either way the build and installation below are the same.
+
+### From a release archive
+
+Each release on the [releases page](https://github.com/manuelschoene/quick-translate/releases) carries two `linux-amd64` archives. Pick the one that matches the WebKitGTK your distribution ships:
+
+```sh
+pkg-config --exists webkit2gtk-4.1 && echo webkit41 || echo webkit40
+```
+
+`webkit41` fits current distributions (Arch, Fedora 40+, Ubuntu 24.04, Debian 13); `webkit40` fits the older ones that still ship WebKit2GTK 4.0. Both are built on Ubuntu 22.04, so they run on any glibc from 2.35 onwards. Unpack, install the binary, and let it register itself:
+
+```sh
+tar -xzf quick-translate-*-linux-amd64-webkit41.tar.gz
+cd quick-translate-*-linux-amd64-webkit41
+install -D -m 0755 quick-translate ~/.local/bin/quick-translate
+~/.local/bin/quick-translate --install
+```
+
+Each release also carries a `SHA256SUMS` file, so the download can be checked with `sha256sum --check SHA256SUMS`. You still need a clipboard tool at runtime — see [clipboard access](#clipboard-access) below.
+
+Building from source, described in the rest of this section, is the other route and the one to take if your distribution ships neither WebKitGTK version the releases cover.
 
 ### Prerequisites
 
@@ -44,7 +73,7 @@ Run `make help` for the full list of targets and variables.
 The Wails CLI itself is not listed above, as it is installed as a Go tool rather than a system dependency:
 
 ```sh
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
 ```
 
 ### Clipboard access
@@ -103,11 +132,32 @@ make status
 
 ### Uninstalling
 
-To remove the desktop entry, the icon, the autostart, the window rules, and the binary itself, run:
+To remove the desktop entry, the icons, the autostart, the window rules, and the binary itself, run:
 
 ```sh
 make uninstall
 ```
+
+**Your own files are kept.** Uninstalling never touches them, because reinstalling or rebuilding is far more common than leaving for good, and a history that disappeared with a rebuild would be a nasty surprise. What stays behind:
+
+- `~/.config/quick-translate/` — the configuration you wrote, including your provider auth keys.
+- `~/.local/share/quick-translate/` — the history of everything you translated.
+- `~/.cache/quick-translate/` — the cached language lists, which are fetched again when they are missing.
+
+To delete those as well, ask for it explicitly:
+
+```sh
+make uninstall PURGE=1
+```
+
+The binary understands the same as a flag, which is useful when the sources are no longer around:
+
+```sh
+quick-translate --uninstall --purge
+```
+
+> [!CAUTION]
+> Purging cannot be undone. Your translation history and your provider configuration, auth keys included, are deleted for good.
 
 ## Provider
 
@@ -128,12 +178,22 @@ The DeepL API requires a key for authentication, which can be retrieved from the
 
 #### Configuration
 
-Configuring the DeepL provider requires editing the `provider.yaml` in your user configuration directory (e.g., `~/.config/quick-translate/provider.yaml`). Under the provider section specify the `deepl` key. The following options are supported and may be specified under the `deepl` key:
+Configuring the DeepL provider requires editing `config.yml` in your user configuration directory (`~/.config/quick-translate/config.yml`, or under `$XDG_CONFIG_HOME` when that is set). The file is created with a commented template the first time Quick Translate starts. Under the `provider` section specify the `deepl` key. The following options are supported and may be specified under the `deepl` key:
 
 - `auth_key` (required): Set your personal auth key retrieved from the DeepL website. See the section above for more information.
 - `free_version` (required): When using the free version of the API set this option to `true`. For the paid version use `false`.
 - `fast_mode` (optional): DeepL provides latency-optimized and quality-optimized language models for translation. By setting `fast_mode` to `true`, the latency-optimized models are being used. Defaults to `false`.
 - `formality` (optional): DeepL supports different formality styles per language. Not all languages are supported for this feature (see the [DeepL API documentation](https://developers.deepl.com/api-reference/translate#param-formality) for more information). The option supports `formal`, `informal` and `default`. Defaults to `default`.
+
+## Contributing
+
+Contributions are welcome, and so are bug reports — this is an alpha and it has only ever been run on a handful of machines. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers how to build and verify a change, the conventions the codebase follows, and the one hard rule for pull requests (Conventional Commits in the title). Note that there is no test suite yet.
+
+Questions of any kind are welcome as an [issue](https://github.com/manuelschoene/quick-translate/issues) or by email at [schoene-manuel@gmx.de](mailto:schoene-manuel@gmx.de).
+
+Found a security problem? [SECURITY.md](SECURITY.md) explains how to report it, and also describes what the application does with your text, your auth keys and your history.
+
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

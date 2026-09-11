@@ -1,0 +1,16 @@
+name: Setup Go
+author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+description: Sets up Go and downloads the module dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: go.mod
+        cache-dependency-path: go.sum
+
+    - name: Download dependencies
+      shell: bash
+      run: go mod download

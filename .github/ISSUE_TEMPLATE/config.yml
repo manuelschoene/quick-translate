@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/manuelschoene/quick-translate/blob/main/SECURITY.md
+    about: Please do not open a public issue for something an attacker could act on. SECURITY.md explains how to report it.
+  - name: Contributing a change
+    url: https://github.com/manuelschoene/quick-translate/blob/main/CONTRIBUTING.md
+    about: How to build, verify and open a pull request — including the fact that there is no test suite yet.

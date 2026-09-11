@@ -1,0 +1,170 @@
+name: Continuous Integration
+on:
+  push:
+    branches: [main, "feature/**", "hotfix/**"]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  lint:
+    name: Lint and format code
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-lint-${{ github.event.pull_request.head.ref || github.ref_name }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      # Every step below fixes rather than checks, and none of them may fail the job: this job is a
+      # courtesy for a contributor who forgot to run the formatters, not a gate. The test job checks.
+      - name: Run gofmt
+        shell: bash
+        continue-on-error: true
+        run: gofmt -s -w .
+
+      - name: Run ESLint
+        uses: ./.github/actions/run-eslint
+        continue-on-error: true
+        with:
+          write: "true"
+
+      - name: Run Prettier
+        uses: ./.github/actions/run-prettier
+        continue-on-error: true
+        with:
+          write: "true"
+
+      # A pull request from a fork hands this workflow a read-only token, so the push would fail. Skipping
+      # it keeps the job green; the test job still reports what is unformatted, and the contributor fixes
+      # it with 'bun run format' as CONTRIBUTING describes.
+      - name: Commit changes
+        if: >-
+          github.ref_type != 'tag' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        uses: stefanzweifel/git-auto-commit-action@v7
+        continue-on-error: true
+        with:
+          branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+          commit_message: "style: Linted and formatted code (auto-committed)"
+          commit_options: "--no-verify"
+
+  test:
+    name: Run tests and static analysis
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: ${{ github.workflow }}-test-${{ github.event.pull_request.head.ref || github.ref_name }}
+      cancel-in-progress: true
+
+    steps:
+      # Checked out by branch rather than by SHA, so this picks up whatever the lint job committed.
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      # --- Go: everything that needs no system libraries -------------------------------------------------
+      # Wails' Linux frontend, and with it the WebKitGTK cgo dependency, only enters the build graph under
+      # the 'desktop,production' tags. Without them these run on a bare runner.
+
+      - name: Check formatting
+        shell: bash
+        run: |
+          unformatted=$(gofmt -s -l .)
+          if [[ -n "$unformatted" ]]; then
+            echo "::error::These files are not gofmt-clean. Run 'gofmt -s -w .':"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run go test
+        run: go test ./...
+
+      - name: Verify module dependencies
+        shell: bash
+        run: |
+          go mod verify
+          go mod tidy
+          if ! git diff --exit-code go.mod go.sum; then
+            echo "::error::'go mod tidy' changed go.mod or go.sum. Run it and commit the result."
+            exit 1
+          fi
+
+      - name: Scan dependencies for known vulnerabilities
+        shell: bash
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      # --- Frontend --------------------------------------------------------------------------------------
+
+      - name: Run TypeScript
+        working-directory: frontend
+        run: bun run types
+
+      - name: Run ESLint
+        uses: ./.github/actions/run-eslint
+        with:
+          write: "false"
+
+      - name: Run Prettier
+        uses: ./.github/actions/run-prettier
+        with:
+          write: "false"
+
+      # --- The build that proves the release compiles ----------------------------------------------------
+      # This is the only step that compiles Wails' Linux frontend. The Makefile picks the WebKit build tag
+      # with pkg-config, so installing the 4.1 development package is enough to select 'webkit2_41'.
+      # UPX is skipped because compressing the binary costs minutes and proves nothing here.
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libgtk-3-dev libwebkit2gtk-4.1-dev desktop-file-utils
+
+      - name: Install the Wails CLI
+        shell: bash
+        run: |
+          version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+          go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
+
+      - name: Build the application
+        run: make build UPX=0
+
+      - name: Validate the desktop entry
+        shell: bash
+        run: |
+          ./build/bin/quick-translate --version
+          entry=$(mktemp -d)
+          XDG_DATA_HOME="$entry" XDG_CONFIG_HOME="$entry" XDG_CURRENT_DESKTOP=KDE \
+            ./build/bin/quick-translate --install > /dev/null
+          desktop-file-validate "$entry/applications/quick-translate.desktop"

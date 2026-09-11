@@ -1,0 +1,122 @@
+name: Bug report
+description: Something does not work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. Quick Translate is in alpha and has only run on a handful of
+        machines, so the details below are what make a report actionable — the desktop integration and the
+        clipboard behave differently on almost every setup.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, and what did the application do instead of working?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+      description: Leave this out if it is obvious from the above.
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select text in …
+        2. Press Shortcut
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: status
+    attributes:
+      label: Output of `quick-translate --status`
+      description: This names the build and shows what is installed where, which answers most of my first questions.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: journal
+    attributes:
+      label: Log output
+      description: |
+        `journalctl --user -u quick-translate.service -n 50` when it runs as a service. This is also where
+        the clipboard backend it picked is reported. Please remove anything private before pasting.
+      render: text
+    validations:
+      required: false
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How did you install it
+      options:
+        - Release archive, webkit41
+        - Release archive, webkit40
+        - Built from source with make install
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: distribution
+    attributes:
+      label: Distribution and version
+      placeholder: Fedora 42, Ubuntu 24.04, Arch (rolling), …
+    validations:
+      required: true
+
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop environment and version
+      placeholder: KDE Plasma 6.7, GNOME 50, sway 1.12, …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: session
+    attributes:
+      label: Session type
+      description: The value of `echo $XDG_SESSION_TYPE`.
+      options:
+        - Wayland
+        - X11
+        - I do not know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: clipboard
+    attributes:
+      label: Which clipboard tools are installed
+      description: Check with `command -v wl-paste xclip xsel`. Pick all that apply.
+      multiple: true
+      options:
+        - wl-clipboard
+        - xclip
+        - xsel
+        - None of them
+        - I do not know
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and this is not one of them.
+          required: true
+        - label: I am on the latest release, or on a recent state of `main`.
+          required: false

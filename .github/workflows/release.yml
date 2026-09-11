@@ -1,0 +1,159 @@
+name: Release
+on:
+    release:
+        types: [published]
+
+permissions:
+    contents: write
+
+jobs:
+    verify:
+        name: Verify
+        uses: ./.github/workflows/ci.yml
+        permissions:
+            contents: write
+
+    build:
+        name: Build for WebKitGTK ${{ matrix.webkit }}
+        needs: verify
+        # Built on the oldest available runner on purpose, and the reason is glibc rather than WebKit: glibc
+        # is backward but not forward compatible, so a binary built on 24.04 refuses to start on Ubuntu 22.04
+        # or Debian 12. Both development packages exist on jammy, so one runner covers both variants and the
+        # artifacts reach as far back as the runner image does.
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    # 'tags' is the value the Makefile would otherwise derive with pkg-config. It is pinned
+                    # here so a matrix leg cannot silently produce the other variant: the tag decides which
+                    # pkg-config name cgo asks for, and a missing package fails the build loudly.
+                    - webkit: "4.1"
+                      suffix: webkit41
+                      package: libwebkit2gtk-4.1-dev
+                      pkgconfig: webkit2gtk-4.1
+                      tags: webkit2_41
+                    - webkit: "4.0"
+                      suffix: webkit40
+                      package: libwebkit2gtk-4.0-dev
+                      pkgconfig: webkit2gtk-4.0
+                      tags: ""
+
+        steps:
+            # The full history is fetched because the Makefile takes the version from 'git describe
+            # --tags --exact-match', which needs the tag this release was published from.
+            - name: Checkout code
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Setup Bun
+              uses: ./.github/actions/setup-bun
+
+            - name: Setup Go
+              uses: ./.github/actions/setup-go
+
+            # A tag that does not match the version in wails.json would ship a binary whose '--version'
+            # disagrees with the packaging metadata, so it is caught before anything is built.
+            - name: Check the tag against wails.json
+              shell: bash
+              run: |
+                  declared=$(jq -r '.info.productVersion' wails.json)
+                  tagged=${GITHUB_REF_NAME#v}
+                  if [[ "$declared" != "$tagged" ]]; then
+                    echo "::error::Tag '$GITHUB_REF_NAME' does not match wails.json's productVersion '$declared'. Bump one of them."
+                    exit 1
+                  fi
+
+            - name: Install build dependencies
+              shell: bash
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install --no-install-recommends -y \
+                    libgtk-3-dev ${{ matrix.package }} upx-ucl
+
+            - name: Confirm the WebKitGTK version is the intended one
+              shell: bash
+              run: |
+                  if ! pkg-config --exists ${{ matrix.pkgconfig }}; then
+                    echo "::error::${{ matrix.pkgconfig }} is not available on this runner."
+                    exit 1
+                  fi
+                  echo "Building against ${{ matrix.pkgconfig }} $(pkg-config --modversion ${{ matrix.pkgconfig }})"
+
+            - name: Build the application
+              run: make build WEBKIT_TAGS=${{ matrix.tags }}
+
+            # Note for anyone extending this: the binary Wails produces cannot be inspected with 'ldd' or
+            # 'strings' — its section headers are gone, so neither reports the WebKitGTK it links. The
+            # guarantee comes from the pinned tag and the build failing on a missing package, not from
+            # inspecting the artifact afterwards.
+            - name: Assemble the archive
+              shell: bash
+              run: |
+                  name="quick-translate-${GITHUB_REF_NAME}-linux-amd64-${{ matrix.suffix }}"
+                  mkdir -p "dist/$name"
+                  cp build/bin/quick-translate LICENSE README.md "dist/$name/"
+
+                  cat > "dist/$name/INSTALL.txt" <<EOF
+                  Quick Translate ${GITHUB_REF_NAME} — linux/amd64, built against WebKitGTK ${{ matrix.webkit }}
+
+                  This build needs WebKitGTK ${{ matrix.webkit }} and GTK 3 at runtime. If it does not start,
+                  check which version your distribution ships and take the other archive instead:
+
+                    pkg-config --exists webkit2gtk-4.1 && echo 4.1 || echo 4.0
+
+                  It also needs one of wl-clipboard, xclip or xsel to read the selection.
+
+                  Install:
+
+                    install -D -m 0755 quick-translate ~/.local/bin/quick-translate
+                    ~/.local/bin/quick-translate --install
+
+                  The second command registers the icon, a desktop entry and an autostart service, and
+                  prints which shortcut to use or how to bind one.
+
+                  Uninstall:
+
+                    ~/.local/bin/quick-translate --uninstall
+                    rm ~/.local/bin/quick-translate
+
+                  Add --purge to the uninstall to delete your configuration and history as well.
+                  EOF
+
+                  tar -C dist -czf "dist/$name.tar.gz" "$name"
+                  rm -rf "dist/$name"
+
+            - name: Upload the archive
+              uses: actions/upload-artifact@v7
+              with:
+                  name: ${{ matrix.suffix }}
+                  path: dist/*.tar.gz
+                  if-no-files-found: error
+
+    publish:
+        name: Publish the release assets
+        needs: build
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Download the archives
+              uses: actions/download-artifact@v8
+              with:
+                  path: dist
+                  merge-multiple: true
+
+            # One file over both archives rather than one beside each, so a reader can verify everything
+            # the release ships with a single 'sha256sum --check'.
+            - name: Generate the checksums
+              shell: bash
+              working-directory: dist
+              run: |
+                  sha256sum *.tar.gz | tee SHA256SUMS
+
+            - name: Attach everything to the release
+              shell: bash
+              working-directory: dist
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: gh release upload "$GITHUB_REF_NAME" *.tar.gz SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"

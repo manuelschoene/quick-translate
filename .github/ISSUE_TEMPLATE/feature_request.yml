@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest something Quick Translate should be able to do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggestions are welcome. Two things worth knowing before you write: the project is maintained by one
+        person, and some of it is going to move. For anything substantial it is worth asking first, so your
+        idea is not designed around a part that is about to be replaced.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve
+      description: What are you trying to do today, and where does the application get in your way?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including anything you already tried, and why it was not enough.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to build it
+      options:
+        - label: I would be willing to open a pull request for this.
+          required: false

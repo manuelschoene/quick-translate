@@ -9,7 +9,11 @@
         "preview": "vite preview",
         "types": "vue-tsc --noEmit",
         "lint": "eslint . --fix",
-        "format": "prettier . --write --no-editorconfig"
+        "lint:check": "eslint . --cache --cache-location='/tmp/eslint'",
+        "lint:fix": "eslint . --fix --cache --cache-location='/tmp/eslint' --quiet || true",
+        "format": "prettier . --write --no-editorconfig",
+        "format:check": "prettier . --check --no-editorconfig --cache --cache-location=/tmp/prettier",
+        "format:fix": "prettier . --write --no-editorconfig --cache --cache-location=/tmp/prettier"
     },
     "dependencies": {
         "@lucide/vue": "^1.31.0",

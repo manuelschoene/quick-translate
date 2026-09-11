@@ -1,0 +1,28 @@
+name: Question
+description: Ask about using, configuring or building Quick Translate.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions are welcome here — an answer in an issue is useful to the next person too, which is why
+        this is preferred over email. The [README](https://github.com/manuelschoene/quick-translate/blob/main/README.md)
+        covers installation, the clipboard requirements and the provider configuration, so it is worth a
+        look first, but do ask if it does not answer you.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything that helps answer it
+      description: |
+        Your distribution and desktop environment if the question is about installing or the shortcut, and
+        the output of `quick-translate --status` if it is about an installation that already exists.
+    validations:
+      required: false

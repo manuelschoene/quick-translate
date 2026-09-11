@@ -1,0 +1,33 @@
+name: Run Prettier
+author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+description: Runs Prettier over the frontend, with its cache restored.
+
+inputs:
+  write:
+    description: Whether to write changes back to the working tree instead of only reporting them.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # The cache location lives in the script in package.json, so it is read from there rather than
+    # repeated here and left to drift out of step with it.
+    - name: Extract Prettier cache file
+      id: prettier-cache
+      shell: bash
+      run: |
+        CACHE_FILE=$(jq -r '.scripts["format:fix"]' frontend/package.json | grep -oP '(?<=--cache-location=)[\S]+' | tr -d "'")
+        echo "path=$CACHE_FILE" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Prettier cache file
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-prettier-${{ hashFiles('frontend/bun.lock') }}
+        path: ${{ steps.prettier-cache.outputs.path }}
+        restore-keys: ${{ runner.os }}-prettier-
+
+    - name: Run Prettier
+      shell: bash
+      working-directory: frontend
+      run: bun run format:${{ inputs.write == 'true' && 'fix' || 'check' }}

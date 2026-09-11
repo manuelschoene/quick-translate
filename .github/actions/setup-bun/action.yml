@@ -1,0 +1,21 @@
+name: Setup Bun
+author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+description: Sets up Bun and installs the frontend dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+
+    - name: Cache the Bun install cache
+      uses: actions/cache@v6
+      with:
+        key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+        path: ~/.bun/install/cache
+        restore-keys: ${{ runner.os }}-bun-
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: frontend
+      run: bun install --frozen-lockfile --no-progress

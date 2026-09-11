@@ -9,5 +9,12 @@
   "author": {
     "name": "Manuel Schöne",
     "email": "schoene-manuel@gmx.de"
+  },
+  "info": {
+    "companyName": "Manuel Schöne",
+    "productName": "Quick Translate",
+    "productVersion": "0.1.0-alpha",
+    "copyright": "Copyright © 2026 Manuel Schöne",
+    "comments": "Translate your selected text anywhere"
   }
 }
