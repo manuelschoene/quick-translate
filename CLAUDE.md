@@ -66,9 +66,22 @@ runs — `lint:fix` also carries `--quiet || true`, so never point a human at it
 There are no tests in this repository yet (no `*_test.go`, no frontend test runner). Verify changes by
 running the app.
 
-`frontend/wailsjs/` is generated and gitignored. After adding, removing, or changing an **exported**
-method on `transport.Adapter` or a DTO, regenerate the bindings (`wails dev`/`wails build`, or
-`wails generate module`) before the frontend can import them.
+`frontend/wailsjs/` is generated but **tracked**, so a fresh checkout type-checks and lints without a Go
+toolchain. After adding, removing, or changing an **exported** method on `transport.Adapter` or a DTO,
+regenerate the bindings and commit them together with the change; stale bindings make the frontend fail at
+a distance, and nothing else catches it.
+
+Only `wails build` and `wails dev` regenerate them. `wails generate module` does **not** — it runs, prints
+nothing and writes no files. And `wails build` cannot regenerate them while the application is running:
+the generation step builds the app and executes it, `transport.Connect()` hands over to the instance that
+already holds the socket and exits before `wails.Run` is reached, so the step reports "Generating bindings:
+Done." without writing anything and the build then fails on the missing modules. Stop the service first:
+
+```sh
+systemctl --user stop quick-translate.service
+make build
+systemctl --user start quick-translate.service
+```
 
 ## Runtime files
 

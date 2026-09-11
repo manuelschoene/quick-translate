@@ -8,7 +8,7 @@ import type { models, transport } from '@wails/go/models';
 export function applyProviders(dto: transport.ProviderDto): void {
     providerState.current = dto.Current;
     // Wails types a Go slice as an array, but an empty one arrives as null.
-
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     providerState.providers = dto.Providers ?? [];
 }
 

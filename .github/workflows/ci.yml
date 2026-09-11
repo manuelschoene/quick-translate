@@ -87,9 +87,30 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
 
+      # --- Frontend --------------------------------------------------------------------------------------
+
+      - name: Run TypeScript
+        working-directory: frontend
+        run: bun run types
+
+      - name: Run ESLint
+        uses: ./.github/actions/run-eslint
+        with:
+          write: "false"
+
+      - name: Run Prettier
+        uses: ./.github/actions/run-prettier
+        with:
+          write: "false"
+
+      - name: Check the frontend build
+        working-directory: frontend
+        run: bun run build
+
       # --- Go: everything that needs no system libraries -------------------------------------------------
       # Wails' Linux frontend, and with it the WebKitGTK cgo dependency, only enters the build graph under
-      # the 'desktop,production' tags. Without them these run on a bare runner.
+      # the 'desktop,production' tags. Without them these run on a bare runner. The frontend must be built
+      # first, because the assets are embedded into the Go binary and checked for existence.
 
       - name: Check formatting
         shell: bash
@@ -123,22 +144,6 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
 
-      # --- Frontend --------------------------------------------------------------------------------------
-
-      - name: Run TypeScript
-        working-directory: frontend
-        run: bun run types
-
-      - name: Run ESLint
-        uses: ./.github/actions/run-eslint
-        with:
-          write: "false"
-
-      - name: Run Prettier
-        uses: ./.github/actions/run-prettier
-        with:
-          write: "false"
-
       # --- The build that proves the release compiles ----------------------------------------------------
       # This is the only step that compiles Wails' Linux frontend. The Makefile picks the WebKit build tag
       # with pkg-config, so installing the 4.1 development package is enough to select 'webkit2_41'.
@@ -159,6 +164,20 @@ jobs:
 
       - name: Build the application
         run: make build UPX=0
+
+      # The bindings are generated but committed, so a checkout lints and type-checks without a Go
+      # toolchain. That only holds while they are current, which is what this compares: 'make build' has
+      # just regenerated them, so anything left behind means the commit is missing the regenerated files.
+      - name: Check the generated bindings are current
+        shell: bash
+        run: |
+          changes=$(git status --porcelain -- frontend/wailsjs)
+          if [[ -n "$changes" ]]; then
+            echo "::error::The generated bindings are out of date. Run 'make build' and commit frontend/wailsjs."
+            echo "$changes"
+            git --no-pager diff -- frontend/wailsjs
+            exit 1
+          fi
 
       - name: Validate the desktop entry
         shell: bash

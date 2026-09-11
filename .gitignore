@@ -21,9 +21,6 @@ go.work.sum
 # --- Wails build output ---
 build/bin/
 
-# --- Wails auto-generated frontend bindings ---
-frontend/wailsjs/
-
 # --- Frontend dependencies ---
 frontend/node_modules/
 
