@@ -2,6 +2,15 @@ name: Release
 on:
     push:
         branches: [main]
+    # Rebuilds and re-attaches the assets of a release that already exists, for when the build failed after
+    # release-please had already tagged it. release-please itself is skipped on this path, so a manual run
+    # can never create or move a release — it only fills one in.
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Existing release tag to rebuild the assets for, e.g. v0.1.0-alpha"
+                required: true
+                type: string
 
 permissions:
     contents: write
@@ -13,6 +22,7 @@ jobs:
     # create it. Only the second case sets 'release_created', which is what gates everything below.
     release-please:
         name: Prepare the release
+        if: github.event_name != 'workflow_dispatch'
         runs-on: ubuntu-latest
         outputs:
             created: ${{ steps.release.outputs.release_created }}
@@ -27,21 +37,76 @@ jobs:
               id: release
               uses: googleapis/release-please-action@v4
 
+    # The single place that answers "what is being built", so nothing below has to know which trigger it
+    # was started from. Runs when release-please has just created a release, or on a manual rebuild — and in
+    # neither case does it touch the release itself.
+    resolve:
+        name: Resolve the release
+        needs: release-please
+        if: >-
+            !cancelled() &&
+            (github.event_name == 'workflow_dispatch' ||
+             needs.release-please.outputs.created == 'true')
+        runs-on: ubuntu-latest
+        outputs:
+            tag: ${{ steps.pick.outputs.tag }}
+            version: ${{ steps.pick.outputs.version }}
+
+        steps:
+            # The version is the tag without the leading 'v' — the same split the rest of the pipeline
+            # relies on, and the reason a manual run only needs the tag.
+            - name: Pick the tag and the version
+              id: pick
+              shell: bash
+              env:
+                  DISPATCH_TAG: ${{ inputs.tag }}
+                  RELEASE_TAG: ${{ needs.release-please.outputs.tag }}
+                  RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+              run: |
+                  if [[ -n "$DISPATCH_TAG" ]]; then
+                    tag=$DISPATCH_TAG
+                    version=${tag#v}
+                  else
+                    tag=$RELEASE_TAG
+                    version=$RELEASE_VERSION
+                  fi
+
+                  echo "tag=$tag" >> "$GITHUB_OUTPUT"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+                  echo "Building $version for release $tag"
+
+            - name: Confirm the release exists
+              if: github.event_name == 'workflow_dispatch'
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ steps.pick.outputs.tag }}
+              run: |
+                  if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+                    echo "::error::There is no release for tag '$TAG'. Check 'gh release list'."
+                    exit 1
+                  fi
+
     # Nothing is published from a tree that does not pass. Merging the release pull request runs the CI
     # workflow on its own as a push to main, so this repeats it once per release — worth it for the
-    # guarantee that the artefacts and the checks come from the same commit.
+    # guarantee that the artefacts and the checks come from the same commit. Skipped on a manual rebuild:
+    # that tree passed when it was released, and re-running the checks against an old tag can fail for
+    # reasons that have nothing to do with the assets, such as a vulnerability published since.
     verify:
         name: Verify
-        needs: release-please
-        if: needs.release-please.outputs.created == 'true'
+        needs: resolve
+        if: github.event_name != 'workflow_dispatch'
         uses: ./.github/workflows/ci.yml
         permissions:
             contents: write
 
     build:
         name: Build for WebKitGTK ${{ matrix.webkit }}
-        needs: [release-please, verify]
-        if: needs.release-please.outputs.created == 'true'
+        needs: [resolve, verify]
+        if: >-
+            !cancelled() &&
+            needs.resolve.result == 'success' &&
+            needs.verify.result != 'failure'
         # Built on the oldest available runner on purpose, and the reason is glibc rather than WebKit: glibc
         # is backward but not forward compatible, so a binary built on 24.04 refuses to start on Ubuntu 22.04
         # or Debian 12. Both development packages exist on jammy, so one runner covers both variants and the
@@ -71,7 +136,7 @@ jobs:
             - name: Checkout the release
               uses: actions/checkout@v7
               with:
-                  ref: ${{ needs.release-please.outputs.tag }}
+                  ref: ${{ needs.resolve.outputs.tag }}
                   fetch-depth: 0
 
             - name: Setup Bun
@@ -86,7 +151,7 @@ jobs:
             - name: Check wails.json against the release
               shell: bash
               env:
-                  RELEASED: ${{ needs.release-please.outputs.version }}
+                  RELEASED: ${{ needs.resolve.outputs.version }}
               run: |
                   declared=$(jq -r '.info.productVersion' wails.json)
                   if [[ "$declared" != "$RELEASED" ]]; then
@@ -110,6 +175,12 @@ jobs:
                   fi
                   echo "Building against ${{ matrix.pkgconfig }} $(pkg-config --modversion ${{ matrix.pkgconfig }})"
 
+            - name: Install the Wails CLI
+              shell: bash
+              run: |
+                  version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+                  go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
+
             - name: Build the application
               run: make build WEBKIT_TAGS=${{ matrix.tags }}
 
@@ -120,7 +191,7 @@ jobs:
             - name: Assemble the archive
               shell: bash
               env:
-                  VERSION: ${{ needs.release-please.outputs.version }}
+                  VERSION: ${{ needs.resolve.outputs.version }}
               run: |
                   name="quick-translate-${VERSION}-linux-amd64-${{ matrix.suffix }}"
                   mkdir -p "dist/$name"
@@ -164,8 +235,7 @@ jobs:
 
     publish:
         name: Publish the release assets
-        needs: [release-please, build]
-        if: needs.release-please.outputs.created == 'true'
+        needs: [resolve, build]
         runs-on: ubuntu-latest
 
         steps:
@@ -188,5 +258,5 @@ jobs:
               working-directory: dist
               env:
                   GH_TOKEN: ${{ github.token }}
-                  TAG: ${{ needs.release-please.outputs.tag }}
+                  TAG: ${{ needs.resolve.outputs.tag }}
               run: gh release upload "$TAG" *.tar.gz SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"

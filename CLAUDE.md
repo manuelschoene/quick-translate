@@ -51,6 +51,17 @@ on Debian 12. Note that the binary Wails produces has no section headers, so nei
 tell you which WebKitGTK it links — the pinned `WEBKIT_TAGS` and a build that fails on a missing pkg-config
 package are the only guarantee there is.
 
+The same workflow has a second entry point: `workflow_dispatch` with a `tag` input rebuilds and re-attaches
+the assets of a release that already exists, for when the build failed after release-please had already
+tagged it (`gh workflow run release.yml -f tag=v0.1.0-alpha`). On that path **release-please is skipped
+entirely**, so a manual run can never create or move a release, and `verify` is skipped too — that tree
+passed when it was released, and re-running the checks against an old tag can fail for reasons unrelated to
+the assets, such as a vulnerability published since. A `resolve` job is the only place that knows which
+trigger it was: it hands `tag` and `version` down, and on a manual run it fails early when no release
+exists for the tag. Because `verify` is skipped there, `build` has to carry a status-check condition
+(`!cancelled() && needs.resolve.result == 'success' && needs.verify.result != 'failure'`) — without it a
+skipped dependency would skip the build as well.
+
 Versions come from `release-please-config.json`, never by hand:
 
 - `initial-version` is what the very first release becomes. Without it release-please would start at
@@ -63,9 +74,19 @@ Versions come from `release-please-config.json`, never by hand:
   things make that work and must not be "simplified": the `extra-files` updater and the action's `version`
   output both carry the bare semver — only `tag_name` has the prefix — and the Makefile strips a leading
   `v` from `git describe`. Never name an asset after `tag_name`.
-- The default versioning strategy **keeps a prerelease label while bumping the numbers before it**, so
-  `0.1.0-alpha` goes to `0.1.1-alpha` on a `fix:` and `0.2.0-alpha` on a `feat:`. Do not set
-  `versioning: prerelease` — that bumps a counter *after* the label (`0.1.0-alpha.1`) instead.
+- `prerelease`, `versioning` and `prerelease-type` are set together and **must stay together**. The reason
+  for `prerelease: true` is not the numbering: it is what makes release-please mark the GitHub release as a
+  prerelease, which it does when the flag is set and the version either carries a label or has major `0`.
+  Without it a release named `0.1.0-alpha` would show up as a full release.
+- With `versioning: prerelease` the counter *after* the label moves and the numbers before it stand still:
+  `0.1.0-alpha` → `0.1.0-alpha.1` → `0.1.0-alpha.2`, whatever the commit type, for as long as the patch
+  number is `0`. That is deliberate — boring and predictable beats pretty numbers.
+- **Never set `versioning: prerelease` without `prerelease: true`.** That combination does not keep the
+  label, it *drops* it: the strategy bumps, then rebuilds the version from major, minor and patch alone, so
+  `0.1.0-alpha` would be released as `0.1.0`.
+- Because the numbers before the label no longer move on their own, getting to `0.2.0-alpha` or to a stable
+  version is a deliberate act: put `Release-As: 0.2.0-alpha` in the footer of a commit on `main`, which
+  every strategy honours ahead of its own calculation.
 - `bump-minor-pre-major` keeps a breaking change inside `0.x` until the project declares 1.0.
 
 Frontend (from `frontend/`, package manager is **bun**, not npm):
