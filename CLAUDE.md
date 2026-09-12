@@ -34,12 +34,14 @@ build made on an exact git tag uses the tag instead. A build without the flag re
 Building and installing are deliberately separate targets: `make install-binary` works on a binary that
 was downloaded rather than built, so a release needs no toolchain.
 
-Work happens on `feature/…` or `hotfix/…` branches cut from `main` and lands through a pull request.
-`main` is protected and is the nightly state people clone and build, so never commit to it directly and
-never leave it in a state that does not install. CI (`.github/workflows/ci.yml`) runs one job that
-auto-formats and commits the result back, and one that checks: gofmt, `go vet`, `go test`, `go mod verify`,
-a `go mod tidy` that must change nothing, `govulncheck`, the frontend checks, a full `make build`, and
-`desktop-file-validate` over the entry the binary generates.
+Work happens on branches cut from `main` and lands through a pull request. The prefix is what the CI
+trigger watches, so it has to be one of `feature/`, `hotfix/`, `chore/`, `docs/`, `refactor/` or `test/` —
+a push to a branch named anything else runs no checks until a pull request opens. `main` is protected and
+is the nightly state people clone and build, so never commit to it directly and never leave it in a state
+that does not install. CI (`.github/workflows/ci.yml`) runs one job that auto-formats and commits the
+result back, and one that checks: gofmt, `go vet`, `go test`, `go mod verify`, a `go mod tidy` that must
+change nothing, `govulncheck`, the frontend checks, a full `make build`, and `desktop-file-validate` over
+the entry the binary generates.
 
 `.github/workflows/release.yml` runs on every push to `main` and starts with `release-please`, which either
 keeps the release pull request in step with the conventional commits that have landed or, once that pull

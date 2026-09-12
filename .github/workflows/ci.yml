@@ -1,7 +1,8 @@
 name: Continuous Integration
 on:
   push:
-    branches: [main, "feature/**", "hotfix/**"]
+    branches:
+      [main, "chore/**", "docs/**", "feature/**", "hotfix/**", "refactor/**", "test/**"]
   pull_request:
     branches: [main]
   workflow_call:
