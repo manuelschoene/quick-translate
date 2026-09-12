@@ -126,13 +126,17 @@ read best — pointing yours at it will save you most of the drift.
 
 ## Pull requests
 
-Branch off `main`, name the branch `feature/…` for anything new or `hotfix/…` for an urgent fix, and open
-a pull request back into `main`. There is no long-lived development branch: `main` is protected, every
-change arrives through a pull request, and `main` is what people clone and build — so it has to stay
-installable at all times. Released versions are downloaded from the
+Branch off `main`, name the branch after what it carries, and open a pull request back into `main`. The
+prefix is what continuous integration watches, so it has to be one of these: `feature/…` for anything new,
+`hotfix/…` for an urgent fix, and `chore/…`, `docs/…`, `refactor/…` or `test/…` for the rest. A push to a
+branch named anything else runs no checks until the pull request opens.
+
+There is no long-lived development branch: `main` is protected, every change arrives through a pull
+request, and `main` is what people clone and build — so it has to stay installable at all times. Released
+versions are downloaded from the
 [releases page](https://github.com/manuelschoene/quick-translate/releases); `main` is the nightly state.
 
-Continuous integration runs on every push to a `feature/…` or `hotfix/…` branch and on every pull request:
+Continuous integration runs on every push to one of those branches and on every pull request:
 
 - The first job **fixes** rather than checks. It runs `gofmt -s -w`, ESLint and Prettier and commits the
   result back to your branch, so a forgotten formatting run is not something you have to fix by hand. It
@@ -174,6 +178,11 @@ through the history" is worth far more than "works".
 If your change touches the desktop integration, the clipboard or the installation, please say which
 distribution, desktop environment and session type (Wayland or X11) you tested on. Those paths differ a lot
 between setups and I can only test my own.
+
+Opening a pull request fills the body from `.github/pull_request_template.md`, which scaffolds all of that:
+why the change is needed, what changed and why it looks that way, how you verified it, and anything that
+has to happen by hand after merging. The comments in it are guidance and do not render — delete the
+sections that do not apply rather than leaving them empty, and a one-line fix does not need all four.
 
 ## Reporting bugs
 
