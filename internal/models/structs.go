@@ -5,8 +5,11 @@ import (
 )
 
 type Language struct {
-	Tag, Name              string
-	Source, Target, Stable bool
+	Tag    string `json:"tag"`
+	Name   string `json:"name"`
+	Source bool   `json:"source"`
+	Target bool   `json:"target"`
+	Stable bool   `json:"stable"`
 }
 
 type LanguagePreferences struct {

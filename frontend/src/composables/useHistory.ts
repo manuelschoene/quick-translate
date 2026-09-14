@@ -1,8 +1,8 @@
 import { historyState } from '@/state';
+import { NextTranslation, PreviousTranslation } from '@bind/transport/adapter';
 import { readonlyRefs } from '@lib/reactivity';
 import { request } from '@services/request';
 import { applyFull } from '@services/wire';
-import { NextTranslation, PreviousTranslation } from '@wails/go/transport/Adapter';
 
 const history = readonlyRefs(historyState);
 

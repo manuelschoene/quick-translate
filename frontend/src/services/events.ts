@@ -2,8 +2,7 @@ import { route } from '@/router';
 import { report } from '@services/report';
 import { beginShortcut, endShortcut } from '@services/request';
 import { applyTranslation } from '@services/wire';
-import type { transport } from '@wails/go/models';
-import { EventsOff, EventsOn } from '@wails/runtime/runtime';
+import { Events } from '@wailsio/runtime';
 
 /**
  * The events the backend sends on its own, mirrored from `internal/transport/adapter.go` and only to
@@ -19,9 +18,9 @@ const eventError = 'error';
  * meanwhile is not lost.
  */
 export function listen(): void {
-    EventsOn(eventTranslating, onTranslating);
-    EventsOn(eventTranslation, onTranslation);
-    EventsOn(eventError, onError);
+    Events.On(eventTranslating, onTranslating);
+    Events.On(eventTranslation, onTranslation);
+    Events.On(eventError, onError);
 }
 
 /**
@@ -29,7 +28,7 @@ export function listen(): void {
  * frontend is mounted again and the handlers would otherwise pile up on every event.
  */
 export function silence(): void {
-    EventsOff(eventTranslating, eventTranslation, eventError);
+    Events.Off(eventTranslating, eventTranslation, eventError);
 }
 
 /**
@@ -48,16 +47,16 @@ function onTranslating(): void {
  * already, because the events do not know of each other and whoever brings the data makes sure it
  * can be seen.
  */
-function onTranslation(dto: transport.TranslationDto): void {
+function onTranslation(event: Events.WailsEvent<typeof eventTranslation>): void {
     endShortcut();
-    applyTranslation(dto);
+    applyTranslation(event.data);
     route('translation');
 }
 
 /**
  * Takes a translation by shortcut that failed. Reporting it is what brings up the error view.
  */
-function onError(message: string): void {
+function onError(event: Events.WailsEvent<typeof eventError>): void {
     endShortcut();
-    report(message);
+    report(event.data);
 }

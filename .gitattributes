@@ -9,7 +9,7 @@ build/windows/installer/*.nsh linguist-language=NSIS
 # --- Generated / lock files ---
 frontend/bun.lock linguist-generated
 frontend/package.json.md5 linguist-generated
-frontend/wailsjs/** linguist-generated
+frontend/bindings/** linguist-generated
 go.sum linguist-generated
 
 # --- Binary files ---

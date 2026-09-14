@@ -20,7 +20,7 @@ export default defineConfigWithVueTs(
     vueTsConfigs.strictTypeChecked,
     vueTsConfigs.stylisticTypeChecked,
 
-    globalIgnores(['node_modules', 'dist', 'wailsjs', '.vite', '**/*.d.ts', '*.config.js', '*.config.ts']),
+    globalIgnores(['node_modules', 'dist', 'bindings', '.vite', '**/*.d.ts', '*.config.js', '*.config.ts']),
 
     {
         name: 'custom',

@@ -108,22 +108,22 @@ runs — `lint:fix` also carries `--quiet || true`, so never point a human at it
 There are no tests in this repository yet (no `*_test.go`, no frontend test runner). Verify changes by
 running the app.
 
-`frontend/wailsjs/` is generated but **tracked**, so a fresh checkout type-checks and lints without a Go
-toolchain. After adding, removing, or changing an **exported** method on `transport.Adapter` or a DTO,
-regenerate the bindings and commit them together with the change; stale bindings make the frontend fail at
-a distance, and nothing else catches it.
+`frontend/bindings/` is generated but **tracked**, so a fresh checkout type-checks and lints without a Go
+toolchain. After adding, removing, or changing an **exported** method on `transport.Adapter`, a DTO, or an
+event registered with `application.RegisterEvent`, run `make bindings` and commit the result together with
+the change; stale bindings make the frontend fail at a distance, and nothing else catches it.
 
-Only `wails build` and `wails dev` regenerate them. `wails generate module` does **not** — it runs, prints
-nothing and writes no files. And `wails build` cannot regenerate them while the application is running:
-the generation step builds the app and executes it, `transport.Connect()` hands over to the instance that
-already holds the socket and exits before `wails.Run` is reached, so the step reports "Generating bindings:
-Done." without writing anything and the build then fails on the missing modules. Stop the service first:
+`make bindings` runs `wails3 generate bindings -ts`, which analyses the Go source without running the
+application, so it works while the service is running. Leave out `-b`: it makes the bindings import the
+runtime from `/wails/runtime.js`, which only the running application serves, so `vue-tsc` can resolve
+neither the runtime nor the event types. The frontend depends on `@wailsio/runtime` instead, pinned to the
+exact version of the Go module — bump both together.
 
-```sh
-systemctl --user stop quick-translate.service
-make build
-systemctl --user start quick-translate.service
-```
+Event types reach the frontend in two parts. `bindings/github.com/wailsapp/wails/v3/internal/eventdata.d.ts`
+fills `Events.CustomEvents`, which is why `tsconfig.json` includes `bindings/**/*.d.ts`; without it every
+event's `data` is silently `any`. `eventcreate.ts` turns the data into DTO classes at runtime and is loaded
+by the `@wailsio/runtime/plugins/vite` plugin in `vite.config.ts`, not by any import. The runtime types are
+parameterised on the event *name* (`Events.WailsEvent<'translation'>`), never on the data type.
 
 ## Runtime files
 
@@ -218,7 +218,7 @@ composables/                read-only refs + derived computeds + actions   (one 
         ↑
  services/wire.ts           the only module that knows Go field names
         ↑
- services/events.ts · wailsjs bindings
+ services/events.ts · bindings/
 ```
 
 The split is vertical by domain in `composables/` and horizontal by role below it. The one seam that
@@ -226,8 +226,8 @@ has to stay central is `services/wire.ts`: a `TranslationDto` carries the chosen
 translated text and the history flags at once, so whoever unpacks it reaches into three state groups
 anyway.
 
-- `src/state.ts` — the `reactive` state groups, the only mutable state in the app, plus the
-  `Language` type they hold. Written by `services/`, read through the composables.
+- `src/state.ts` — the `reactive` state groups, the only mutable state in the app. Written by `services/`,
+  read through the composables.
 - `src/router.ts` — `ViewName`, the `ViewName → Component` table and `route()`. The single door to
   navigation; there is no vue-router. `component` is a `ref` the App renders with `<component :is>`.
 - `composables/use*.ts` — the only thing views and components import. Each hands out read-only refs
@@ -245,13 +245,13 @@ anyway.
 - `services/events.ts` — the three backend events, mirrored from `internal/transport/adapter.go`.
 - `lib/` — pure helpers with no app state: `cn`, `keyboard` (`onKey`), `search`, and `reactivity`
   (`readonlyRefs`, which wraps a state group in `readonly` + `toRefs` so components can only read).
-- Types live with what owns them: `Language` in `state.ts`, `ViewName` in `router.ts`, `ButtonProps`
-  in a plain `<script>` block of `Button.vue`. There is no types-only module.
+- Types live with what owns them: `Language` and the DTOs in the generated `@bind` modules, `ViewName` in
+  `router.ts`, `ButtonProps` in a plain `<script>` block of `Button.vue`. There is no types-only module.
 - A component that is styled from the outside declares a `class` prop and merges it with `cn()`
   (`Button`, `Panel`, `LoadingTextarea`, and the toolbars, which forward it down to `Panel`); one that
   is never styled from the outside declares none. Templates address props as `props.x`, never bare.
 - Import aliases (kept in sync in `vite.config.ts` **and** `tsconfig.json`): `@`, `@assets`, `@comp`,
-  `@lay`, `@lib`, `@services`, `@use`, `@views`, `@wails`.
+  `@lay`, `@lib`, `@services`, `@use`, `@views`, `@bind`.
 
 ## Conventions
 

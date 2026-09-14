@@ -88,22 +88,11 @@ The codebase is fairly consistent; matching what is around your change matters m
   `internal/transport/unix.go` and `internal/desktop/linux.go`.
 - **`architecture.mmd`** is a Mermaid class diagram of the Go packages. Please update it when backend types
   or package boundaries change.
-- After changing an **exported** method on `transport.Adapter` or a DTO, regenerate the frontend bindings
-  in `frontend/wailsjs/` and **commit them with your change**. They are generated but tracked, so that a
-  checkout type-checks and lints without a Go toolchain — and CI fails if they are out of date.
-
-Regenerating those bindings has one trap worth knowing about. Only `wails build` and `wails dev` write
-them — `wails generate module` runs, prints nothing and writes no files — and neither can do it while Quick
-Translate is running. The generation step builds the application and executes it, and that process hands
-the request over to the instance already holding the socket and exits before the bindings are written. The
-build then reports `Generating bindings: Done.` without having written anything and fails on the missing
-modules. Stop it first:
-
-```sh
-systemctl --user stop quick-translate.service
-make build
-systemctl --user start quick-translate.service
-```
+- After changing an **exported** method on `transport.Adapter`, a DTO or a registered event, run
+  `make bindings` and **commit the files in `frontend/bindings/` with your change**. They are generated but
+  tracked, so that a checkout type-checks and lints without a Go toolchain — and CI fails if they are out of
+  date. The generator reads the Go source without starting the application, so Quick Translate can keep
+  running while you do it.
 
 ## Using AI assistants
 

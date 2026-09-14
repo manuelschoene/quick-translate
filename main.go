@@ -57,10 +57,7 @@ func main() {
 		return
 	}
 
-	// A problem that keeps the application from translating is not a reason to stop: it is shown in the window
-	// the next time the shortcut is pressed, and the service manager is spared restarting a process that would
-	// fail in exactly the same way for the rest of the session.
-	runApp(transport.NewAdapter())
+	runApp()
 }
 
 // Carries out the command the binary was started with and reports whether one was found, in which case the application must not start. Arguments that are none of the known commands are ignored rather than rejected, because 'wails dev' starts the binary with arguments of its own.

@@ -1,7 +1,7 @@
 import { requestState, translationState } from '@/state';
+import { CopyTranslation } from '@bind/transport/adapter';
 import { readonlyRefs } from '@lib/reactivity';
 import { requestQuietly } from '@services/request';
-import { CopyTranslation } from '@wails/go/transport/Adapter';
 
 const translation = readonlyRefs(translationState);
 const { pending } = readonlyRefs(requestState);

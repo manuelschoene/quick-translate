@@ -1,12 +1,5 @@
+import type { Language } from '@bind/models';
 import { reactive } from 'vue';
-
-export interface Language {
-    tag: string;
-    name: string;
-    source: boolean;
-    target: boolean;
-    stable: boolean;
-}
 
 interface ProviderState {
     current: string;

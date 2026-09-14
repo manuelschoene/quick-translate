@@ -1,10 +1,12 @@
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
+import wails from '@wailsio/runtime/plugins/vite';
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [vue(), tailwindcss()],
+    // Loads the generated event bindings into the runtime, so an event's data arrives as its DTO class.
+    plugins: [vue(), tailwindcss(), wails('./bindings')],
     resolve: {
         alias: {
             '@': '/src',
@@ -15,7 +17,7 @@ export default defineConfig({
             '@services': '/src/services',
             '@use': '/src/composables',
             '@views': '/src/views',
-            '@wails': '/wailsjs',
+            '@bind': '/bindings/quick-translate/internal',
         },
     },
 });

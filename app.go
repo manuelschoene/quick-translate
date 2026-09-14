@@ -2,49 +2,51 @@ package main
 
 import (
 	"embed"
-	"log"
 
 	"quick-translate/internal/transport"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-//go:embed all:frontend/dist
+//go:embed frontend/dist
 var assets embed.FS
 
 //go:embed art/quick-translate_48x48.png
 var icon []byte
 
 // Runs the application with the adapter registered as the only bridge between the frontend and the application. Blocks until the application is stopped and ends the process if it can not be started.
-func runApp(adapter *transport.Adapter) {
-	err := wails.Run(&options.App{
-		Title:             "Quick Translate",
-		Width:             480,
-		Height:            300,
-		DisableResize:     true,
-		Frameless:         true,
-		StartHidden:       !isDevBuild(),
-		AlwaysOnTop:       true,
-		HideWindowOnClose: true,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		BackgroundColour: &options.RGBA{R: 1, G: 3, B: 3, A: 255},
-		OnStartup:        adapter.StartUp,
-		OnShutdown:       adapter.Shutdown,
-		Bind: []interface{}{
-			adapter,
-		},
-		Linux: &linux.Options{
-			Icon:        icon,
+func runApp() {
+	app := application.New(application.Options{
+		Name:        "Quick Translate",
+		Description: "Translate your selected text anywhere",
+		Icon:        icon,
+		Linux: application.LinuxOptions{
 			ProgramName: "quick-translate",
+		},
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
 		},
 	})
 
+	app.RegisterService(application.NewService(transport.NewAdapter(app)))
+
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "Quick Translate",
+		Width:            480,
+		Height:           300,
+		AlwaysOnTop:      true,
+		DisableResize:    true,
+		Frameless:        true,
+		BackgroundColour: application.RGBA{Red: 1, Green: 3, Blue: 3, Alpha: 255},
+		Hidden:           !isDevBuild(),
+		Linux: application.LinuxWindow{
+			Icon:             icon,
+			WebviewGpuPolicy: application.WebviewGpuPolicyAlways,
+		},
+	})
+
+	err := app.Run()
 	if err != nil {
-		log.Fatalf("Could not start the application: %v", err)
+		panic(err)
 	}
 }

@@ -9,7 +9,7 @@ import (
 
 	"quick-translate/internal/core"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Sent when the window was opened by the shortcut and the translation is on its way, so the frontend can show that it is working instead of the previous translation.
@@ -22,15 +22,21 @@ const eventTranslation = "translation"
 const eventError = "error"
 
 type Adapter struct {
-	ctx      context.Context
+	app *application.App
 	core     *core.Core
 	listener net.Listener
 	mutex    sync.Mutex
 }
 
 // Creates a new adapter and builds the core it works on. A core that can not be built does not stop the application: the reason is almost always a configuration the user has yet to finish, and a window that says so is worth more than a process that exits and is restarted by the service manager for as long as the session lasts. The adapter answers every call with that reason instead, and tries again on the next one.
-func NewAdapter() *Adapter {
-	adapter := &Adapter{}
+func NewAdapter(app *application.App) *Adapter {
+	application.RegisterEvent[application.Void](eventTranslating)
+	application.RegisterEvent[*TranslationDto](eventTranslation)
+	application.RegisterEvent[string](eventError)
+
+	adapter := &Adapter{
+		app: app,
+	}
 
 	// Built here rather than on the first call, so a problem shows up in the log when the session starts and the languages of the provider are fetched before the user asks for the first translation.
 	if err := adapter.ready(); err != nil {
@@ -57,18 +63,16 @@ func (a *Adapter) ready() error {
 }
 
 // Prepares the application once the window is ready and starts listening for the shortcut. Called by Wails, which also hands over the context every call into its runtime needs.
-func (a *Adapter) StartUp(ctx context.Context) {
-	a.ctx = ctx
-
+func (a *Adapter) ServiceStartup(_ context.Context, _ application.ServiceOptions) {
 	if err := a.listenOnSocket(); err != nil {
 		// The application is started hidden and is only brought up through the socket, so it is of no use without it.
 		fmt.Println(err)
-		runtime.Quit(ctx)
+		a.app.Quit()
 	}
 }
 
 // Releases everything the application holds. Called by Wails on shutdown, so the history database is closed and the socket is removed even when the application is stopped from the outside.
-func (a *Adapter) Shutdown(ctx context.Context) {
+func (a *Adapter) ServiceShutdown(_ context.Context, _ application.ServiceOptions) {
 	// Closing the listener also removes the socket file, because it was created by this instance.
 	if a.listener != nil {
 		if err := a.listener.Close(); err != nil {
@@ -84,23 +88,23 @@ func (a *Adapter) Shutdown(ctx context.Context) {
 
 // Hides the window without stopping the application, which is what the frontend does when the user dismisses it.
 func (a *Adapter) Hide() {
-	runtime.WindowHide(a.ctx)
+	a.app.Window.Current().Hide()
 }
 
 // Shows the window and translates the selected text. Used for the shortcut, which reaches the application through the socket instead of the frontend, so the result is sent as an event. The window is shown before the translation is made, so it reacts to the shortcut right away.
 func (a *Adapter) show() {
-	runtime.WindowShow(a.ctx)
-	runtime.WindowCenter(a.ctx)
-	runtime.EventsEmit(a.ctx, eventTranslating)
+	a.app.Window.Current().Show()
+	a.app.Window.Current().Center()
+	a.app.Event.Emit(eventTranslating)
 
 	dto, err := a.translateFromClipboard()
 	if err != nil {
 		fmt.Printf("Could not translate the selected text: %v\n", err)
-		runtime.EventsEmit(a.ctx, eventError, err.Error())
+		a.app.Event.Emit(eventError, err.Error())
 		return
 	}
 
-	runtime.EventsEmit(a.ctx, eventTranslation, dto)
+	a.app.Event.Emit(eventTranslation, dto)
 }
 
 // Translates the selected text and returns the new state of the translation view.

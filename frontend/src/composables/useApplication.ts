@@ -1,7 +1,7 @@
+import { Hide, State } from '@bind/transport/adapter';
 import { listen, silence } from '@services/events';
 import { request, requestQuietly } from '@services/request';
 import { applyFull } from '@services/wire';
-import { Hide, State } from '@wails/go/transport/Adapter';
 
 const exposed = { start, stop, hide };
 

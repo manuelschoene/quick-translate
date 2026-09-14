@@ -50,6 +50,7 @@ all: build
 help:
 	@printf "Quick Translate\n\n"
 	@printf "  make build            Compile the application to $(BINARY).\n"
+	@printf "  make bindings         Generate the TypeScript bindings for the frontend.\n"
 	@printf "  make dev              Run the application with live reload.\n"
 	@printf "  make install          Build, install the binary and register it with the desktop.\n"
 	@printf "  make install-binary   Copy an already built binary to $(BIN_DIR).\n"
@@ -63,13 +64,16 @@ help:
 	@printf "           WEBKIT_TAGS=$(WEBKIT_TAGS) (detected; set to webkit2_41 or empty to force a version)\n"
 
 dev:
-	wails dev $(TAGS)
+	wails3 dev $(TAGS)
+
+bindings:
+	wails3 generate bindings -ts
 
 build:
 	@printf "==> Compiling Quick Translate $(VERSION)...\n"
 	@$(if $(WEBKIT_TAGS),,printf "    webkit2gtk-4.1 was not found, building against webkit2gtk-4.0.\n")
 	@$(if $(filter-out 0,$(UPX)),$(if $(UPX_FOUND),,printf "    upx is not installed, the binary is not compressed.\n"),)
-	wails build $(TAGS) $(COMPRESS) -ldflags "$(LDFLAGS)"
+	wails3 build $(TAGS) $(COMPRESS) -ldflags "$(LDFLAGS)"
 
 icons:
 	@command -v magick >/dev/null || { printf "ImageMagick is required to render the icon set.\n"; exit 1; }
