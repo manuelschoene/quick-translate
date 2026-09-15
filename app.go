@@ -38,7 +38,7 @@ func runApp() {
 		DisableResize:    true,
 		Frameless:        true,
 		BackgroundColour: application.RGBA{Red: 1, Green: 3, Blue: 3, Alpha: 255},
-		Hidden:           !isDevBuild(),
+		Hidden: !app.Env.Info().Debug,
 		Linux: application.LinuxWindow{
 			Icon:             icon,
 			WebviewGpuPolicy: application.WebviewGpuPolicyAlways,
