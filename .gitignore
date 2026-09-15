@@ -18,6 +18,10 @@ go.work.sum
 
 # --- Wails build output ---
 build/bin/
+bin/
+
+# --- Task checksum cache ---
+.task/
 
 # --- Frontend dependencies ---
 frontend/node_modules/

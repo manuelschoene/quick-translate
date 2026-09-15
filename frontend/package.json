@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "bun run types && vite build",
+        "build:dev": "bun run types && vite build --minify false --mode development",
         "preview": "vite preview",
         "types": "vue-tsc --noEmit",
         "lint": "eslint . --fix",
@@ -28,6 +29,7 @@
         "@babel/types": "^8.0.4",
         "@eslint/js": "^10.0.1",
         "@tailwindcss/vite": "^4.3.3",
+        "@types/node": "^20.19.43",
         "@vitejs/plugin-vue": "^6.0.8",
         "@vue/eslint-config-typescript": "^14.9.0",
         "eslint": "^10.9.1",

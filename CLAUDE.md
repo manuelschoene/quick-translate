@@ -28,7 +28,7 @@ make icons                   # re-render the checked-in icon set from the master
 go vet ./...
 ```
 
-The version is stamped in from `wails.json`'s `info.productVersion` via `-ldflags -X main.version=…`; a
+The version is stamped in from `build/config.yml`'s `info.version` via `-ldflags -X main.version=…`; a
 build made on an exact git tag uses the tag instead. A build without the flag reports `0.0.0-dev`.
 
 Building and installing are deliberately separate targets: `make install-binary` works on a binary that

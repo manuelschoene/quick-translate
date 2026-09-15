@@ -21,7 +21,7 @@ const (
 )
 
 // The text the help command prints.
-// The version this binary was built as. Stamped in by the Makefile from the version in 'wails.json', or from
+// The version this binary was built as. Stamped in by the Makefile from the version in 'build/config.yml', or from
 // the git tag when the build was made on one. A build made without the linker flag keeps the fallback, which
 // is why it names itself a development build rather than a release.
 var version = "0.0.0-dev"

@@ -55,8 +55,8 @@ export default defineConfigWithVueTs(
             eqeqeq: 'error',
             'init-declarations': 'off',
             'no-alert': 'error',
-            // A failure that only costs a feature is printed and swallowed here, see the Go side of it.
-            'no-console': ['error', { allow: ['warn', 'error'] }],
+            // The production build drops every console call, so nothing written there would ever be seen.
+            'no-console': 'error',
             'no-extra-label': 'error',
             'no-implied-eval': 'error',
             'no-invalid-this': 'error',
