@@ -22,7 +22,7 @@ const eventTranslation = "translation"
 const eventError = "error"
 
 type Adapter struct {
-	app *application.App
+	app      *application.App
 	core     *core.Core
 	listener net.Listener
 	mutex    sync.Mutex
