@@ -1,19 +1,38 @@
-version: '3'
-
 # Holds the tasks every operating system shares.
+
+version: '3'
 
 tasks:
   go:mod:tidy:
-    summary: Runs `go mod tidy`
+    desc: Tidies go.mod
+    summary: Runs `go mod tidy` before anything reads the module, so a stale go.sum cannot fail a build halfway.
     internal: true
-    # Universal/multi-arch builds invoke this concurrently from parallel deps;
-    # two `go mod tidy` processes racing on go.mod can corrupt it.
-    run: once
+    run: once # Invoked concurrently from parallel deps, so only run once to avoid racing on go.mod.
     cmds:
       - go mod tidy
 
+  generate:bindings:
+    desc: Generates the frontend bindings
+    summary: Writes the TypeScript bindings for the bound services and the registered events to frontend/bindings. Analyses the Go source, so the application does not have to run.
+    run: once
+    deps:
+      - task: go:mod:tidy
+    sources:
+      - "**/*.[jt]s"
+      - exclude: frontend/**/*
+      - frontend/bindings/**/*  # Rerun when switching between dev/production mode causes changes in output
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - frontend/bindings/**/*
+    cmds:
+      - wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true -time-type=Date{{if eq .OBFUSCATED "true"}} -obfuscated{{end}} -ts
+
   install:frontend:deps:
-    summary: Install frontend dependencies
+    desc: Installs the frontend dependencies
+    summary: Installs what bun.lock pins, and is skipped while package.json and bun.lock are unchanged.
+    internal: true
     run: once
     dir: frontend
     sources:
@@ -25,11 +44,12 @@ tasks:
       - sh: bun --version
         msg: "bun not found"
     cmds:
-      - bun install
+      - bun install --frozen-lockfile --no-progress
 
   build:frontend:
     label: build:frontend (DEV={{.DEV}})
-    summary: Build the frontend project
+    desc: Builds the frontend
+    summary: Builds the frontend bundle the binary embeds. DEV=true keeps the sources readable and the console calls in.
     run: once
     dir: frontend
     sources:
@@ -50,25 +70,9 @@ tasks:
     env:
       PRODUCTION: '{{if eq .DEV "true"}}false{{else}}true{{end}}'
 
-  generate:bindings:
-    summary: Generates bindings for the frontend
-    run: once
-    deps:
-      - task: go:mod:tidy
-    sources:
-      - "**/*.[jt]s"
-      - exclude: frontend/**/*
-      - frontend/bindings/**/*  # Rerun when switching between dev/production mode causes changes in output
-      - "**/*.go"
-      - go.mod
-      - go.sum
-    generates:
-      - frontend/bindings/**/*
-    cmds:
-      - wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true -time-type=Date{{if eq .OBFUSCATED "true"}} -obfuscated{{end}} -ts
-
   dev:frontend:
-    summary: Runs the frontend in development mode
+    desc: Runs the frontend dev server
+    summary: Serves the frontend on VITE_PORT, the port `wails3 dev` points the application at.
     dir: frontend
     deps:
       - task: install:frontend:deps

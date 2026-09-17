@@ -18,7 +18,7 @@
     },
     "dependencies": {
         "@lucide/vue": "^1.31.0",
-        "@wailsio/runtime": "3.0.0-beta.21",
+        "@wailsio/runtime": "3.0.0-beta.23",
         "clsx": "^2.1.1",
         "tailwind-merge": "^3.6.0",
         "tailwindcss": "^4.3.3",

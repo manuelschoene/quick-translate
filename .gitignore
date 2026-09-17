@@ -20,6 +20,9 @@ go.work.sum
 build/bin/
 bin/
 
+# --- Intermediate build artifacts ---
+build/linux/artifact/
+
 # --- Task checksum cache ---
 .task/
 

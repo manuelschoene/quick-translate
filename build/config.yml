@@ -7,7 +7,7 @@ info:
   description: "Translate your selected text anywhere"
   copyright: "Copyright © 2026 Manuel Schöne"
   comments: "Translate your selected text anywhere"
-  version: "0.1.0-alpha"
+  version: "0.0.0-alpha" # release-please writes the new version here. All other build files read it from here.
 
 # Dev mode configuration
 dev_mode:
@@ -39,6 +39,5 @@ dev_mode:
       type: primary
 
 other:
-  # The author
-  - name: "Manuel Schöne"
+  - name: "Manuel Schöne" # The author
     email: "schoene-manuel@gmx.de"

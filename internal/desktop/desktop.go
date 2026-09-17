@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// The name the desktop matches this application on, in the reverse domain form GTK and D-Bus require. The
+// application hands it to Wails as the GTK application id, the desktop entry and the icon are named after
+// it, and KWin matches its rules against it, so every one of those has to read it from here. GTK would
+// otherwise derive 'org.wails.quick_translate' from the application name, under a domain this project does
+// not own.
+const ApplicationID = "io.github.manuelschoene.QuickTranslate"
+
 // The desktop environments an installation can be tailored to. Generic uses only what every freedesktop-compliant desktop understands and is what every environment without a case of its own falls back to, while KDE adds the parts Plasma offers on top of it.
 const (
 	EnvironmentGeneric = "generic"

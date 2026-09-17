@@ -6,7 +6,7 @@
       "name": "frontend",
       "dependencies": {
         "@lucide/vue": "^1.31.0",
-        "@wailsio/runtime": "3.0.0-beta.21",
+        "@wailsio/runtime": "3.0.0-beta.23",
         "clsx": "^2.1.1",
         "tailwind-merge": "^3.6.0",
         "tailwindcss": "^4.3.3",
@@ -209,7 +209,7 @@
 
     "@vue/shared": ["@vue/shared@3.5.41", "", {}, "sha512-IOnwSCma8j+9xJT6b8H0dEYidC80NsYmNMlZxRsukYcSoGaDBohog5hDxzeUXdFeGWFA++vWvxqOmrr96VlqMA=="],
 
-    "@wailsio/runtime": ["@wailsio/runtime@3.0.0-beta.21", "", {}, "sha512-5khssqPE98JDCHL82XpVnqOHT5ar9HT1NEJqMyTknNML066lhDc1Zd4sVkR+wx0vO80zlG2svGfzals5a0QsZA=="],
+    "@wailsio/runtime": ["@wailsio/runtime@3.0.0-beta.23", "", {}, "sha512-Am9N7nvA9WBpVzOkrJ0PzTg/cgEFL72I97ksOfOuryLP4VOdnl7viP59+6Nx5zMoHJo207k85WINJaWfCY1CQQ=="],
 
     "acorn": ["acorn@8.18.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ=="],
 

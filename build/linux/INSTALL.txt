@@ -1,0 +1,30 @@
+Quick Translate @VERSION@ - linux/@ARCH@
+
+Two binaries are included, one per Linux graphics stack:
+
+  @BINARY@ - GTK4 and WebKitGTK 6.0
+  @BINARY_GTK3@ - GTK3 and WebKit2GTK 4.1, for older distributions
+
+Take the first one unless it refuses to start. What your system offers:
+
+  pkg-config --exists webkitgtk-6.0 && echo 6.0 || echo 4.1
+
+Reading the selection also needs one of wl-clipboard, xclip or xsel.
+
+The archive mirrors the directories it is installed into. For your user only, with the GTK4 binary:
+
+  install -D -m 0755 @BINARY@ ~/.local/bin/@APP_NAME@
+  cp -r share ~/.local/
+
+For the GTK3 build, install @BINARY_GTK3@ under the same name instead.
+
+Do not rename any of the files below share/: your desktop grants the global shortcut to the
+application these names identify, and under different ones the shortcut stops working.
+
+Uninstall. The first command deletes your configuration, your history and everything the application
+cached - leave it out to keep them:
+
+  ~/.local/bin/@APP_NAME@ --purge
+  rm ~/.local/bin/@APP_NAME@
+  rm ~/.local/share/applications/@APP_ID@.desktop
+  rm ~/.local/share/icons/hicolor/scalable/apps/@APP_ID@.svg

@@ -72,7 +72,7 @@ type paths struct {
 	appCache  string
 }
 
-// The values the templates are rendered with: the binary the desktop entry and the service start, the name the icon is looked up under in the theme, the window class KWin matches its rules against and the shortcut the KDE entry is bound to.
+// The values the templates are rendered with: the binary the desktop entry and the service start, the name the icon is looked up under in the theme, the window class KWin matches its rules against, which is the application id because Wails derives the program name from it, and the shortcut the KDE entry is bound to.
 type values struct {
 	Exec     string
 	Icon     string
@@ -250,7 +250,7 @@ func install(environment string) error {
 		return err
 	}
 
-	vals := &values{Exec: quoteExecutable(executable), Icon: iconName, Class: appName, Shortcut: kdeShortcut}
+	vals := &values{Exec: quoteExecutable(executable), Icon: iconName, Class: ApplicationID, Shortcut: kdeShortcut}
 
 	fmt.Printf("==> Installing Quick Translate for the '%s' desktop...\n", environment)
 	fmt.Printf("    Binary        %s\n", executable)
