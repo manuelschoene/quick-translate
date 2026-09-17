@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 805 245" width="805" height="245"
+     role="img" aria-label="Quick Translate">
+  <title>Quick Translate</title>
+  <desc>
+    Quick Translate wordmark. art/wordmark.src.svg is the editable source and
+    art/wordmark.svg is exported from it by "task wordmark", which runs:
+    inkscape art/wordmark.src.svg --export-text-to-path --export-plain-svg --export-filename=art/wordmark.svg
+  </desc>
+
+  <!--
+    The wordmark is two files, and this comment travels into both of them:
+
+      art/wordmark.src.svg  name as a text element.  Edit this one.
+      art/wordmark.svg      name as outlines.        This one is used.
+
+    Run "task wordmark" after every change to the source. The command it runs is
+    in the desc element above rather than in this comment, because an XML
+    comment may not contain a double hyphen and every one of those flags opens
+    with one. The task does nothing else to the exported file, so that command
+    alone reproduces it exactly.
+
+    Outlines are necessary because the app bundles no font of its own
+    (frontend/src/style.css resolves everything through a system-ui stack), so
+    Noto Sans is not guaranteed on any target system. A text element would fall
+    back to whatever the viewer happens to have installed, and the wordmark
+    would differ from machine to machine.
+
+    Colors are the same sRGB values as art/icon.svg and come from
+    frontend/src/style.css. They are written as hex because librsvg, the
+    renderer behind the desktop icon themes, does not understand oklch(); a
+    color it cannot parse renders as nothing at all. The token names below are
+    spelled without their leading dashes for the same reason as the flags.
+
+      #1E9F9F  is color-accent-400, oklch(63.8% 0.103 195)
+      #EFF7F7  is color-gray-50,    oklch(97%   0.008 195)
+
+    Layout: the type size is derived from the bubble, not picked by eye. Cap
+    height plus leading equal the bubble's 184.08 units, so the cap line of
+    "Quick" and the baseline of "Translate" meet its top and bottom edge. At
+    Noto Sans' cap height of 0.714 em that puts the size at 105 and the leading
+    at 109.11. Change the icon scale and all three follow.
+
+    The viewBox is trimmed to the ink, so neither file carries a dead margin and
+    whoever places the wordmark controls the clear space. The box starts above
+    the bubble's top edge on purpose: the ascender of the "k" rises past the cap
+    line.
+
+    This is the wordmark, not the application icon. art/icon.svg is the square
+    mark the Linux archive installs into hicolor/scalable/apps.
+  -->
+
+  <!-- Icon, scaled to 240 units tall and placed so its ink starts at x=0 -->
+  <g transform="translate(-0.58 -28.79) scale(0.5825243)">
+    <g fill="#1E9F9F">
+      <rect x="170" y="58" width="316" height="316" rx="84"/>
+      <path d="M 230 352 L 348 352 L 190 470 Z"/>
+    </g>
+    <g fill="none" stroke="#EFF7F7" stroke-width="20" stroke-linecap="round">
+      <circle cx="328" cy="216" r="92"/>
+      <ellipse cx="328" cy="216" rx="30.7" ry="92"/>
+      <path d="M 241 185 H 415"/>
+      <path d="M 241 247 H 415"/>
+    </g>
+    <g stroke="#1E9F9F" stroke-width="26" stroke-linecap="round" fill="none">
+      <path d="M 68 148 H 146"/>
+      <path d="M 14 216 H 146"/>
+      <path d="M 84 284 H 146"/>
+    </g>
+  </g>
+
+  <!-- Keep the family exactly "Noto Sans": the outlines in art/wordmark.svg were
+       generated from it. A fallback stack here would make the export depend on
+       whatever resolves first on the machine running it, which is why the task
+       checks that the family is installed before it runs. -->
+  <g font-family="Noto Sans" font-size="105" font-weight="700" fill="#1E9F9F" letter-spacing="-2">
+    <text x="338.5" y="79.97">Quick</text>
+    <text x="338.5" y="189.08">Translate</text>
+  </g>
+</svg>

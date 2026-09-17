@@ -1,5 +1,5 @@
 <p align="center">
-	<img alt="Quick Translate Logo" src="art/quick-translate.png" width="256">
+	<img alt="Quick Translate Logo" src="art/wordmark.svg" width="512">
 </p>
 
 <br>
