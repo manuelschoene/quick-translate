@@ -1,11 +1,10 @@
 //go:build linux
 
-package desktop
+package system
 
 import (
+	"bytes"
 	"fmt"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -13,15 +12,32 @@ import (
 // The group the window rules are written to. KWin addresses every rule by a name of its own, so a fixed one lets the installation replace and remove exactly its own rule without ever touching the rules the user has made.
 const rulesGroup = "8f2c1d64-3a5b-4c7e-9d10-2b6f4a8c0e31"
 
+// The KWin rules with a placeholder at the window class for the application ID
+const rules = `Description=Quick Translate
+wmclass=%s
+wmclasscomplete=false
+wmclassmatch=1
+above=true
+aboverule=3
+noborder=true
+noborderrule=3
+skiptaskbar=true
+skiptaskbarrule=3
+skippager=true
+skippagerrule=3
+skipswitcher=true
+skipswitcherrule=3
+`
+
+// The name the rule carries in the KWin settings. It is what recognizes a rule an earlier version has written under a group name of its own, so such a rule is replaced instead of being left behind as a duplicate.
+const rulesDescription = "Quick Translate"
+
 // The group KWin keeps the list of its rules in, and the key inside it that names them in order.
 const (
 	generalGroup = "General"
 	rulesKey     = "rules"
 	countKey     = "count"
 )
-
-// The name the rule carries in the KWin settings. It is what recognizes a rule an earlier version has written under a group name of its own, so such a rule is replaced instead of being left behind as a duplicate.
-const rulesDescription = "Quick Translate"
 
 // One group of a KDE settings file: the name it carries in brackets and the lines below it, up to the next group (INI-style).
 type group struct {
@@ -161,48 +177,38 @@ func updateRuleList(groups []*group, include bool) []*group {
 	return groups
 }
 
-// Reads the user's KWin rule file. A file that does not exist yet is answered with an empty content, because the first installation on a machine is the one that creates it. Returns an error if the file is there but can not be read.
-func readRules(dirs *paths) ([]byte, error) {
-	content, err := os.ReadFile(dirs.kwinRules)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("Could not read the KWin rules at '%s': %w", dirs.kwinRules, err)
-	}
-
-	return content, nil
+// Returns the lines of the rule's group, filled in with the application id KWin matches the window against.
+func ruleBody() []string {
+	return strings.Split(strings.TrimSpace(fmt.Sprintf(rules, ApplicationID)), "\n")
 }
 
-// Writes the window rules the frameless window that is always on top needs into the user's rule file. KWin has no directory rules can be dropped into, so the rule is merged into the file next to the rules the user has made, replacing the one an earlier installation has left behind, and KWin is asked to read its settings again afterwards. Returns an error if the rule file can not be read or written.
-func installRules(dirs *paths, vals *values) error {
-	body, err := render(rulesTemplate, vals)
+// Ensures the window rules are part of the user's rule file. Earlier versions of the window rules are replaced. KWin is asked to be reconfigured for the rules to take effect without a logout. It is only written when the file does not have the rules installed. Returns an error if the rule file can not be read or written.
+func ensureRules(files *FileService) error {
+	content, err := files.Read(WindowRules)
 	if err != nil {
 		return err
 	}
 
-	content, err := readRules(dirs)
-	if err != nil {
+	groups := append(dropRules(parseGroups(content)), &group{name: rulesGroup, lines: ruleBody()})
+
+	wanted := renderGroups(updateRuleList(groups, true))
+	if bytes.Equal(content, wanted) {
+		return nil
+	}
+
+	if err := files.Write(WindowRules, wanted); err != nil {
 		return err
 	}
 
-	groups := dropRules(parseGroups(content))
-	groups = append(groups, &group{name: rulesGroup, lines: strings.Split(strings.TrimRight(string(body), "\n"), "\n")})
-
-	if err := writeFile(dirs.kwinRules, renderGroups(updateRuleList(groups, true))); err != nil {
-		return err
-	}
-
-	fmt.Printf("    Window rules  %s\n", dirs.kwinRules)
+	fmt.Printf("Merged the window rules of Quick Translate into '%s'.\n", files.Path(WindowRules))
 	reconfigureKWin()
 
 	return nil
 }
 
 // Removes the window rules from the user's rule file and reports whether the file had to be changed, so the caller only tells KWin about it when something has moved. A rule file that does not exist means there is nothing to remove. Returns an error if the file can not be read or written.
-func removeRules(dirs *paths) (bool, error) {
-	content, err := readRules(dirs)
+func removeRules(files *FileService) (bool, error) {
+	content, err := files.Read(WindowRules)
 	if err != nil || len(content) == 0 {
 		return false, err
 	}
@@ -214,16 +220,16 @@ func removeRules(dirs *paths) (bool, error) {
 		return false, nil
 	}
 
-	if err := writeFile(dirs.kwinRules, renderGroups(updateRuleList(kept, false))); err != nil {
+	if err := files.Write(WindowRules, renderGroups(updateRuleList(kept, false))); err != nil {
 		return false, err
 	}
 
 	return true, nil
 }
 
-// Reports whether the application's window rules are part of the user's rule file. Meant for the status report, so a rule file that can not be read counts as no rules rather than as an error.
-func rulesInstalled(dirs *paths) bool {
-	content, err := readRules(dirs)
+// Reports whether the application's window rules are part of the user's rule file.
+func rulesInstalled(files *FileService) bool {
+	content, err := files.Read(WindowRules)
 	if err != nil || len(content) == 0 {
 		return false
 	}
@@ -234,14 +240,4 @@ func rulesInstalled(dirs *paths) bool {
 // Asks KWin to read its settings again, so the window rules take effect without a logout. KWin is only reachable over the session bus of a running Plasma session, which is why a failure is reported and swallowed.
 func reconfigureKWin() {
 	runOptional("dbus-send", "--session", "--dest=org.kde.KWin", "--type=method_call", "/KWin", "org.kde.KWin.reconfigure")
-}
-
-// Rebuilds Plasma's cache of desktop entries, which is what makes it notice the global shortcut the entry carries. The tool is named after the major version of Plasma, so the current one is tried first and the previous one after it.
-func refreshPlasma() {
-	for _, name := range []string{"kbuildsycoca6", "kbuildsycoca5"} {
-		if _, err := exec.LookPath(name); err == nil {
-			runOptional(name)
-			return
-		}
-	}
 }

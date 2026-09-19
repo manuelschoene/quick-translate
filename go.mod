@@ -3,6 +3,7 @@ module quick-translate
 go 1.26.8
 
 require (
+	github.com/adrg/xdg v0.5.3
 	github.com/glebarez/go-sqlite v1.23.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.23
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.11.0 // indirect
