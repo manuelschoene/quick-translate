@@ -13,8 +13,6 @@ import (
 	"github.com/adrg/xdg"
 )
 
-const socketName = appSlug + ".sock"
-
 // Removes all files and modifications the application has written for the user. Returns the files that were present and removed and an error containing all remove failures. The KWin rules are only removed if they were installed and KWin is reconfigured. Does not fail on the first error to try to remove as many files as possible.
 func Purge(files *FileService) ([]File, error) {
 	removed := make([]File, 0, len(files.table))
@@ -117,10 +115,8 @@ func runOptional(name string, args ...string) {
 	}
 }
 
-// All file entries for Linux: shared entries, desktop session entries, KWin rules and socket entries. Not written files are necessary for status reports.
+// All file entries for Linux: shared entries, desktop session entries and KWin rules. Not written files are necessary for status reports.
 func entries() []entry {
-	runtime := runtimeDirectory()
-
 	return append(userEntries(),
 		entry{
 			resource: Autostart,
@@ -137,24 +133,11 @@ func entries() []entry {
 			category: installed,
 		},
 		entry{
-			resource: Instance,
-			path:     filepath.Join(runtime, socketName),
-			mode:     0600, // Ignored as the socket is created with the permissions of the listener
-			category: internal,
-			parent:   Runtime,
-		},
-		entry{
 			resource: Launcher,
 			name:     "Desktop entry",
 			path:     filepath.Join(xdg.DataHome, "applications", ApplicationID+".desktop"),
 			mode:     0644,
 			category: installed,
-		},
-		entry{
-			resource: Runtime,
-			path:     runtime,
-			mode:     0700,
-			category: internal,
 		},
 		entry{
 			resource: WindowRules,
@@ -164,13 +147,4 @@ func entries() []entry {
 			category: merged, // Merged as KWin uses a single INI style file for all rules
 		},
 	)
-}
-
-// The directory the socket lives in. Preferred is the session's runtime directory, otherwise a temporary directory scoped to the current user.
-func runtimeDirectory() string {
-	if _, err := os.Stat(xdg.RuntimeDir); err == nil {
-		return xdg.RuntimeDir
-	}
-
-	return filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d", appSlug, os.Getuid()))
 }

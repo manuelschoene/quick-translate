@@ -13,7 +13,9 @@ import (
 var assets embed.FS
 
 // Runs the Wails application. Registers services and creates the window. No icon is handed over as it is ignored by GTK4 and taken from the desktop entry instead. Blocks until the application is stopped.
-func runApp(files *system.FileService) {
+func runApp() {
+	var adapter *transport.Adapter
+	
 	app := application.New(application.Options{
 		Name:        "Quick Translate",
 		Description: "Translate your selected text anywhere",
@@ -23,10 +25,17 @@ func runApp(files *system.FileService) {
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: system.ApplicationID, // Owns '<id>.SingleInstance' on the session bus
+			OnSecondInstanceLaunch: func(_ application.SecondInstanceData) { adapter.Restore() }, // Same adapter for both instances
+		},
 	})
-
-	app.RegisterService(application.NewService(system.NewIntegrationService(app, files)))
-	app.RegisterService(application.NewService(transport.NewAdapter(app, files)))
+	
+	files := system.NewFileService()
+	adapter = transport.NewAdapter(app, files)
+	
+	app.RegisterService(application.NewService(system.NewIntegrationService(app, files, adapter.Show)))
+	app.RegisterService(application.NewService(adapter))
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Quick Translate",

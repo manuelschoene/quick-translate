@@ -1,17 +1,18 @@
 import { route } from '@/router';
 import { report } from '@services/report';
 import { beginShortcut, endShortcut } from '@services/request';
-import { applyTranslation } from '@services/wire';
+import { applyFull, applyTranslation } from '@services/wire';
 import { Events } from '@wailsio/runtime';
 
 /**
  * The events the backend sends on its own, mirrored from `internal/transport/adapter.go` and only to
  * be changed together with it. They are the only way a translation that was started by the shortcut
- * reaches the frontend, because that one begins outside of it.
+ * or by a second start of the application reaches the frontend, because those begin outside of it.
  */
 const eventTranslating = 'translating';
 const eventTranslation = 'translation';
 const eventError = 'error';
+const eventRestored = 'restored';
 
 /**
  * Starts listening to the backend. Done before the first load, so a shortcut that is pressed
@@ -21,6 +22,7 @@ export function listen(): void {
     Events.On(eventTranslating, onTranslating);
     Events.On(eventTranslation, onTranslation);
     Events.On(eventError, onError);
+    Events.On(eventRestored, onRestored);
 }
 
 /**
@@ -28,7 +30,7 @@ export function listen(): void {
  * frontend is mounted again and the handlers would otherwise pile up on every event.
  */
 export function silence(): void {
-    Events.Off(eventTranslating, eventTranslation, eventError);
+    Events.Off(eventTranslating, eventTranslation, eventError, eventRestored);
 }
 
 /**
@@ -59,4 +61,13 @@ function onTranslation(event: Events.WailsEvent<typeof eventTranslation>): void 
 function onError(event: Events.WailsEvent<typeof eventError>): void {
     endShortcut();
     report(event.data);
+}
+
+/**
+ * Takes the translation a second start of the application brought back. It carries everything,
+ * because a stored translation brings its own provider and languages with it.
+ */
+function onRestored(event: Events.WailsEvent<typeof eventRestored>): void {
+    applyFull(event.data);
+    route('translation');
 }

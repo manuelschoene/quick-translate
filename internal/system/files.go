@@ -35,10 +35,8 @@ const (
 	DataRoot
 	History
 	Icon
-	Instance
 	Languages
 	Launcher
-	Runtime
 	Settings
 	WindowRules
 )

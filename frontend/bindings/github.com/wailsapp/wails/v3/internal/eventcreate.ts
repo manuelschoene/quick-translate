@@ -12,12 +12,15 @@ import * as transport$0 from "../../../../../quick-translate/internal/transport/
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
-        "translation": $$createType1,
+        "restored": $$createType1,
+        "translation": $$createType3,
     }));
 }
 
 // Private type creation functions
-const $$createType0 = transport$0.TranslationDto.createFrom;
+const $$createType0 = transport$0.FullDto.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = transport$0.TranslationDto.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
 
 configure();

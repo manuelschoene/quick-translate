@@ -9,7 +9,7 @@ const (
 	preamble = `Quick Translate translates your selected text, triggered by a global shortcut.
 
 Usage: quick-translate <command>
-When no command is given, the application is started or the running one is triggered.
+When no command is given, the application is started, or the running one is brought back up.
 
 Available commands:`
 

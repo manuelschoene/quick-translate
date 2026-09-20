@@ -36,6 +36,17 @@ func (c *Core) PreviousTranslation() (translation *models.Translation, hasPrevio
 	return c.navigate(entry, err)
 }
 
+// Returns the translation that was stored last, and whether an older and a newer translation exist for it. The provider and the languages of the translation are taken over as far as they are still available. Returns an error if the history is disabled, empty or can not be read.
+func (c *Core) LatestTranslation() (translation *models.Translation, hasPrevious bool, hasNext bool, err error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	// An ID below one is the position behind the newest entry, so the history answers with the newest one.
+	entry, err := c.history.Previous(0)
+
+	return c.navigate(entry, err)
+}
+
 // Returns the translation that was stored after the current one, and whether an older and a newer translation exist for it. The provider and the languages of the translation are taken over as far as they are still available. The current translation is returned unchanged when it is the newest one. Returns an error if the history is disabled or can not be read.
 func (c *Core) NextTranslation() (translation *models.Translation, hasPrevious bool, hasNext bool, err error) {
 	c.mutex.Lock()

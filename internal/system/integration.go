@@ -8,16 +8,17 @@ import (
 )
 
 type IntegrationService struct {
-	app   *application.App
-	files *FileService
+	app      *application.App
+	files    *FileService
+	shortcut func() // What the global shortcut triggers. Handed in, so this package stays free of the rest of the application.
 }
 
 // Creates a new integration service. All integration runs on startup and does not integrate with the frontend.
-func NewIntegrationService(app *application.App, files *FileService) *IntegrationService {
-	return &IntegrationService{app: app, files: files}
+func NewIntegrationService(app *application.App, files *FileService, shortcut func()) *IntegrationService {
+	return &IntegrationService{app: app, files: files, shortcut: shortcut}
 }
 
-// Runs the system integration based on the operating system used. The autostart registration is ensured on every start. As failed integration is not a fatal error, the error is reported and swallowed, continuing the application startup.
+// Runs the system integration based on the operating system used. The autostart registration and the global shortcut are ensured on every start. As failed integration is not a fatal error, every error is reported and swallowed.
 func (i *IntegrationService) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
 	if err := integrate(i.files); err != nil {
 		fmt.Printf("Could not put Quick Translate into the desktop: %v\n", err)
@@ -25,6 +26,11 @@ func (i *IntegrationService) ServiceStartup(_ context.Context, _ application.Ser
 
 	if err := i.ensureAutostart(); err != nil {
 		fmt.Printf("Could not register Quick Translate to start with the session: %v\n", err)
+	}
+
+	// Unregistering is done by Wails on shutdown. Refusal by the desktop reaches the error handler and is not returned here.
+	if err := i.app.GlobalShortcut.Register(Shortcut, i.shortcut); err != nil {
+		fmt.Printf("Could not bind the '%s' shortcut to Quick Translate: %v\n", Shortcut, err)
 	}
 
 	return nil

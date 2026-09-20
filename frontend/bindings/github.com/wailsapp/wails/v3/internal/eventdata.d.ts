@@ -13,6 +13,7 @@ declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "error": string;
+            "restored": transport$0.FullDto | null;
             "translating": void;
             "translation": transport$0.TranslationDto | null;
         }
