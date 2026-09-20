@@ -12,6 +12,7 @@ import (
 	"quick-translate/internal/language"
 	"quick-translate/internal/models"
 	"quick-translate/internal/provider"
+	"quick-translate/internal/system"
 )
 
 type clip interface {
@@ -21,6 +22,7 @@ type clip interface {
 
 type Core struct {
 	clipboard    clip
+	files        *system.FileService
 	factory      func(slug string) (models.Provider, error)
 	history      *history.History
 	langs        *language.Collection
@@ -34,16 +36,16 @@ type Core struct {
 }
 
 // Creates a new core and initializes every service the application is built on. The providers the application knows about are matched against the ones configured in the configuration file, and the configuration is then used to set up the clipboard, the history and the languages of the default provider. Returns an error for every problem that stops the application from running, so a core that is returned is ready to translate.
-func NewCore() (*Core, error) {
+func NewCore(files *system.FileService) (*Core, error) {
 	detection := provider.All()
 	known := slices.Sorted(maps.Keys(detection))
 
-	slug, err := config.DefaultProvider()
+	slug, err := config.DefaultProvider(files)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := config.ListProviders(known)
+	list, err := config.ListProviders(files, known)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +55,12 @@ func NewCore() (*Core, error) {
 		return nil, fmt.Errorf("The default provider '%s' is not configured. Please add it to the 'provider' section of the configuration file or choose one of: %v", slug, list)
 	}
 
-	preferences, err := config.PreferredLanguages()
+	preferences, err := config.PreferredLanguages(files)
 	if err != nil {
 		return nil, err
 	}
 
-	limit, err := config.HistoryLimit()
+	limit, err := config.HistoryLimit(files)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +71,7 @@ func NewCore() (*Core, error) {
 	}
 	fmt.Printf("Using the clipboard backend: %s\n", board.Backend())
 
-	past := history.NewHistory(limit)
+	past := history.NewHistory(limit, files)
 	if past.Enabled() {
 		// Opens the database right away, so a broken history is reported on startup and not with the first translation.
 		if _, err := past.HasPrevious(0); err != nil {
@@ -78,15 +80,16 @@ func NewCore() (*Core, error) {
 	}
 
 	core := &Core{
-		clipboard:    board,
-		factory:      buildProvider,
+		clipboard: board,
+		files:     files,
+		factory:      func(slug string) (models.Provider, error) { return buildProvider(files, slug) },
 		history:      past,
 		preferences:  preferences,
 		detection:    detection,
 		providerList: list,
 	}
 
-	prov, err := buildProvider(slug)
+	prov, err := buildProvider(files, slug)
 	if err != nil {
 		past.Close()
 		return nil, err

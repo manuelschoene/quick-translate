@@ -1,10 +1,9 @@
 package config
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
+
+	"quick-translate/internal/system"
 
 	"go.yaml.in/yaml/v4"
 )
@@ -57,127 +56,28 @@ default_provider: ""
 provider: {}
 `
 
-// The permissions the configuration file and the directory around it are kept at. The file holds the
-// authentication keys of the providers and the directory also holds the history database, which holds every
-// text that was ever translated, so neither belongs to the other users of the machine.
-const (
-	fileMode = 0600
-	dirMode  = 0700
-)
-
-// Builds the path to the config file inside the user's config directory.
-func filePath() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return dir + "/quick-translate/config.yml", nil
-}
-
-// Checks if the config file exists.
-func fileExists() (bool, error) {
-	path, err := filePath()
-	if err != nil {
-		return false, err
-	}
-
-	_, err = os.Stat(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// Creates all necessary directories and the config file with default values. Does not check if the file already exists.
-func createFile() error {
-	path, err := filePath()
-	if err != nil {
-		return err
-	}
-
-	err = os.MkdirAll(filepath.Dir(path), dirMode)
-	if err != nil {
-		return err
-	}
-
-	buf := new(bytes.Buffer)
-	buf.WriteString(defaultYml)
-
-	err = os.WriteFile(path, buf.Bytes(), fileMode)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Initializes the config file if it does not exist. If the file exists, it does nothing.
-func initFile() error {
-	path, err := filePath()
-	if err != nil {
-		return err
-	}
-
-	exists, err := fileExists()
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		narrow(filepath.Dir(path), dirMode)
-		narrow(path, fileMode)
-
-		return nil
-	}
-
-	fmt.Println("Could not find config file. Creating new file with default values at: " + path)
-
-	err = createFile()
+// Creates the config file with the commented default template when it is not there yet, and narrows the permissions of one an earlier version created readable for everyone else on the machine. Returns an error if the file can not be written.
+func initFile(files *system.FileService) error {
+	created, err := files.EnsureFile(system.Settings, []byte(defaultYml))
 	if err != nil {
 		return fmt.Errorf("Could not create config file: %w", err)
 	}
 
+	if created {
+		fmt.Println("Could not find config file. Created a new one with default values at: " + files.Path(system.Settings))
+	}
+
 	return nil
 }
 
-// Narrows the permissions of a path that an earlier version has created readable for everyone else on the
-// machine. A path that is already narrow enough is left alone and never reported, which is the normal case.
-// Failing to narrow only costs the narrowing itself, so it is reported and swallowed rather than keeping the
-// application from starting.
-func narrow(path string, mode os.FileMode) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return
-	}
-
-	if info.Mode().Perm()&0077 == 0 {
-		return
-	}
-
-	if err := os.Chmod(path, mode); err != nil {
-		fmt.Printf("Could not narrow the permissions of '%s': %v\n", path, err)
-		return
-	}
-
-	fmt.Printf("Narrowed the permissions of '%s', which is not meant to be readable by other users.\n", path)
-}
-
-// Reads a struct from the config file. The struct must have YAML tags from the "go.yaml.in/yaml/v4" package. The function will return an error if the file does not exist or if the struct cannot be decoded from the file.
-func readStruct[T any](x *T) error {
-	path, err := filePath()
+// Reads a struct from the config file. The struct must have YAML tags from the "go.yaml.in/yaml/v4" package. Every caller runs initFile first, so the file is there; one that is empty leaves the struct at its own defaults. The function will return an error if the file can not be read or if the struct cannot be decoded from it.
+func readStruct[T any](files *system.FileService, x *T) error {
+	content, err := files.Read(system.Settings)
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	err = yaml.NewDecoder(file).Decode(x)
-	if err != nil {
+	if err := yaml.Unmarshal(content, x); err != nil {
 		return fmt.Errorf("Could not decode YAML from config file: %w", err)
 	}
 

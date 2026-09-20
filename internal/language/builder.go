@@ -2,18 +2,21 @@ package language
 
 import (
 	"fmt"
+
 	"quick-translate/internal/models"
+	"quick-translate/internal/system"
 )
 
 type CollectionBuilder struct {
+	files                          *system.FileService
 	languageDetection              bool
 	preferences                    *models.LanguagePreferences
 	source, detectedSource, target string
 }
 
 // Creates a new CollectionBuilder instance for building a Collection.
-func NewBuilder() *CollectionBuilder {
-	return &CollectionBuilder{}
+func NewBuilder(files *system.FileService) *CollectionBuilder {
+	return &CollectionBuilder{files: files}
 }
 
 // Sets the source language tag for the Collection. The tag of the language the provider detected for the previous translation can be passed as well. It is only kept if the Collection ends up using language detection and if the tag is available as a source language. Otherwise it is dropped.
@@ -47,7 +50,7 @@ func (b *CollectionBuilder) Build(providerSlug string, provider models.Provider,
 		return nil, fmt.Errorf("Provider slug and provider must be set")
 	}
 
-	langs, err := retrieveLanguages(providerSlug, provider, providerSlugs)
+	langs, err := retrieveLanguages(b.files, providerSlug, provider, providerSlugs)
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +84,11 @@ func (b *CollectionBuilder) Build(providerSlug string, provider models.Provider,
 }
 
 // Retrieves languages for the current provider. Tries to read from the cache first. If the cache does not exist or is expired, it fetches languages from the provider and updates the cache. This function also invalidates caches for other providers in a separate goroutine.
-func retrieveLanguages(providerSlug string, provider models.Provider, providerSlugs []string) ([]*models.Language, error) {
-	cache := newCache(providerSlug)
+func retrieveLanguages(files *system.FileService, providerSlug string, provider models.Provider, providerSlugs []string) ([]*models.Language, error) {
+	cache := newCache(providerSlug, files)
 
 	// The housekeeping runs on its own cache instance, because reading the cache below overwrites the struct it works with.
-	go newCache(providerSlug).invalidateOtherCaches(providerSlugs)
+	go newCache(providerSlug, files).invalidateOtherCaches(providerSlugs)
 
 	if cache.exists() {
 		err := cache.read()
@@ -95,7 +98,7 @@ func retrieveLanguages(providerSlug string, provider models.Provider, providerSl
 
 		// The refresh runs on its own cache instance, because it would otherwise write the languages that are returned below while they are being read.
 		if cache.isExpired() {
-			go fetchProviderLanguages(newCache(providerSlug), provider)
+			go fetchProviderLanguages(newCache(providerSlug, files), provider)
 		}
 
 		return cache.Languages, nil

@@ -3,7 +3,7 @@ package main
 import (
 	"embed"
 
-	"quick-translate/internal/desktop"
+	"quick-translate/internal/system"
 	"quick-translate/internal/transport"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -12,28 +12,21 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed art/quick-translate_48x48.png
-var icon []byte
-
-// Runs the application with the adapter registered as the only bridge between the frontend and the application. Blocks until the application is stopped and ends the process if it can not be started.
-func runApp() {
+// Runs the Wails application. Registers services and creates the window. No icon is handed over as it is ignored by GTK4 and taken from the desktop entry instead. Blocks until the application is stopped.
+func runApp(files *system.FileService) {
 	app := application.New(application.Options{
 		Name:        "Quick Translate",
 		Description: "Translate your selected text anywhere",
-		Icon:        icon,
 		Linux: application.LinuxOptions{
-			// The name everything on the desktop matches on: the desktop entry file, the window's class under
-			// Wayland and X11, the autostart entry, the single-instance lock and the KWin rule. ProgramName
-			// is left unset on purpose, because Wails then gives it this same id, and only then does a
-			// window under Wayland match its desktop entry.
-			ApplicationID: desktop.ApplicationID,
+			ApplicationID: system.ApplicationID, // Required for application matching with desktop entry, KWin rules, etc.
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
 	})
 
-	app.RegisterService(application.NewService(transport.NewAdapter(app)))
+	app.RegisterService(application.NewService(system.NewIntegrationService(app, files)))
+	app.RegisterService(application.NewService(transport.NewAdapter(app, files)))
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Quick Translate",
@@ -45,7 +38,6 @@ func runApp() {
 		BackgroundColour: application.RGBA{Red: 1, Green: 3, Blue: 3, Alpha: 255},
 		Hidden:           !app.Env.Info().Debug,
 		Linux: application.LinuxWindow{
-			Icon:             icon,
 			WebviewGpuPolicy: application.WebviewGpuPolicyAlways,
 		},
 	})

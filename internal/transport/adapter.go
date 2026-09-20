@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"quick-translate/internal/core"
+	"quick-translate/internal/system"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -23,19 +24,21 @@ const eventError = "error"
 
 type Adapter struct {
 	app      *application.App
+	files    *system.FileService
 	core     *core.Core
 	listener net.Listener
 	mutex    sync.Mutex
 }
 
 // Creates a new adapter and builds the core it works on. A core that can not be built does not stop the application: the reason is almost always a configuration the user has yet to finish, and a window that says so is worth more than a process that exits and is restarted by the service manager for as long as the session lasts. The adapter answers every call with that reason instead, and tries again on the next one.
-func NewAdapter(app *application.App) *Adapter {
+func NewAdapter(app *application.App, files *system.FileService) *Adapter {
 	application.RegisterEvent[application.Void](eventTranslating)
 	application.RegisterEvent[*TranslationDto](eventTranslation)
 	application.RegisterEvent[string](eventError)
 
 	adapter := &Adapter{
-		app: app,
+		app:   app,
+		files: files,
 	}
 
 	// Built here rather than on the first call, so a problem shows up in the log when the session starts and the languages of the provider are fetched before the user asks for the first translation.
@@ -52,7 +55,7 @@ func (a *Adapter) ready() error {
 		return nil
 	}
 
-	instance, err := core.NewCore()
+	instance, err := core.NewCore(a.files)
 	if err != nil {
 		return err
 	}
@@ -62,17 +65,17 @@ func (a *Adapter) ready() error {
 	return nil
 }
 
-// Prepares the application once the window is ready and starts listening for the shortcut. Called by Wails, which also hands over the context every call into its runtime needs.
-func (a *Adapter) ServiceStartup(_ context.Context, _ application.ServiceOptions) {
+// Called by Wails on startup. Starts listening on the IPC socket for the shortcut. Returns an error if the socket cannot be listened on, therefore shutting down the application as it would not work otherwise.
+func (a *Adapter) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
 	if err := a.listenOnSocket(); err != nil {
-		// The application is started hidden and is only brought up through the socket, so it is of no use without it.
-		fmt.Println(err)
-		a.app.Quit()
+		return err
 	}
+
+	return nil
 }
 
-// Releases everything the application holds. Called by Wails on shutdown, so the history database is closed and the socket is removed even when the application is stopped from the outside.
-func (a *Adapter) ServiceShutdown(_ context.Context, _ application.ServiceOptions) {
+// Called by Wails on shutdown. Close socket and database connection.
+func (a *Adapter) ServiceShutdown() error {
 	// Closing the listener also removes the socket file, because it was created by this instance.
 	if a.listener != nil {
 		if err := a.listener.Close(); err != nil {
@@ -84,6 +87,8 @@ func (a *Adapter) ServiceShutdown(_ context.Context, _ application.ServiceOption
 	if a.core != nil {
 		a.core.Close()
 	}
+
+	return nil
 }
 
 // Hides the window without stopping the application, which is what the frontend does when the user dismisses it.

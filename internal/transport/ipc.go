@@ -1,15 +1,17 @@
 package transport
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"time"
+
+	"quick-translate/internal/system"
 )
 
-// The name of the socket file the running instance listens on.
-const socketName = "quick-translate.sock"
+// Returned when the operating system the binary was built for has no socket for the instances to meet at.
+var errNoSocket = errors.New("Quick Translate cannot reach a running instance on this operating system yet.")
 
 // The message an instance that was started by the shortcut sends to the running one.
 const showMessage = "show"
@@ -18,10 +20,10 @@ const showMessage = "show"
 const messageTimeout = 2 * time.Second
 
 // Checks if the application is already running and asks it to show itself. Returns true if another instance has taken the request over, which means this instance is not needed and should stop before it initializes anything.
-func Connect() bool {
-	path, err := socketPath()
-	if err != nil {
-		fmt.Printf("Could not determine the path of the instance socket: %v\n", err)
+func Connect(files *system.FileService) bool {
+	path := files.Path(system.Instance)
+	if len(path) == 0 {
+		fmt.Printf("Could not reach a running instance: %v\n", errNoSocket)
 		return false
 	}
 
@@ -45,12 +47,16 @@ func Connect() bool {
 
 // Starts listening for the instances that are started by the shortcut. The socket file of an instance that did not shut down properly is removed first, which is safe because connecting to it has just failed. Returns an error if the socket can not be created.
 func (a *Adapter) listenOnSocket() error {
-	path, err := socketPath()
-	if err != nil {
-		return fmt.Errorf("Could not determine the path of the instance socket: %w", err)
+	path := a.files.Path(system.Instance)
+	if len(path) == 0 {
+		return errNoSocket
 	}
 
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+	if err := a.files.EnsureDirectory(system.Runtime); err != nil {
+		return err
+	}
+
+	if _, err := a.files.Remove(system.Instance); err != nil {
 		return fmt.Errorf("Could not remove the socket of a previous instance: %w", err)
 	}
 
