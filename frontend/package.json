@@ -5,8 +5,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "bun run types && vite build",
-        "build:dev": "bun run types && vite build --minify false --mode development",
+        "build": "vite build",
+        "build:dev": "vite build --minify false --mode development",
         "preview": "vite preview",
         "types": "vue-tsc --noEmit",
         "lint": "eslint . --fix",

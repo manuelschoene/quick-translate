@@ -1,17 +1,13 @@
 version: '3'
 
 includes:
-  # The root Taskfile includes the same file for the command line, so this one is only for the tasks below:
-  # `internal` keeps the shared tasks from being listed a second time under `linux:common:`. `dir` is needed
-  # alongside it, because in this form a relative `dir:` inside the included tasks resolves against this
-  # directory rather than the project root.
   common:
     taskfile: ../Taskfile.yml
-    dir: ../..
-    internal: true
+    dir: ../.. # The included tasks are in the project root, not in build/linux.
+    internal: true # Keeps the included tasks from being listed a second time under `linux:common:`.
 
 vars:
-  # The application ID, defined in Go as desktop.ApplicationID and repeated here because a Taskfile cannot
+  # The application ID, defined in Go and repeated here because a Taskfile cannot
   # read a Go constant. The desktop entry and the icon have to carry exactly this name: the portal grants
   # the global shortcut to the ID the entry is named after, and the entry finds its icon under the same
   # name.
@@ -80,6 +76,13 @@ tasks:
     desc: Generates the desktop entry
     summary: Renders build/linux/app.desktop into the artifact directory and validates the result.
     run: once # Same entry for both binaries, so only generate it once.
+    sources:
+      - '{{.STUB}}'
+      - build/config.yml
+      - build/linux/Taskfile.yml
+      - Taskfile.yml
+    generates:
+      - '{{.OUTPUT}}'
     cmds:
       - mkdir -p {{.ARTIFACT_DIR}}
       - task: render
@@ -143,11 +146,11 @@ tasks:
       - task: render
         vars:
           SOURCE: '{{.INSTALL_STUB}}'
-          TARGET: '{{.STAGE}}/INSTALL.txt'
+          TARGET: '{{.STAGE}}/INSTALL.md'
       - tar -C {{.ARTIFACT_DIR}} -czf {{.BIN_DIR}}/{{.NAME}}.tar.gz {{.NAME}}
     vars:
       ICON_SOURCE: 'art/icon.svg'
-      INSTALL_STUB: 'build/linux/INSTALL.txt' # Stub with placeholders for the archive's INSTALL.txt. The task fills in the values that change per build.
+      INSTALL_STUB: 'build/linux/INSTALL.md' # Stub with placeholders for the archive's INSTALL.md. The task fills in the values that change per build.
       NAME: '{{.APP_NAME}}-{{.VERSION}}-linux-{{.ARCH | default ARCH}}'
       STAGE: '{{.ARTIFACT_DIR}}/{{.NAME}}'
 
