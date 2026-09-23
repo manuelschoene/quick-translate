@@ -82,6 +82,7 @@ func (a *Adapter) Hide() {
 }
 
 // Shows the window and translates the selected text. Called and exported for the shortcut only, and kept out of the frontend API.
+//
 //wails:ignore
 func (a *Adapter) Show() {
 	a.app.Window.Current().Show()
@@ -115,6 +116,7 @@ func (a *Adapter) translateFromClipboard() (*TranslationDto, error) {
 }
 
 // Shows the window and puts the translation that was stored last back into it. Called when the application is started a second time, which restores rather than translates. Exported for that callback only, and kept out of the frontend API.
+//
 //wails:ignore
 func (a *Adapter) Restore() {
 	a.app.Window.Current().Show()

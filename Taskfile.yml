@@ -1,6 +1,6 @@
 # This file mostly delegates: the work happens in build/Taskfile.yml and in one Taskfile per operating
 # system. Supporting another one means adding its Taskfile under build/<os>/ and including it below.
-# The exception is `wordmark`, which belongs to no operating system and therefore runs here.
+# The exception is `art`, which belongs to no operating system and therefore runs here.
 
 version: '3'
 
@@ -23,6 +23,26 @@ tasks:
     cmds:
       - task: "{{.GOOS}}:clean"
       - task: "{{.GOOS}}:archive"
+
+  art:
+    desc: Exports every artwork file from its source
+    summary: Writes art/tray.png and art/wordmark.svg from their sources.
+    sources:
+      - art/icon.svg
+      - art/wordmark.src.svg
+    generates:
+      - art/tray.png
+      - art/wordmark.svg
+    preconditions:
+      - sh: 'command -v inkscape >/dev/null 2>&1'
+        msg: "Inkscape is required: it renders the artwork. Install it from your distribution's package manager, or from https://inkscape.org."
+      - sh: 'fc-list "Noto Sans" | grep -q .'
+        msg: "The font 'Noto Sans' is not installed. Inkscape would quietly outline a substitute instead and the wordmark would change without anything failing."
+    cmds:
+      # 64 pixels covers a 32 pixel panel at double scaling. The tray takes a PNG only.
+      - inkscape art/icon.svg --export-type=png --export-width=64 --export-height=64 --export-filename=art/tray.png
+      # The name is converted to outlines, so the wordmark does not need the font installed to render.
+      - inkscape art/wordmark.src.svg --export-text-to-path --export-plain-svg --export-filename=art/wordmark.svg
 
   build:
     desc: Builds the application
@@ -48,18 +68,3 @@ tasks:
     summary: Starts the binary in BIN_DIR. Build it first; this task does not.
     cmds:
       - task: "{{.GOOS}}:run"
-
-  wordmark:
-    desc: Exports the wordmark from its source
-    summary: Converts the name in art/wordmark.src.svg to outlines and writes art/wordmark.svg.
-    sources:
-      - art/wordmark.src.svg
-    generates:
-      - art/wordmark.svg
-    preconditions:
-      - sh: 'command -v inkscape >/dev/null 2>&1'
-        msg: "Inkscape is required: it converts the name in the wordmark source to outlines. Install it from your distribution's package manager, or from https://inkscape.org."
-      - sh: 'fc-list "Noto Sans" | grep -q .'
-        msg: "The font 'Noto Sans' is not installed. Inkscape would quietly outline a substitute instead and the wordmark would change without anything failing. Install it, usually packaged as noto-fonts or fonts-noto."
-    cmds:
-      - inkscape art/wordmark.src.svg --export-text-to-path --export-plain-svg --export-filename=art/wordmark.svg
