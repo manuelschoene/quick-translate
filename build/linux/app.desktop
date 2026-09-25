@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=@PRODUCT_NAME@
+GenericName=Translator
+Comment=@COMMENT@
+Icon=@APP_ID@
+Exec=@APP_NAME@
+Terminal=false
+Categories=Utility;
+Keywords=translate;translation;clipboard;selection;language;
+StartupNotify=false
+StartupWMClass=@APP_ID@

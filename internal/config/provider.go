@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"quick-translate/internal/models"
+	"quick-translate/internal/system"
 	"slices"
 
 	"go.yaml.in/yaml/v4"
@@ -17,13 +18,13 @@ type provider struct {
 }
 
 // Reads the default provider slug from the configuration file. Returns an error if reading the configuration file fails or if the default provider is not set. The slug is not verified for existence in the list of providers.
-func DefaultProvider() (string, error) {
-	if err := initFile(); err != nil {
+func DefaultProvider(files *system.FileService) (string, error) {
+	if err := initFile(files); err != nil {
 		return "", err
 	}
 
 	def := &defaultProvider{}
-	if err := readStruct(def); err != nil {
+	if err := readStruct(files, def); err != nil {
 		return "", fmt.Errorf("Could not read default provider: %w", err)
 	}
 
@@ -36,13 +37,13 @@ func DefaultProvider() (string, error) {
 }
 
 // Reads the list of configured provider slugs from the configuration file. Returns an error if reading the configuration file fails, if any of the slugs in the list are not in the list of allowed providers or no provider is found in the configuration file.
-func ListProviders(slugs []string) ([]string, error) {
-	if err := initFile(); err != nil {
+func ListProviders(files *system.FileService, slugs []string) ([]string, error) {
+	if err := initFile(files); err != nil {
 		return nil, err
 	}
 
 	prov := &provider{}
-	if err := readStruct(prov); err != nil {
+	if err := readStruct(files, prov); err != nil {
 		return nil, fmt.Errorf("Could not read providers: %w", err)
 	}
 
@@ -63,13 +64,13 @@ func ListProviders(slugs []string) ([]string, error) {
 }
 
 // Reads the configuration for a specific provider from the configuration file and decodes it into the provided config struct. Returns an error if reading the configuration file fails, if the provider is not configured in the configuration file, or if decoding the configuration fails.
-func LoadProvider[T models.Provider](slug string, config *T) error {
-	if err := initFile(); err != nil {
+func LoadProvider[T models.Provider](files *system.FileService, slug string, config *T) error {
+	if err := initFile(files); err != nil {
 		return err
 	}
 
 	prov := &provider{}
-	if err := readStruct(prov); err != nil {
+	if err := readStruct(files, prov); err != nil {
 		return fmt.Errorf("Could not read providers: %w", err)
 	}
 

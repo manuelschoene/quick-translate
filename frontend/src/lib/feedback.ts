@@ -22,7 +22,7 @@ const fadeDuration = 500;
  * like one that worked.
  *
  * The component decides which icon each outcome stands for, this only says which one is due and how
- * it is coloured and animated. Asks for the setup scope, like every composable, so a component that
+ * it is colored and animated. Asks for the setup scope, like every composable, so a component that
  * is left while the answer stands does not run its timers into nothing.
  */
 export function feedback(): Feedback {
@@ -36,9 +36,9 @@ export function feedback(): Feedback {
             return undefined;
         }
 
-        const colour = outcome.value === 'success' ? 'text-(--text-success)' : 'text-(--text-error)';
+        const color = outcome.value === 'success' ? 'text-(--text-success)' : 'text-(--text-error)';
 
-        return `${fading.value ? 'animate-check-out' : 'animate-check'} ${colour}`;
+        return `${fading.value ? 'animate-check-out' : 'animate-check'} ${color}`;
     });
 
     /**

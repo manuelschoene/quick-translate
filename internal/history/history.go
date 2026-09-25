@@ -3,27 +3,27 @@ package history
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"quick-translate/internal/models"
 	"sync"
-)
 
-const dbPath = "history.db"
+	"quick-translate/internal/models"
+	"quick-translate/internal/system"
+)
 
 // Returned by every function that needs the database while the history is disabled.
 var ErrDisabled = errors.New("The history is disabled. Set 'history.max_entries' to a value greater than zero in the configuration file.")
 
 type History struct {
 	limit    int
+	files    *system.FileService
 	database *db
 	mutex    sync.Mutex
 }
 
 // Creates a new history for the given limit of entries. A limit of zero or lower disables the history, so every function besides Enabled() and Close() returns ErrDisabled. The database connection is not opened yet, it is established with the first call that needs it.
-func NewHistory(limit int) *History {
+func NewHistory(limit int, files *system.FileService) *History {
 	return &History{
 		limit:    limit,
+		files:    files,
 		database: nil,
 	}
 }
@@ -125,51 +125,24 @@ func (h *History) connection() (*db, error) {
 	return h.database, nil
 }
 
-// Opens the database connection and stores it for further calls. Does not check if a connection is already established.
+// Creates the database file and opens the database connection. Stores the connection for further calls. Does not check if a connection is already established. Returns an error if the file cannot be created or the database cannot be opened.
 func (h *History) initialize() error {
-	path, err := filePath()
-	if err != nil {
+	if err := h.files.EnsureDirectory(system.DataRoot); err != nil {
 		return fmt.Errorf("Could not initialize the database: %w", err)
 	}
 
-	instance, err := newDb(path)
+	h.files.Narrow(system.DataRoot)
+
+	path := h.files.Path(system.History)
+	if path == "" {
+		return fmt.Errorf("Could not find the database file.")
+	}
+
+	instance, err := newDb(path, h.files)
 	if err != nil {
 		return fmt.Errorf("Could not initialize the database: %w", err)
 	}
 
 	h.database = instance
 	return nil
-}
-
-// Returns the path to the database file inside the user's data directory and creates the directory if it does not exist. The history is data the user has produced and can not be fetched again, so it belongs neither next to the configuration they write themselves nor in the cache, which cleanup tools are allowed to empty. The directory is narrowed to the user alone, because the history holds every text that was ever translated.
-func filePath() (string, error) {
-	dir, err := dataDir()
-	if err != nil {
-		return "", err
-	}
-
-	dir = filepath.Join(dir, "quick-translate")
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", err
-	}
-
-	if err := os.Chmod(dir, 0700); err != nil {
-		fmt.Printf("Could not narrow the permissions of '%s': %v\n", dir, err)
-	}
-
-	return filepath.Join(dir, dbPath), nil
-}
-
-// Returns the directory user-specific data files are stored in, which is what XDG_DATA_HOME points at when it is set and '~/.local/share' otherwise. The standard library has a helper for the configuration and the cache directory but none for this one, so the freedesktop rule is applied here. Returns an error if the home directory can not be determined.
-func dataDir() (string, error) {
-	if dir, ok := os.LookupEnv("XDG_DATA_HOME"); ok && len(dir) > 0 {
-		return dir, nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("Could not determine the home directory: %w", err)
-	}
-
-	return filepath.Join(home, ".local", "share"), nil
 }

@@ -103,7 +103,7 @@ func (c *Core) SwitchLanguages() error {
 func (c *Core) buildCollection(slug string, prov models.Provider, source string, target string, detected string) (*language.Collection, error) {
 	preferences := *c.preferences
 
-	langs, err := language.NewBuilder().
+	langs, err := language.NewBuilder(c.files).
 		SetSource(source, detected).
 		SetTarget(target).
 		SetLanguageDetection(c.detection[slug]).

@@ -4,7 +4,7 @@ on:
         branches: [main]
     # Rebuilds and re-attaches the assets of a release that already exists, for when the build failed after
     # release-please had already tagged it. release-please itself is skipped on this path, so a manual run
-    # can never create or move a release — it only fills one in.
+    # can never create or move a release, it only fills one in.
     workflow_dispatch:
         inputs:
             tag:
@@ -18,7 +18,7 @@ permissions:
 
 jobs:
     # Runs on every push to main and does one of two things: keep the release pull request up to date with
-    # the conventional commits that have landed, or — once that pull request is merged — tag the release and
+    # the conventional commits that have landed, or, once that pull request is merged, tag the release and
     # create it. Only the second case sets 'release_created', which is what gates everything below.
     release-please:
         name: Prepare the release
@@ -30,15 +30,12 @@ jobs:
             version: ${{ steps.release.outputs.version }}
 
         steps:
-            # The release type, the version inside wails.json and the first version this repository releases
-            # are all configured in release-please-config.json, because the extra-files updater for
-            # wails.json can only be expressed there. The action therefore takes no inputs of its own.
             - name: Run release-please
               id: release
               uses: googleapis/release-please-action@v4
 
     # The single place that answers "what is being built", so nothing below has to know which trigger it
-    # was started from. Runs when release-please has just created a release, or on a manual rebuild — and in
+    # was started from. Runs when release-please has just created a release, or on a manual rebuild, and in
     # neither case does it touch the release itself.
     resolve:
         name: Resolve the release
@@ -53,7 +50,7 @@ jobs:
             version: ${{ steps.pick.outputs.version }}
 
         steps:
-            # The version is the tag without the leading 'v' — the same split the rest of the pipeline
+            # The version is the tag without the leading 'v', the same split the rest of the pipeline
             # relies on, and the reason a manual run only needs the tag.
             - name: Pick the tag and the version
               id: pick
@@ -88,7 +85,7 @@ jobs:
                   fi
 
     # Nothing is published from a tree that does not pass. Merging the release pull request runs the CI
-    # workflow on its own as a push to main, so this repeats it once per release — worth it for the
+    # workflow on its own as a push to main, so this repeats it once per release, worth it for the
     # guarantee that the artefacts and the checks come from the same commit. Skipped on a manual rebuild:
     # that tree passed when it was released, and re-running the checks against an old tag can fail for
     # reasons that have nothing to do with the assets, such as a vulnerability published since.
@@ -101,43 +98,20 @@ jobs:
             contents: write
 
     build:
-        name: Build for WebKitGTK ${{ matrix.webkit }}
+        name: Build the archive
         needs: [resolve, verify]
         if: >-
             !cancelled() &&
             needs.resolve.result == 'success' &&
             needs.verify.result != 'failure'
-        # Built on the oldest available runner on purpose, and the reason is glibc rather than WebKit: glibc
-        # is backward but not forward compatible, so a binary built on 24.04 refuses to start on Ubuntu 22.04
-        # or Debian 12. Both development packages exist on jammy, so one runner covers both variants and the
-        # artifacts reach as far back as the runner image does.
-        runs-on: ubuntu-22.04
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    # 'tags' is the value the Makefile would otherwise derive with pkg-config. It is pinned
-                    # here so a matrix leg cannot silently produce the other variant: the tag decides which
-                    # pkg-config name cgo asks for, and a missing package fails the build loudly.
-                    - webkit: "4.1"
-                      suffix: webkit41
-                      package: libwebkit2gtk-4.1-dev
-                      pkgconfig: webkit2gtk-4.1
-                      tags: webkit2_41
-                    - webkit: "4.0"
-                      suffix: webkit40
-                      package: libwebkit2gtk-4.0-dev
-                      pkgconfig: webkit2gtk-4.0
-                      tags: ""
+        # The oldest runner that ships GTK 4.10. Requires glibc 2.39, which is shipped on distributions with GTK 4.10 anyway.
+        runs-on: ubuntu-24.04
 
         steps:
-            # Checked out at the tag release-please has just created, with the full history because the
-            # Makefile takes the version from 'git describe --tags --exact-match'.
             - name: Checkout the release
               uses: actions/checkout@v7
               with:
-                  ref: ${{ needs.resolve.outputs.tag }}
-                  fetch-depth: 0
+                  ref: ${{ needs.resolve.outputs.tag }} # Tag created by release-please, or the one given to a manual run.
 
             - name: Setup Bun
               uses: ./.github/actions/setup-bun
@@ -145,92 +119,32 @@ jobs:
             - name: Setup Go
               uses: ./.github/actions/setup-go
 
-            # release-please writes the version into wails.json through its extra-files updater. If that ever
-            # stops matching the release, the binary would report a different version than the packaging
-            # metadata, so the two are compared before anything is built.
-            - name: Check wails.json against the release
+            - name: Setup Wails
+              uses: ./.github/actions/setup-wails
+              with:
+                  upx: "true"
+
+            # Check to prevent a release-please misconfiguration from shipping the wrong version, and to make sure the
+            # extra-files updater is still working after a change to the release-please config.
+            - name: Check build/config.yml against the release
               shell: bash
               env:
                   RELEASED: ${{ needs.resolve.outputs.version }}
               run: |
-                  declared=$(jq -r '.info.productVersion' wails.json)
+                  declared=$(sed -n 's/^  version: *"\(.*\)".*/\1/p' build/config.yml)
                   if [[ "$declared" != "$RELEASED" ]]; then
-                    echo "::error::wails.json says '$declared' but the release is '$RELEASED'. Check the extra-files updater in release-please-config.json."
+                    echo "::error::build/config.yml says '$declared' but the release is '$RELEASED'. Check the extra-files updater in release-please-config.json."
                     exit 1
                   fi
 
-            - name: Install build dependencies
-              shell: bash
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install --no-install-recommends -y \
-                    libgtk-3-dev ${{ matrix.package }} upx-ucl
-
-            - name: Confirm the WebKitGTK version is the intended one
-              shell: bash
-              run: |
-                  if ! pkg-config --exists ${{ matrix.pkgconfig }}; then
-                    echo "::error::${{ matrix.pkgconfig }} is not available on this runner."
-                    exit 1
-                  fi
-                  echo "Building against ${{ matrix.pkgconfig }} $(pkg-config --modversion ${{ matrix.pkgconfig }})"
-
-            - name: Install the Wails CLI
-              shell: bash
-              run: |
-                  version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
-                  go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
-
-            - name: Build the application
-              run: make build WEBKIT_TAGS=${{ matrix.tags }}
-
-            # Note for anyone extending this: the binary Wails produces cannot be inspected with 'ldd' or
-            # 'strings' — its section headers are gone, so neither reports the WebKitGTK it links. The
-            # guarantee comes from the pinned tag and the build failing on a missing package, not from
-            # inspecting the artifact afterwards.
-            - name: Assemble the archive
-              shell: bash
-              env:
-                  VERSION: ${{ needs.resolve.outputs.version }}
-              run: |
-                  name="quick-translate-${VERSION}-linux-amd64-${{ matrix.suffix }}"
-                  mkdir -p "dist/$name"
-                  cp build/bin/quick-translate LICENSE README.md "dist/$name/"
-
-                  cat > "dist/$name/INSTALL.txt" <<EOF
-                  Quick Translate ${VERSION} — linux/amd64, built against WebKitGTK ${{ matrix.webkit }}
-
-                  This build needs WebKitGTK ${{ matrix.webkit }} and GTK 3 at runtime. If it does not start,
-                  check which version your distribution ships and take the other archive instead:
-
-                    pkg-config --exists webkit2gtk-4.1 && echo 4.1 || echo 4.0
-
-                  It also needs one of wl-clipboard, xclip or xsel to read the selection.
-
-                  Install:
-
-                    install -D -m 0755 quick-translate ~/.local/bin/quick-translate
-                    ~/.local/bin/quick-translate --install
-
-                  The second command registers the icon, a desktop entry and an autostart service, and
-                  prints which shortcut to use or how to bind one.
-
-                  Uninstall:
-
-                    ~/.local/bin/quick-translate --uninstall
-                    rm ~/.local/bin/quick-translate
-
-                  Add --purge to the uninstall to delete your configuration and history as well.
-                  EOF
-
-                  tar -C dist -czf "dist/$name.tar.gz" "$name"
-                  rm -rf "dist/$name"
+            - name: Build the archive
+              run: wails3 task archive
 
             - name: Upload the archive
               uses: actions/upload-artifact@v7
               with:
-                  name: ${{ matrix.suffix }}
-                  path: dist/*.tar.gz
+                  name: archive
+                  path: bin/*.tar.gz
                   if-no-files-found: error
 
     publish:
@@ -243,14 +157,14 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - name: Download the archives
+            - name: Download the archive
               uses: actions/download-artifact@v8
               with:
+                  name: archive
                   path: dist
-                  merge-multiple: true
 
-            # One file over both archives rather than one beside each, so a reader can verify everything
-            # the release ships with a single 'sha256sum --check'.
+            # One file over every archive rather than one beside each, so a reader can verify everything the
+            # release ships with a single 'sha256sum --check'.
             - name: Generate the checksums
               shell: bash
               working-directory: dist

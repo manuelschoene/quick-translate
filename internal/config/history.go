@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+
+	"quick-translate/internal/system"
 )
 
 // The number of entries kept in the history if the option is not set in the configuration file.
@@ -14,13 +16,13 @@ type historyConfig struct {
 }
 
 // Reads the maximum number of history entries from the configuration file. A limit of zero disables the history. If the option is missing, the default limit is returned. Returns an error if reading the configuration file fails or if the limit is negative.
-func HistoryLimit() (int, error) {
-	if err := initFile(); err != nil {
+func HistoryLimit(files *system.FileService) (int, error) {
+	if err := initFile(files); err != nil {
 		return 0, err
 	}
 
 	config := &historyConfig{}
-	if err := readStruct(config); err != nil {
+	if err := readStruct(files, config); err != nil {
 		return 0, fmt.Errorf("Could not read history limit: %w", err)
 	}
 

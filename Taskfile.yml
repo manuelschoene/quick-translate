@@ -1,0 +1,70 @@
+# This file mostly delegates: the work happens in build/Taskfile.yml and in one Taskfile per operating
+# system. Supporting another one means adding its Taskfile under build/<os>/ and including it below.
+# The exception is `art`, which belongs to no operating system and therefore runs here.
+
+version: '3'
+
+vars:
+  APP_NAME: "quick-translate"
+  BIN_DIR: "bin" # The directory where the final build artifacts go. Intermediate build steps should not be written here.
+  GOOS: '{{.GOOS | default OS}}'
+  VERSION:
+    sh: 'sed -n ''s/^  version: *"\(.*\)".*/\1/p'' build/config.yml'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+
+includes:
+  common: ./build/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+
+tasks:
+  archive:
+    desc: Packages the release archive
+    summary: Builds everything the target operating system ships and packs it into one archive in BIN_DIR.
+    cmds:
+      - task: "{{.GOOS}}:clean"
+      - task: "{{.GOOS}}:archive"
+
+  art:
+    desc: Exports every artwork file from its source
+    summary: Writes art/tray.png and art/wordmark.svg from their sources.
+    sources:
+      - art/icon.svg
+      - art/wordmark.src.svg
+    generates:
+      - art/tray.png
+      - art/wordmark.svg
+    preconditions:
+      - sh: 'command -v inkscape >/dev/null 2>&1'
+        msg: "Inkscape is required: it renders the artwork. Install it from your distribution's package manager, or from https://inkscape.org."
+      - sh: 'fc-list "Noto Sans" | grep -q .'
+        msg: "The font 'Noto Sans' is not installed. Inkscape would quietly outline a substitute instead and the wordmark would change without anything failing."
+    cmds:
+      # 64 pixels covers a 32 pixel panel at double scaling. The tray takes a PNG only.
+      - inkscape art/icon.svg --export-type=png --export-width=64 --export-height=64 --export-filename=art/tray.png
+      # The name is converted to outlines, so the wordmark does not need the font installed to render.
+      - inkscape art/wordmark.src.svg --export-text-to-path --export-plain-svg --export-filename=art/wordmark.svg
+
+  build:
+    desc: Builds the application
+    summary: Builds the frontend, the bindings and the binary for the target operating system into BIN_DIR.
+    cmds:
+      - task: "{{.GOOS}}:build"
+
+  clean:
+    desc: Removes everything a build writes
+    summary: Deletes BIN_DIR and whatever the target operating system writes beside it.
+    cmds:
+      - task: "{{.GOOS}}:clean"
+      - rm -rf {{.BIN_DIR}}
+
+  dev:
+    desc: Runs the application with live reload
+    summary: Starts the frontend dev server and the application, rebuilding both as sources change.
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  run:
+    desc: Runs the built application
+    summary: Starts the binary in BIN_DIR. Build it first; this task does not.
+    cmds:
+      - task: "{{.GOOS}}:run"

@@ -95,6 +95,10 @@
 :root {
     color-scheme: dark;
 
+    /* Wails shows the native context menu on text fields and selections by default. The window offers
+       its own buttons for everything it would, so it is hidden everywhere. Debug builds show it anyway. */
+    --default-contextmenu: hide;
+
     --bg-base: var(--color-gray-950);
     --bg-surface: var(--color-gray-900);
     --bg-elevated: var(--color-gray-800);

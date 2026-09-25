@@ -1,8 +1,9 @@
-import { languageState, type Language } from '@/state';
+import { languageState } from '@/state';
+import type { Language } from '@bind/models';
+import { ChangeSource, ChangeTarget, SwitchLanguages } from '@bind/transport/adapter';
 import { readonlyRefs } from '@lib/reactivity';
 import { request } from '@services/request';
 import { applyTranslation } from '@services/wire';
-import { ChangeSource, ChangeTarget, SwitchLanguages } from '@wails/go/transport/Adapter';
 import { computed, type DeepReadonly } from 'vue';
 
 const {

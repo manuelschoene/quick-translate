@@ -11,12 +11,11 @@
   "packages": {
     ".": {
       "release-type": "go",
-      "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
-          "type": "json",
-          "path": "wails.json",
-          "jsonpath": "$.info.productVersion"
+          "type": "yaml",
+          "path": "build/config.yml",
+          "jsonpath": "$.info.version"
         }
       ]
     }

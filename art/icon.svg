@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
+     role="img" aria-label="Quick Translate">
+  <title>Quick Translate</title>
+
+  <!--
+    A speech bubble carrying a globe, flying to the right: the speed stripes
+    trail behind it on the left, and so does the triangular tail.
+
+    Colors come from frontend/src/style.css but are written here as sRGB hex,
+    because librsvg - the renderer behind the desktop icon themes - does not
+    understand OKLCH. Change a token there and this file has to be converted
+    again by hand.
+
+      #1E9F9F  is color-accent-400, oklch(63.8% 0.103 195)
+      #EFF7F7  is color-gray-50,    oklch(97%   0.008 195)
+
+    The background stays transparent, so the icon has no tile of its own to
+    align against; it will read slightly smaller than tiled icons beside it.
+  -->
+
+  <!-- Bubble: body plus the triangular tail, leaning back to the left. The
+       tail's base sits at y=352, inside the body, so the two shapes union
+       without a seam and the corner radius does not cut into it. -->
+  <g fill="#1E9F9F">
+    <rect x="170" y="58" width="316" height="316" rx="84"/>
+    <path d="M 230 352 L 348 352 L 190 470 Z"/>
+  </g>
+
+  <!--
+    Globe: outline, two meridians (the sides of the ellipse) and two parallels.
+    The grid is spaced evenly, which for two lines means they cut the diameter
+    into three equal parts, so both sit at r/3 from the center. Everything else
+    follows from that and must be recomputed if r changes:
+      ellipse width     rx = r / 3               = 30.7
+      chord half-width     = sqrt(r^2 - (r/3)^2) = 86.7
+  -->
+  <g fill="none" stroke="#EFF7F7" stroke-width="20" stroke-linecap="round">
+    <circle cx="328" cy="216" r="92"/>
+    <ellipse cx="328" cy="216" rx="30.7" ry="92"/>
+    <path d="M 241 185 H 415"/>
+    <path d="M 241 247 H 415"/>
+  </g>
+
+  <!--
+    Speed stripes, lengths 78 / 132 / 62. The lengths differ on purpose; equal
+    ones would read as a block rather than as motion. All three paths end at
+    x=146, which puts every round cap at x=159 and leaves the same gap of 11 to
+    the bubble's edge at x=170.
+
+    A round cap reaches half the stroke width beyond the path end, 13 units
+    here. That is why the middle stripe starts at 14 rather than at 0: any
+    earlier and its cap would be clipped by the viewBox.
+  -->
+  <g stroke="#1E9F9F" stroke-width="26" stroke-linecap="round" fill="none">
+    <path d="M 68 148 H 146"/>
+    <path d="M 14 216 H 146"/>
+    <path d="M 84 284 H 146"/>
+  </g>
+</svg>

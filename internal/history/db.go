@@ -3,8 +3,9 @@ package history
 import (
 	"database/sql"
 	"fmt"
-	"os"
+
 	"quick-translate/internal/models"
+	"quick-translate/internal/system"
 
 	_ "github.com/glebarez/go-sqlite"
 )
@@ -17,7 +18,7 @@ type db struct {
 }
 
 // Opens the database at the given path and creates the history table if it does not exist yet. Returns an error if the database can not be opened or migrated.
-func newDb(path string) (*db, error) {
+func newDb(path string, files *system.FileService) (*db, error) {
 	dsn := fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)", path)
 
 	conn, err := sql.Open("sqlite", dsn)
@@ -41,9 +42,7 @@ func newDb(path string) (*db, error) {
 	// SQLite creates the database with the permissions of the process, which would leave every text that was
 	// ever translated readable for the other users of the machine. The write-ahead log beside it is created
 	// the same way and is covered by the directory, which is narrow already.
-	if err := os.Chmod(path, 0600); err != nil {
-		fmt.Printf("Could not narrow the permissions of the history database: %v\n", err)
-	}
+	files.Narrow(system.History)
 
 	return db, nil
 }

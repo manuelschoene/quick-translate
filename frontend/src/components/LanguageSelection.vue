@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { route } from '@/router';
-import type { Language } from '@/state';
+import type { Language } from '@bind/models';
 import Button from '@comp/Button.vue';
 import Panel from '@comp/Panel.vue';
 import SearchBox from '@comp/SearchBox.vue';

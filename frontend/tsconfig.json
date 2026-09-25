@@ -13,7 +13,7 @@
             "@services/*": ["./src/services/*"],
             "@use/*": ["./src/composables/*"],
             "@views/*": ["./src/views/*"],
-            "@wails/*": ["./wailsjs/*"]
+            "@bind/*": ["./bindings/quick-translate/internal/*"]
         },
         "allowImportingTsExtensions": true,
         "noEmit": true,
@@ -26,7 +26,7 @@
         "lib": ["ESNext", "DOM"],
         "skipLibCheck": true
     },
-    "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+    "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "bindings/**/*.d.ts"],
     "references": [
         {
             "path": "./tsconfig.node.json"

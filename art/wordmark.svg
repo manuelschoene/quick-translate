@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 805 245"
+   width="805"
+   height="245"
+   role="img"
+   aria-label="Quick Translate"
+   version="1.1"
+   id="svg8"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8" />
+  <title
+     id="title1">Quick Translate</title>
+  <desc
+     id="desc1">
+    Quick Translate wordmark. art/wordmark.src.svg is the editable source and
+    art/wordmark.svg is exported from it by &quot;task wordmark&quot;, which runs:
+    inkscape art/wordmark.src.svg --export-text-to-path --export-plain-svg --export-filename=art/wordmark.svg
+  </desc>
+  <!--
+    The wordmark is two files, and this comment travels into both of them:
+
+      art/wordmark.src.svg  name as a text element.  Edit this one.
+      art/wordmark.svg      name as outlines.        This one is used.
+
+    Run "task wordmark" after every change to the source. The command it runs is
+    in the desc element above rather than in this comment, because an XML
+    comment may not contain a double hyphen and every one of those flags opens
+    with one. The task does nothing else to the exported file, so that command
+    alone reproduces it exactly.
+
+    Outlines are necessary because the app bundles no font of its own
+    (frontend/src/style.css resolves everything through a system-ui stack), so
+    Noto Sans is not guaranteed on any target system. A text element would fall
+    back to whatever the viewer happens to have installed, and the wordmark
+    would differ from machine to machine.
+
+    Colors are the same sRGB values as art/icon.svg and come from
+    frontend/src/style.css. They are written as hex because librsvg, the
+    renderer behind the desktop icon themes, does not understand oklch(); a
+    color it cannot parse renders as nothing at all. The token names below are
+    spelled without their leading dashes for the same reason as the flags.
+
+      #1E9F9F  is color-accent-400, oklch(63.8% 0.103 195)
+      #EFF7F7  is color-gray-50,    oklch(97%   0.008 195)
+
+    Layout: the type size is derived from the bubble, not picked by eye. Cap
+    height plus leading equal the bubble's 184.08 units, so the cap line of
+    "Quick" and the baseline of "Translate" meet its top and bottom edge. At
+    Noto Sans' cap height of 0.714 em that puts the size at 105 and the leading
+    at 109.11. Change the icon scale and all three follow.
+
+    The viewBox is trimmed to the ink, so neither file carries a dead margin and
+    whoever places the wordmark controls the clear space. The box starts above
+    the bubble's top edge on purpose: the ascender of the "k" rises past the cap
+    line.
+
+    This is the wordmark, not the application icon. art/icon.svg is the square
+    mark the Linux archive installs into hicolor/scalable/apps.
+  -->
+  <!-- Icon, scaled to 240 units tall and placed so its ink starts at x=0 -->
+  <g
+     transform="translate(-0.58 -28.79) scale(0.5825243)"
+     id="g7">
+    <g
+       fill="#1E9F9F"
+       id="g1">
+      <rect
+         x="170"
+         y="58"
+         width="316"
+         height="316"
+         rx="84"
+         id="rect1" />
+      <path
+         d="M 230 352 L 348 352 L 190 470 Z"
+         id="path1" />
+    </g>
+    <g
+       fill="none"
+       stroke="#EFF7F7"
+       stroke-width="20"
+       stroke-linecap="round"
+       id="g3">
+      <circle
+         cx="328"
+         cy="216"
+         r="92"
+         id="circle1" />
+      <ellipse
+         cx="328"
+         cy="216"
+         rx="30.7"
+         ry="92"
+         id="ellipse1" />
+      <path
+         d="M 241 185 H 415"
+         id="path2" />
+      <path
+         d="M 241 247 H 415"
+         id="path3" />
+    </g>
+    <g
+       stroke="#1E9F9F"
+       stroke-width="26"
+       stroke-linecap="round"
+       fill="none"
+       id="g6">
+      <path
+         d="M 68 148 H 146"
+         id="path4" />
+      <path
+         d="M 14 216 H 146"
+         id="path5" />
+      <path
+         d="M 84 284 H 146"
+         id="path6" />
+    </g>
+  </g>
+  <!-- Keep the family exactly "Noto Sans": the outlines in art/wordmark.svg were
+       generated from it. A fallback stack here would make the export depend on
+       whatever resolves first on the machine running it, which is why the task
+       checks that the family is installed before it runs. -->
+  <g
+     font-family="Noto Sans"
+     font-size="105"
+     font-weight="700"
+     fill="#1E9F9F"
+     letter-spacing="-2"
+     id="g8">
+    <path
+       d="m 415.675,42.380001 q 0,12.495 -4.515,21.735 -4.41,9.24 -13.86,13.545 l 18.165,20.16 H 394.78 l -13.335,-16.8 q -0.315,0 -0.735,0 -0.42,0 -0.735,0 -12.18,0 -20.16,-4.83 -7.875,-4.83 -11.76,-13.545 -3.78,-8.715 -3.78,-20.37 0,-11.55 3.78,-20.16 3.885,-8.715 11.76,-13.4399998 7.98,-4.83 20.265,-4.83 12.18,0 20.055,4.83 7.98,4.7249998 11.76,13.4399998 3.78,8.61 3.78,20.265 z m -54.495,0 q 0,11.76 4.41,18.48 4.515,6.615 14.385,6.615 10.08,0 14.385,-6.615 4.41,-6.72 4.41,-18.48 0,-11.76 -4.41,-18.48 -4.305,-6.72 -14.28,-6.72 -9.975,0 -14.49,6.72 -4.41,6.72 -4.41,18.48 z m 118.85504,-19.74 v 57.33 h -12.18 l -1.995,-7.35 h -0.945 q -2.73,4.41 -7.455,6.405 -4.725,1.995 -10.185,1.995 -9.135,0 -14.805,-4.935 -5.565,-5.04 -5.565,-16.065 v -37.38 h 15.96 v 33.39 q 0,6.09 2.1,9.24 2.205,3.045 6.93,3.045 7.14,0 9.66,-4.83 2.625,-4.83 2.625,-13.965 v -26.88 z M 501.55499,0.06500122 q 3.465,0 5.985,1.67999998 2.625,1.575 2.625,6.09 0,4.3049998 -2.625,5.9849998 -2.52,1.68 -5.985,1.68 -3.57,0 -6.09,-1.68 -2.52,-1.68 -2.52,-5.9849998 0,-4.515 2.52,-6.09 2.52,-1.67999998 6.09,-1.67999998 z m 7.875,22.57499978 v 57.33 h -15.855 v -57.33 z m 38.42499,58.38 q -8.295,0 -14.595,-3.045 -6.195,-3.15 -9.66,-9.66 -3.465,-6.51 -3.465,-16.695 0,-10.5 3.78,-17.115 3.78,-6.72 10.29,-9.765 6.51,-3.15 14.805,-3.15 4.935,0 9.45,1.05 4.515,1.05 7.98,2.835 l -4.725,11.97 q -3.15,-1.365 -6.405,-2.205 -3.15,-0.945 -6.3,-0.945 -6.09,0 -9.45,4.305 -3.255,4.305 -3.255,12.915 0,8.505 3.255,12.6 3.36,4.095 9.24,4.095 4.41,0 8.505,-1.155 4.095,-1.26 7.56,-3.255 v 12.915 q -3.36,1.995 -7.455,3.15 -3.99,1.155 -9.555,1.155 z m 43.36007,-45.15 q 0,3.255 -0.315,6.51 -0.21,3.15 -0.525,6.405 h 0.21 q 1.575,-2.205 3.255,-4.41 1.68,-2.31 3.57,-4.305 l 16.065,-17.43 h 17.64 l -22.785,24.885 24.15,32.445 h -18.06 l -16.485,-23.205 -6.72,5.355 v 17.85 h -15.645 V 0.17000122 h 15.645 z"
+       id="text7"
+       aria-label="Quick" />
+    <path
+       d="M 376.825,189.08 H 360.76 V 127.445 H 340.495 V 114.11 h 56.595 v 13.335 h -20.265 z m 54.38504,-58.38 q 1.575,0 3.36,0.21 1.785,0.21 2.94,0.42 l -1.575,14.805 q -1.155,-0.315 -2.73,-0.42 -1.575,-0.21 -3.78,-0.21 -3.255,0 -6.51,1.365 -3.255,1.365 -5.46,4.515 -2.1,3.15 -2.1,8.61 v 29.085 h -15.855 v -57.33 h 12.075 l 2.31,9.66 h 0.735 q 2.52,-4.41 6.825,-7.56 4.41,-3.15 9.765,-3.15 z m 36.74501,0 q 10.71,0 16.38,5.145 5.775,5.04 5.775,15.015 v 38.22 h -11.025 l -3.045,-7.77 h -0.42 q -3.78,4.62 -7.875,6.72 -3.99,2.1 -11.235,2.1 -7.56,0 -12.6,-4.41 -5.04,-4.41 -5.04,-13.545 0,-8.925 6.51,-13.44 6.51,-4.62 19.425,-5.145 l 9.555,-0.315 v -1.785 q 0,-5.145 -2.415,-7.14 -2.31,-2.1 -6.405,-2.1 -3.885,0 -7.98,1.26 -4.095,1.26 -8.085,3.045 l -4.62,-10.815 q 4.515,-2.31 10.29,-3.675 5.88,-1.365 12.81,-1.365 z m 0.42,32.13 q -7.56,0.21 -10.5,2.415 -2.835,2.205 -2.835,6.195 0,3.675 1.995,5.46 2.1,1.68 5.565,1.68 4.935,0 8.295,-2.94 3.465,-2.94 3.465,-8.4 v -4.725 z m 67.61511,-32.13 q 9.45,0 14.91,5.04 5.46,4.935 5.46,15.96 v 37.38 h -15.75 v -33.39 q 0,-12.39 -9.24,-12.39 -7.14,0 -9.765,4.935 -2.52,4.83 -2.52,13.965 v 26.88 h -15.855 v -57.33 h 12.18 l 2.205,7.665 h 0.63 q 5.67,-8.715 17.745,-8.715 z m 74.12495,41.475 q 0,8.19 -5.88,13.125 -5.775,4.83 -17.85,4.83 -6.09,0 -10.71,-0.84 -4.62,-0.735 -8.925,-2.52 v -13.125 q 4.62,2.205 9.87,3.465 5.355,1.26 9.345,1.26 4.83,0 6.93,-1.365 2.205,-1.365 2.205,-3.675 0,-1.575 -1.155,-2.835 -1.05,-1.26 -3.885,-2.625 -2.73,-1.365 -7.875,-3.36 -7.665,-3.045 -11.655,-6.72 -3.885,-3.78 -3.885,-10.92 0,-7.98 6.195,-12.075 6.3,-4.095 16.59,-4.095 5.46,0 10.29,1.155 4.83,1.155 9.765,3.255 l -4.62,10.815 q -3.99,-1.785 -8.19,-2.94 -4.2,-1.155 -7.455,-1.155 -7.56,0 -7.56,4.2 0,1.575 1.05,2.73 1.155,1.05 3.885,2.31 2.835,1.26 7.875,3.255 5.145,2.1 8.61,4.305 3.57,2.205 5.25,5.46 1.785,3.15 1.785,8.085 z m 25.9301,16.905 h -15.855 v -79.8 h 15.855 z m 39.05501,-58.38 q 10.71,0 16.38,5.145 5.775,5.04 5.775,15.015 v 38.22 h -11.025 l -3.045,-7.77 h -0.42 q -3.78,4.62 -7.875,6.72 -3.99,2.1 -11.235,2.1 -7.56,0 -12.6,-4.41 -5.04,-4.41 -5.04,-13.545 0,-8.925 6.51,-13.44 6.51,-4.62 19.425,-5.145 l 9.555,-0.315 v -1.785 q 0,-5.145 -2.415,-7.14 -2.31,-2.1 -6.405,-2.1 -3.885,0 -7.98,1.26 -4.095,1.26 -8.085,3.045 l -4.62,-10.815 q 4.515,-2.31 10.29,-3.675 5.88,-1.365 12.81,-1.365 z m 0.42,32.13 q -7.56,0.21 -10.5,2.415 -2.835,2.205 -2.835,6.195 0,3.675 1.995,5.46 2.1,1.68 5.565,1.68 4.935,0 8.295,-2.94 3.465,-2.94 3.465,-8.4 v -4.725 z m 59.53011,14.805 q 2.625,0 5.04,-0.525 2.415,-0.525 4.83,-1.26 v 11.655 q -2.52,1.05 -6.3,1.785 -3.675,0.84 -8.085,0.84 -5.145,0 -9.24,-1.68 -3.99,-1.68 -6.405,-5.775 -2.31,-4.2 -2.31,-11.55 V 143.51 h -7.455 v -6.615 l 8.61,-5.25 4.515,-12.075 h 9.975 v 12.18 h 16.065 v 11.76 h -16.065 v 27.615 q 0,3.255 1.89,4.935 1.89,1.575 4.935,1.575 z m 43.36,-46.935 q 11.97,0 18.795,6.72 6.93,6.72 6.93,19.32 v 7.665 h -36.855 q 0.315,6.51 3.99,10.29 3.78,3.675 10.815,3.675 5.355,0 9.765,-1.05 4.41,-1.05 9.03,-3.15 v 11.865 q -4.2,2.1 -8.925,3.045 -4.725,1.05 -11.55,1.05 -8.505,0 -15.12,-3.15 -6.51,-3.255 -10.29,-9.765 -3.78,-6.51 -3.78,-16.38 0,-15.015 7.455,-22.575 7.56,-7.56 19.74,-7.56 z m 0.42,11.235 q -4.725,0 -7.77,3.045 -2.94,2.94 -3.36,8.82 h 21.63 q -0.105,-5.145 -2.73,-8.505 -2.52,-3.36 -7.77,-3.36 z"
+       id="text8"
+       aria-label="Translate" />
+  </g>
+</svg>

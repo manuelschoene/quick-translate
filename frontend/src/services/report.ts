@@ -20,15 +20,11 @@ export function reportQuietly(error: unknown): void {
 }
 
 /**
- * Puts the message of a failure into the state and onto the console, which keeps it around while the
- * window is being worked on.
+ * Puts the message of a failure into the state, which keeps it around while the window is being worked
+ * on.
  */
 function note(error: unknown): void {
-    const text = message(error);
-
-    console.error('Quick Translate: ', text);
-
-    errorState.message = text;
+    errorState.message = message(error);
 }
 
 /**

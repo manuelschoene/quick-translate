@@ -5,10 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Questions are welcome here — an answer in an issue is useful to the next person too, which is why
-        this is preferred over email. The [README](https://github.com/manuelschoene/quick-translate/blob/main/README.md)
-        covers installation, the clipboard requirements and the provider configuration, so it is worth a
-        look first, but do ask if it does not answer you.
+        Questions are welcome. The [README](https://github.com/manuelschoene/quick-translate/blob/main/README.md)
+        covers the requirements, installation and configuration, so it is worth a look first.
 
   - type: textarea
     id: question

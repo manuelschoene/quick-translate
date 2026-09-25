@@ -1,9 +1,9 @@
 import { providerState } from '@/state';
+import { ChangeProvider } from '@bind/transport/adapter';
 import { readonlyRefs } from '@lib/reactivity';
 import { Globe } from '@lucide/vue';
 import { request } from '@services/request';
 import { applyFull } from '@services/wire';
-import { ChangeProvider } from '@wails/go/transport/Adapter';
 import { computed, type Component } from 'vue';
 import { DeepLIcon } from 'vue3-simple-icons';
 
