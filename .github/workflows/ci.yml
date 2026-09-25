@@ -53,7 +53,7 @@ jobs:
       # 'main' is protected and everything on it came through a reviewed pull request already, a tag ref
       # cannot be pushed to at all (the release workflow calls this one on a tag), and a pull request from a
       # fork hands this workflow a read-only token. In all three the test job still reports what is
-      # unformatted, and the contributor fixes it with 'bun run format' as CONTRIBUTING describes.
+      # unformatted, and the contributor fixes it manually.
       #
       # Only this step is guarded, not the job: the test job needs it, and a skipped job would skip the
       # tests along with it.
@@ -110,14 +110,17 @@ jobs:
         with:
           write: "false"
 
+      # The frontend must be built first, because the assets are embedded into the Go binary.
       - name: Check the frontend build
         working-directory: frontend
         run: bun run build
 
-      # --- Go: everything that needs no system libraries -------------------------------------------------
-      # Wails' Linux frontend, and with it the WebKitGTK cgo dependency, only enters the build graph under
-      # the 'desktop,production' tags. Without them these run on a bare runner. The frontend must be built
-      # first, because the assets are embedded into the Go binary and checked for existence.
+      # --- Go ----------------------------------------------------------------------------------------------
+
+      - name: Setup Wails
+        uses: ./.github/actions/setup-wails
+        with:
+          desktop-file-utils: "true"
 
       - name: Check formatting
         shell: bash
@@ -151,57 +154,29 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
 
-      # --- The build that proves the release compiles ----------------------------------------------------
-      # This is the only step that compiles Wails' Linux frontend. The Makefile picks the WebKit build tag
-      # with pkg-config, so installing the 4.1 development package is enough to select 'webkit2_41'.
-      # UPX is skipped because compressing the binary costs minutes and proves nothing here.
+      # Same archive as the release ships, without UPX compression to save time.
+      - name: Build the archive
+        run: wails3 task archive UPX=false
 
-      - name: Install build dependencies
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            libgtk-3-dev libwebkit2gtk-4.1-dev desktop-file-utils
-
-      - name: Install the Wails CLI
-        shell: bash
-        run: |
-          version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
-          go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
-
-      - name: Build the application
-        run: make build UPX=0
-
-      # The bindings are generated but committed, so a checkout lints and type-checks without a Go
-      # toolchain. That only holds while they are current, which is what this compares: 'make build' has
-      # just regenerated them, so anything left behind means the commit is missing the regenerated files.
+      # Bindings must be committed for the frontend checks to pass.
       - name: Check the generated bindings are current
         shell: bash
         run: |
-          changes=$(git status --porcelain -- frontend/wailsjs)
+          changes=$(git status --porcelain -- frontend/bindings)
           if [[ -n "$changes" ]]; then
-            echo "::error::The generated bindings are out of date. Run 'make build' and commit frontend/wailsjs."
+            echo "::error::The generated bindings are out of date. Run 'wails3 task common:generate:bindings' and commit frontend/bindings."
             echo "$changes"
-            git --no-pager diff -- frontend/wailsjs
+            git --no-pager diff -- frontend/bindings
             exit 1
           fi
 
-      # The installation is sandboxed with the XDG variables, but systemd is not: its user manager reads the
-      # unit search path when it starts, so it looks straight past the sandbox and refuses a unit written
-      # into it. A shim that reports no user manager picks the portable autostart path instead, which is
-      # both hermetic and the path most non-KDE users get anyway.
-      - name: Validate the desktop entries
+      # Sandbox the binary in a temporary home directory, so failures do not touch the real one.
+      - name: Smoke-test the command line
         shell: bash
         run: |
-          ./build/bin/quick-translate --version
+          home=$(mktemp -d)
+          export XDG_DATA_HOME="$home/data" XDG_CONFIG_HOME="$home/config" XDG_CACHE_HOME="$home/cache"
 
-          shim=$(mktemp -d)
-          printf '#!/bin/sh\nexit 1\n' > "$shim/systemctl"
-          chmod +x "$shim/systemctl"
-
-          entry=$(mktemp -d)
-          PATH="$shim:$PATH" XDG_DATA_HOME="$entry" XDG_CONFIG_HOME="$entry" XDG_CURRENT_DESKTOP=KDE \
-            ./build/bin/quick-translate --install
-
-          desktop-file-validate "$entry/applications/quick-translate.desktop"
-          desktop-file-validate "$entry/autostart/quick-translate.desktop"
+          ./bin/quick-translate --version
+          ./bin/quick-translate --help
+          ./bin/quick-translate --status

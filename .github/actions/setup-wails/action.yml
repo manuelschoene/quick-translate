@@ -1,0 +1,52 @@
+name: Setup Wails
+author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+description: Installs the GTK4 and WebKitGTK 6.0 development packages, optionally UPX, and the wails3 CLI. Expects Go to be set up already.
+
+inputs:
+  desktop-file-utils:
+    description: Also installs desktop-file-utils, so the build validates the desktop entry it generates.
+    required: false
+    default: "false"
+  upx:
+    description: Also installs UPX, which a release build needs to compress the binary. A build with UPX=false does not.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install build dependencies
+      shell: bash
+      env:
+        DESKTOP_FILE_UTILS: ${{ inputs.desktop-file-utils == 'true' && 'desktop-file-utils' || '' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y libgtk-4-dev libwebkitgtk-6.0-dev $DESKTOP_FILE_UTILS
+
+    # A runner image without the package would otherwise only surface as a cgo error deep inside the build.
+    - name: Confirm the WebKitGTK version
+      shell: bash
+      run: |
+        if ! pkg-config --exists webkitgtk-6.0; then
+          echo "::error::webkitgtk-6.0 is not available on this runner."
+          exit 1
+        fi
+        echo "Building against webkitgtk-6.0 $(pkg-config --modversion webkitgtk-6.0)"
+
+    # Pinned from the UPX release rather than taken from apt: Ubuntu 24.04 packages 4.2, and the Taskfile asks for 5.2 or newer.
+    - name: Install UPX
+      if: inputs.upx == 'true'
+      shell: bash
+      env:
+        UPX_VERSION: "5.2.1"
+      run: |
+        curl -fsSL "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz" \
+          | tar -xJ -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/upx-${UPX_VERSION}-amd64_linux" >> "$GITHUB_PATH"
+
+    # The Wails CLI includes the Task runner. Built with cgo against the packages installed above, like a local one.
+    - name: Install the Wails CLI
+      shell: bash
+      run: |
+        version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+        go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
