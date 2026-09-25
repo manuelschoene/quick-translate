@@ -13,9 +13,8 @@
       "release-type": "go",
       "extra-files": [
         {
-          "type": "yaml",
-          "path": "build/config.yml",
-          "jsonpath": "$.info.version"
+          "type": "generic",
+          "path": "build/config.yml"
         }
       ]
     }
