@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-alpha.2](https://github.com/manuelschoene/quick-translate/compare/v0.1.0-alpha.1...v0.1.0-alpha.2) (2026-09-25)
+
+
+### Bug Fixes
+
+* Kept build/config.yml formatted on release ([#6](https://github.com/manuelschoene/quick-translate/issues/6)) ([d3b0141](https://github.com/manuelschoene/quick-translate/commit/d3b014142cc907acfca761735ed3d26ba357c8da))
+
 ## [0.1.0-alpha.1](https://github.com/manuelschoene/quick-translate/compare/v0.1.0-alpha...v0.1.0-alpha.1) (2026-09-25)
 
 
