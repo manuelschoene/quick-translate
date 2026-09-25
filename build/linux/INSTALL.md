@@ -1,37 +1,25 @@
 # Quick Translate @VERSION@ - linux/@ARCH@
 
-Two binaries are included, one per Linux graphics stack:
-
-- `@BINARY@` - GTK4 and WebKitGTK 6.0
-- `@BINARY_GTK3@` - GTK3 and WebKit2GTK 4.1, for older distributions
+The binary `@BINARY@` is built against GTK4 and WebKitGTK 6.0.
 
 ## Requirements
 
-Install the requirements before you install the application. Neither binary starts without its
-WebKit library, not even CLI commands. Use the GTK4 binary where your distribution
-offers WebKitGTK 6.0, and the GTK3 one only where it does not. Reading the selection needs
-wl-clipboard in a Wayland session, and xclip or xsel in an X11 session.
+Install the requirements before you install the application. It does not start without WebKitGTK
+6.0 and GTK 4.10 or newer, not even its CLI commands. Reading the selection needs wl-clipboard in a
+Wayland session, and xclip or xsel in an X11 session.
 
-|             | Debian / Ubuntu       | Fedora            | Arch              |
-|-------------|-----------------------|-------------------|-------------------|
-| GTK4 binary | `libwebkitgtk-6.0-4`  | `webkitgtk6.0`    | `webkitgtk-6.0`   |
-| GTK3 binary | `libwebkit2gtk-4.1-0` | `webkit2gtk4.1`   | `webkit2gtk-4.1`  |
-| Wayland     | `wl-clipboard`        | `wl-clipboard`    | `wl-clipboard`    |
-| X11         | `xclip` or `xsel`     | `xclip` or `xsel` | `xclip` or `xsel` |
+|           | Debian / Ubuntu      | Fedora            | Arch              |
+|-----------|----------------------|-------------------|-------------------|
+| WebKitGTK | `libwebkitgtk-6.0-4` | `webkitgtk6.0`    | `webkitgtk-6.0`   |
+| Wayland   | `wl-clipboard`       | `wl-clipboard`    | `wl-clipboard`    |
+| X11       | `xclip` or `xsel`    | `xclip` or `xsel` | `xclip` or `xsel` |
 
 ## Installation
 
-The archive mirrors the directories it is installed into. For your user only, with the GTK4 binary:
+The archive mirrors the directories it is installed into. For your user only:
 
 ```sh
 install -D -m 0755 @BINARY@ ~/.local/bin/@APP_NAME@
-cp -r share ~/.local/
-```
-
-For the GTK3 build, install `@BINARY_GTK3@` under the same name instead:
-
-```sh
-install -D -m 0755 @BINARY_GTK3@ ~/.local/bin/@APP_NAME@
 cp -r share ~/.local/
 ```
 

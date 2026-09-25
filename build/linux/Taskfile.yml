@@ -12,14 +12,13 @@ vars:
   # the global shortcut to the ID the entry is named after, and the entry finds its icon under the same
   # name.
   APP_ID: "io.github.manuelschoene.QuickTranslate"
-  ARTIFACT_DIR: "build/linux/artifact" # The directory where intermediate build steps put their work. The final build artifacts go to BIN_DIR instead.
-  BINARY: "{{.BIN_DIR}}/{{.APP_NAME}}" # The GTK4/WebKitGTK 6.0 binary, the default one.
-  BINARY_GTK3: "{{.BIN_DIR}}/{{.APP_NAME}}-gtk3" # The GTK3/WebKit2GTK 4.1 binary, built with `-tags gtk3`.
+  ARTIFACT_DIR: "build/linux/artifact" # The directory for intermediate build steps. The final build artifacts go to BIN_DIR instead.
+  BINARY: "{{.BIN_DIR}}/{{.APP_NAME}}"
 
 tasks:
   build:
     desc: Builds the application for Linux
-    summary: Builds one binary and the desktop entry. EXTRA_TAGS=gtk3 with OUTPUT builds the GTK3 variant instead.
+    summary: Builds the binary and the desktop entry. UPX=false skips the compression of a release build.
     cmds:
       - task: build:native
         vars:
@@ -29,6 +28,7 @@ tasks:
           GARBLE_ARGS: '{{.GARBLE_ARGS}}'
           OBFUSCATED: '{{.OBFUSCATED}}'
           OUTPUT: '{{.OUTPUT}}'
+          UPX: '{{.UPX}}'
       - task: generate:dotdesktop
     vars:
       OUTPUT: '{{ .OUTPUT | default .BINARY }}'
@@ -52,18 +52,18 @@ tasks:
         msg: "A C compiler is required: the GTK and WebKit bindings are built through cgo. Install gcc, or point CC at the compiler to use."
       - sh: '{{if eq .OBFUSCATED "true"}}command -v garble >/dev/null 2>&1{{else}}true{{end}}'
         msg: "garble is required for obfuscated builds. Install it with: go install mvdan.cc/garble@v0.16.0 (requires Go 1.24+). See https://github.com/burrowers/garble/releases for version/toolchain compatibility."
-      - sh: '{{if ne .DEV "true"}}command -v upx >/dev/null 2>&1{{else}}true{{end}}'
-        msg: "upx is required for production builds, which are always compressed. Install upx >= 5.2.0."
+      - sh: '{{if and (ne .DEV "true") (ne .UPX "false")}}command -v upx >/dev/null 2>&1{{else}}true{{end}}'
+        msg: "upx is required for production builds, which are compressed unless UPX=false. Install upx >= 5.2.0."
     cmds:
       - '{{if eq .OBFUSCATED "true"}}garble {{.GARBLE_ARGS}} build{{else}}go build{{end}} {{.BUILD_FLAGS}} -o {{.OUTPUT}}'
       # Every production binary is compressed with UPX; development builds stay uncompressed, so they start
-      # without unpacking first and a debugger can still attach.
+      # without unpacking first and a debugger can still attach. UPX=false skips compression to save time.
       #
       # `upx -l` exits zero only on an already packed file, and packing one a second time is an error. Go
       # leaves an output it considers up to date untouched, a packed one included, so without the check a
       # rebuild that changed nothing would fail here. A build whose sources changed does overwrite the packed
       # binary, so the check never keeps a stale one.
-      - '{{if ne .DEV "true"}}upx -l {{.OUTPUT}} >/dev/null 2>&1 || upx --best {{.OUTPUT}}{{end}}'
+      - '{{if and (ne .DEV "true") (ne .UPX "false")}}upx -l {{.OUTPUT}} >/dev/null 2>&1 || upx --best {{.OUTPUT}}{{end}}'
     vars:
       BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X main.version={{.VERSION}}"{{end}}'
       OUTPUT: '{{ .OUTPUT | default .BINARY }}'
@@ -75,7 +75,7 @@ tasks:
   generate:dotdesktop:
     desc: Generates the desktop entry
     summary: Renders build/linux/app.desktop into the artifact directory and validates the result.
-    run: once # Same entry for both binaries, so only generate it once.
+    run: once # Same entry for multiple binary builds, so only generate it once.
     sources:
       - '{{.STUB}}'
       - build/config.yml
@@ -106,7 +106,6 @@ tasks:
         -e 's|@APP_NAME@|{{.APP_NAME}}|g'
         -e 's|@ARCH@|{{.ARCH | default ARCH}}|g'
         -e 's|@BINARY@|{{.BINARY}}|g'
-        -e 's|@BINARY_GTK3@|{{.BINARY_GTK3}}|g'
         -e 's|@COMMENT@|{{.COMMENT}}|g'
         -e 's|@PRODUCT_NAME@|{{.PRODUCT_NAME}}|g'
         -e 's|@VERSION@|{{.VERSION}}|g'
@@ -126,20 +125,16 @@ tasks:
 
   archive:
     desc: Packages the Linux release archive
-    summary: Builds both binaries and packs them with the desktop entry, the icon and the install instructions into BIN_DIR.
+    summary: Builds the binary and packs it with the desktop entry, the icon and the install instructions into BIN_DIR.
     deps:
       - task: build
-      - task: build
-        vars:
-          EXTRA_TAGS: '{{if .EXTRA_TAGS}}{{.EXTRA_TAGS}},{{end}}gtk3'
-          OUTPUT: '{{.BINARY_GTK3}}'
     preconditions:
       - sh: test -f {{.ICON_SOURCE}}
         msg: "{{.ICON_SOURCE}} is missing. The archive ships it as the application icon."
     cmds:
       # Archive mirrors the prefix tree of the Linux installation starting from ~/.local.
       - mkdir -p {{.STAGE}}/bin {{.STAGE}}/share/applications {{.STAGE}}/share/icons/hicolor/scalable/apps
-      - cp {{.BINARY}} {{.BINARY_GTK3}} {{.STAGE}}/bin/
+      - cp {{.BINARY}} {{.STAGE}}/bin/
       - cp LICENSE README.md {{.STAGE}}/
       - cp {{.ARTIFACT_DIR}}/{{.APP_ID}}.desktop {{.STAGE}}/share/applications/
       - cp {{.ICON_SOURCE}} {{.STAGE}}/share/icons/hicolor/scalable/apps/{{.APP_ID}}.svg # SVG name must match the desktop entry's Icon= value, which is the application ID.
@@ -162,6 +157,6 @@ tasks:
 
   run:
     desc: Runs the built Linux binary
-    summary: Starts the default binary in BIN_DIR, the GTK4 one.
+    summary: Starts the binary in BIN_DIR.
     cmds:
       - '{{.BINARY}}'
