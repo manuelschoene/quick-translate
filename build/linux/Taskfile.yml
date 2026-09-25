@@ -48,6 +48,8 @@ tasks:
           OBFUSCATED:
             ref: .OBFUSCATED
     preconditions:
+      - sh: '{{if ne .DEV "true"}}test -n "{{.VERSION}}"{{else}}true{{end}}'
+        msg: "No version could be read from build/config.yml. info.version must be a double-quoted string."
       - sh: 'command -v "${CC:-gcc}" >/dev/null 2>&1'
         msg: "A C compiler is required: the GTK and WebKit bindings are built through cgo. Install gcc, or point CC at the compiler to use."
       - sh: '{{if eq .OBFUSCATED "true"}}command -v garble >/dev/null 2>&1{{else}}true{{end}}'
@@ -100,6 +102,9 @@ tasks:
     desc: Fills the placeholders of a stub
     summary: Writes SOURCE to TARGET with every @PLACEHOLDER@ replaced, and fails on one it does not know.
     internal: true
+    preconditions:
+      - sh: test -n "{{.VERSION}}" && test -n "{{.PRODUCT_NAME}}" && test -n "{{.COMMENT}}"
+        msg: "version, productName or description could not be read from build/config.yml. Each must be a double-quoted string."
     cmds:
       - >-
         sed -e 's|@APP_ID@|{{.APP_ID}}|g'
