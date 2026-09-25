@@ -40,10 +40,10 @@ func purge(out interaction, _ string, _ []string) error {
 	fmt.Fprintln(out)
 
 	removed, err := system.Purge(files)
-	
+
 	printRemovals(out, "Removed:", removed)
 	fmt.Fprintln(out)
-	
+
 	if err != nil {
 		return err
 	}

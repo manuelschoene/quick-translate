@@ -80,8 +80,8 @@ func NewCore(files *system.FileService) (*Core, error) {
 	}
 
 	core := &Core{
-		clipboard: board,
-		files:     files,
+		clipboard:    board,
+		files:        files,
 		factory:      func(slug string) (models.Provider, error) { return buildProvider(files, slug) },
 		history:      past,
 		preferences:  preferences,
