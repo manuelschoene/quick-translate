@@ -1,15 +1,11 @@
 version: '3'
-
-# This information is used to generate the build assets.
 info:
-  companyName: "Manuel Schöne"
-  productName: "Quick Translate"
-  description: "Translate your selected text anywhere"
-  copyright: "Copyright © 2026 Manuel Schöne"
-  comments: "Translate your selected text anywhere"
-  version: "0.0.0-alpha" # release-please writes the new version here. All other build files read it from here.
-
-# Dev mode configuration
+  companyName: Manuel Schöne
+  productName: Quick Translate
+  description: Translate your selected text anywhere
+  copyright: Copyright © 2026 Manuel Schöne
+  comments: Translate your selected text anywhere
+  version: 0.1.0-alpha.1
 dev_mode:
   root_path: .
   log_level: warn
@@ -24,11 +20,11 @@ dev_mode:
       - .DS_Store
       - .gitignore
       - .gitkeep
-      - "*_test.go"
+      - '*_test.go'
     watched_extension:
-      - "*.go"
-      - "*.js" # Watch for changes to JS/TS files included using the //wails:include directive.
-      - "*.ts" # The frontend directory will be excluded entirely by the setting above.
+      - '*.go'
+      - '*.js'
+      - '*.ts'
     git_ignore: true
   executes:
     - cmd: wails3 build DEV=true
@@ -37,7 +33,6 @@ dev_mode:
       type: background
     - cmd: wails3 task run
       type: primary
-
 other:
-  - name: "Manuel Schöne" # The author
-    email: "schoene-manuel@gmx.de"
+  - name: Manuel Schöne
+    email: schoene-manuel@gmx.de

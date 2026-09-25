@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.0-alpha.1](https://github.com/manuelschoene/quick-translate/compare/v0.1.0-alpha...v0.1.0-alpha.1) (2026-09-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* Migrated to Wails v3 with tray icon, portal shortcut and Task build ([#5](https://github.com/manuelschoene/quick-translate/issues/5))
+
+### Features
+
+* Migrated to Wails v3 with tray icon, portal shortcut and Task build ([#5](https://github.com/manuelschoene/quick-translate/issues/5)) ([149657f](https://github.com/manuelschoene/quick-translate/commit/149657faf2cee3584d519f999c02866acba7218f))
+
+
+### Bug Fixes
+
+* Fixed missing release assets and prerelease flag ([#2](https://github.com/manuelschoene/quick-translate/issues/2)) ([54ea4a0](https://github.com/manuelschoene/quick-translate/commit/54ea4a0a806e71d667f72d90db19a1a04dee416d))
+
 ## 0.1.0-alpha (2026-09-11)
 
 
