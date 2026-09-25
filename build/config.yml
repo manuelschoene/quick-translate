@@ -7,7 +7,7 @@ info:
   description: "Translate your selected text anywhere"
   copyright: "Copyright © 2026 Manuel Schöne"
   comments: "Translate your selected text anywhere"
-  version: "0.1.0-alpha.1" # x-release-please-version: release-please writes the new version here, keep the quotes. All build files read it from here.
+  version: "0.1.0-alpha.2" # x-release-please-version: release-please writes the new version here, keep the quotes. All build files read it from here.
 
 # Dev mode configuration
 dev_mode:
