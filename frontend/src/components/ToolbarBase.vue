@@ -17,7 +17,7 @@ const { outcome: hideOutcome, iconClass: hideIconClass, show: showHideOutcome } 
 
 /**
  * What the close button says it does, or that it could not do it. The icon stays the cross it always
- * was, the answer is carried by its colour and the way it comes in.
+ * was, the answer is carried by its color and the way it comes in.
  */
 const hideTitle = computed(() => (hideOutcome.value === 'failure' ? 'Could Not Close Window' : 'Close Window'));
 

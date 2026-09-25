@@ -32,9 +32,9 @@ An icon in the system tray shows that the application is running and offers gene
 Plasma shows it out of the box. GNOME needs the AppIndicator extension. For other desktops, please
 check yourself.
 
-The shortcut is <kbd>Super</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (Some desktops may call it "Meta" and not "Super"). 
-The application registeres it with your desktop session on start, so there is nothing to bind by
-hand. Under Wayland, most desktops will ask you to grant the shortcut and allow you to change it.
+The shortcut is <kbd>Super</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (some desktops call the key "Meta").
+The application registers it with your desktop session on start, so there is nothing to bind by hand.
+Under Wayland, most desktops ask you to grant the shortcut and allow you to change it.
 
 ## Help
 
@@ -54,9 +54,8 @@ The binary answers a few commands on the command line:
 @APP_NAME@ --purge
 ```
 
-This removes everything the application wrote for you - your configuration, your history, the cache and more.
-This cannot be undone afterwards! Quit the application before you
-run it.
+Quit the application first. This removes everything it wrote for you: your configuration, your
+history, the cache and more. **It cannot be undone.**
 
 ### Remove the application
 

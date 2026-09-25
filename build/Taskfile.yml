@@ -14,7 +14,7 @@ tasks:
   generate:bindings:
     label: generate:bindings # Task keys the checksum by name, so `common:` and `linux:common:` would regenerate each.
     desc: Generates the frontend bindings
-    summary: Writes the TypeScript bindings for the bound services and the registered events to frontend/bindings. Analyses the Go source, so the application does not have to run.
+    summary: Writes the TypeScript bindings for the bound services and the registered events to frontend/bindings. Analyzes the Go source, so the application does not have to run.
     run: once
     deps:
       - task: go:mod:tidy

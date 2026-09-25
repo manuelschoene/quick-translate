@@ -178,6 +178,7 @@ classDiagram
 
         class Core {
             -clipboard clip
+            -files *FileService
             -factory func(slug string) (Provider, error)
             -history *History
             -langs *Collection
@@ -211,6 +212,7 @@ classDiagram
             +HistoryEnabled() bool
             +Navigation() (bool, bool, error)
             +PreviousTranslation() (*Translation, bool, bool, error)
+            +LatestTranslation() (*Translation, bool, bool, error)
             +NextTranslation() (*Translation, bool, bool, error)
         }
     }
@@ -226,8 +228,7 @@ classDiagram
 
     namespace transport {
         class TransportPackage {
-            +NewAdapter() (*Adapter, error)
-            +Connect() bool
+            +NewAdapter(app *application.App) *Adapter
         }
 
         class TranslationDto {
@@ -259,13 +260,14 @@ classDiagram
         }
 
         class Adapter {
-            -ctx context.Context
+            -app *application.App
+            -files *FileService
             -core *Core
-            -listener net.Listener
             -mutex sync.Mutex
 
-            +StartUp(ctx context.Context)
-            +Shutdown(ctx context.Context)
+            +ServiceShutdown() error
+            +Show()
+            +Restore()
             +Hide()
             +State() *FullDto
             +ChangeProvider(slug string) (*FullDto, error)
@@ -288,31 +290,136 @@ classDiagram
     FullDto ..> LanguageDto
     LanguageDto ..> Language
 
-    namespace desktop {
-        class DesktopPackage {
-            +EnvironmentGeneric string
-            +EnvironmentKDE string
+    namespace system {
+        class SystemPackage {
+            +ApplicationID string
             +ErrUnsupported error
-            +Install(environment string) error
-            +Uninstall() error
-            +Status() (*Report, error)
+            -integrate(files *FileService) error
+            +Purge(files *FileService) ([]File, error)
+            +Removals(files *FileService) ([]File, error)
+            +Status(files *FileService) (*Report, error)
+        }
+
+        class Resource {
+            <<enumeration>>
+            ConfigRoot
+            Settings
+            DataRoot
+            History
+            CacheRoot
+            Languages
+            Launcher
+            Icon
+            Autostart
+            WindowRules
+        }
+
+        class FileService {
+            -table []entry
+
+            +NewFileService() *FileService
+            +Path(r Resource, parts ...string) string
+            +Exists(r Resource, parts ...string) bool
+            +Read(r Resource, parts ...string) ([]byte, error)
+            +Write(r Resource, content []byte, parts ...string) error
+            +EnsureDirectory(r Resource, parts ...string) error
+            +EnsureFile(r Resource, content []byte, parts ...string) (bool, error)
+            +Narrow(r Resource, parts ...string)
+            +Remove(r Resource, parts ...string) (bool, error)
+        }
+
+        class category {
+            <<enumeration>>
+            internal
+            data
+            registered
+            installed
+            merged
+        }
+
+        class entry {
+            -resource Resource
+            -name string
+            -path string
+            -mode os.FileMode
+            -category category
+            -parent Resource
+        }
+
+        class Integration {
+            -app *application.App
+            -files *FileService
+            -actions Actions
+            -trayIcon []byte
+
+            +ServiceStartup(ctx context.Context, options ServiceOptions) error
+            -ensureAutostart() error
+            -showInTray()
+        }
+
+        class Actions {
+            +func() Translate
+            +func() Open
         }
 
         class File {
-            +string Purpose
+            +string Name
             +string Path
             +bool Present
         }
 
         class Report {
-            +string Environment
             +string Executable
-            +string Autostart
-            +[]File Files
-
-            +String() string
+            +string Environment
+            +[]File Integration
+            +[]File UserFiles
         }
     }
 
-    DesktopPackage ..> Report
+    SystemPackage ..> Report
+    SystemPackage ..> File
+    SystemPackage ..> FileService
+    FileService ..> entry
+    FileService ..> File
+    entry ..> Resource
+    Integration ..> SystemPackage
+    Integration ..> Actions
     Report ..> File
+    ConfigPackage ..> FileService
+    HistoryPackage ..> FileService
+    LanguagePackage ..> FileService
+    CorePackage ..> FileService
+    Adapter ..> FileService
+    CliPackage ..> FileService
+
+    namespace cli {
+        class CliPackage {
+            +Run(args []string, version string) (bool, int)
+        }
+
+        class interaction {
+            <<interface>>
+            +Write(p []byte) (int, error)
+            +confirm(question confirmation) bool
+        }
+
+        class confirmation {
+            -string question
+            -string prompt
+            -bool fallback
+        }
+
+        class terminal {
+            -out io.Writer
+            -in *bufio.Reader
+
+            +Write(p []byte) (int, error)
+            +confirm(question confirmation) bool
+        }
+    }
+
+    CliPackage ..> SystemPackage
+    CliPackage ..> Report
+    CliPackage ..> interaction
+    terminal ..|> interaction
+    interaction ..> confirmation

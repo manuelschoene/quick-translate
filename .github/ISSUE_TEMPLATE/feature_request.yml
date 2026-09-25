@@ -5,9 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Suggestions are welcome. Two things worth knowing before you write: the project is maintained by one
-        person, and some of it is going to move. For anything substantial it is worth asking first, so your
-        idea is not designed around a part that is about to be replaced.
+        Suggestions are welcome. The project is maintained by one person and parts of it are still moving, so
+        for anything substantial, please ask before building it.
 
   - type: textarea
     id: problem

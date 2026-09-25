@@ -4,154 +4,147 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Quick Translate is a Wails v2 desktop app (Go backend + Vue 3 frontend) that translates the text
-currently selected (Linux primary selection) or copied, triggered by a global shortcut bound at the
-desktop-environment level. It runs hidden as a systemd user service, or as an XDG autostart entry where no
-systemd user manager answers; pressing the shortcut launches a *second* process which hands the request to
-the running one over a unix socket and exits immediately.
+Quick Translate is a Wails v3 desktop app (Go backend + Vue 3 frontend) that translates the text
+currently selected (Linux primary selection) or copied, triggered by a global shortcut the running process
+binds itself through Wails. It runs hidden, started with the session through an XDG autostart entry the
+application registers itself; the shortcut press arrives as a callback in that process, so no second process
+is started and the shortcut only works while the application runs. Starting the binary a second time reaches
+the first one through `SingleInstanceOptions` and shows the last translation instead of making a new one.
 
 ## Commands
 
-Backend / whole app (from the repo root). The Makefile picks the WebKit build tag with `pkg-config` —
-`webkit2_41` when webkit2gtk-4.1 is installed and none when only 4.0 is — so the tag is never written by
-hand:
+Build system is [Task](https://taskfile.dev): `Taskfile.yml` delegates to `build/Taskfile.yml` (shared) and
+`build/linux/Taskfile.yml`. From the repo root:
 
 ```sh
-make dev                     # wails dev with the detected tag
-make build                   # -> build/bin/quick-translate; UPX=0 skips the slow compression
-make install                 # build + copy the binary + 'quick-translate --install'
-make install DESKTOP=kde     # force the Plasma flavour instead of detecting it from the session
-make status                  # what the installation looks like on this machine
-make uninstall               # remove the desktop integration and the binary; user files are kept
-make uninstall PURGE=1       # ... and delete config, history and cache as well (irreversible)
-make icons                   # re-render the checked-in icon set from the master artwork
+task dev                        # wails3 dev with live reload
+task build                      # -> bin/quick-translate, production tags, UPX-compressed
+task build DEV=true             # no production tag, no compression, version stays 0.0.0-dev
+task build UPX=false            # production build without compression (what CI uses)
+task archive                    # -> bin/quick-translate-<version>-linux-amd64.tar.gz
+task art                        # re-render art/tray.png and art/wordmark.svg (Inkscape + Noto Sans)
+task common:generate:bindings   # regenerate frontend/bindings/
 go vet ./...
 ```
 
-The version is stamped in from `build/config.yml`'s `info.version` via `-ldflags -X main.version=…`; a
-build made on an exact git tag uses the tag instead. A build without the flag reports `0.0.0-dev`.
+Only the GTK4 / WebKitGTK 6.0 build is supported; Wails calls GTK 4.10 APIs, so the build needs GTK ≥ 4.10.
+The version comes from `info.version` in `build/config.yml`, stamped in with `-ldflags -X main.version=…`.
+`generate:bindings`, `install:frontend:deps` and `build:frontend` carry fixed `label`s, so their checksums in
+`.task/` are shared between the `common:` and `linux:common:` call paths.
 
-Building and installing are deliberately separate targets: `make install-binary` works on a binary that
-was downloaded rather than built, so a release needs no toolchain.
-
-Work happens on branches cut from `main` and lands through a pull request. The prefix is what the CI
-trigger watches, so it has to be one of `feature/`, `hotfix/`, `chore/`, `docs/`, `refactor/` or `test/` —
-a push to a branch named anything else runs no checks until a pull request opens. `main` is protected and
-is the nightly state people clone and build, so never commit to it directly and never leave it in a state
-that does not install. CI (`.github/workflows/ci.yml`) runs one job that auto-formats and commits the
-result back, and one that checks: gofmt, `go vet`, `go test`, `go mod verify`, a `go mod tidy` that must
-change nothing, `govulncheck`, the frontend checks, a full `make build`, and `desktop-file-validate` over
-the entry the binary generates.
-
-`.github/workflows/release.yml` runs on every push to `main` and starts with `release-please`, which either
-keeps the release pull request in step with the conventional commits that have landed or, once that pull
-request is merged, tags the release and creates it. Only the second case sets `release_created`, which gates
-the rest: the CI workflow again, then a build twice on `ubuntu-22.04` — once with `WEBKIT_TAGS=webkit2_41`
-and once with `WEBKIT_TAGS=` — and both archives plus a `SHA256SUMS` file attached to the release. The old
-runner is for glibc, not WebKit: glibc is not forward compatible, so a binary built on 24.04 will not start
-on Debian 12. Note that the binary Wails produces has no section headers, so neither `ldd` nor `strings` can
-tell you which WebKitGTK it links — the pinned `WEBKIT_TAGS` and a build that fails on a missing pkg-config
-package are the only guarantee there is.
-
-The same workflow has a second entry point: `workflow_dispatch` with a `tag` input rebuilds and re-attaches
-the assets of a release that already exists, for when the build failed after release-please had already
-tagged it (`gh workflow run release.yml -f tag=v0.1.0-alpha`). On that path **release-please is skipped
-entirely**, so a manual run can never create or move a release, and `verify` is skipped too — that tree
-passed when it was released, and re-running the checks against an old tag can fail for reasons unrelated to
-the assets, such as a vulnerability published since. A `resolve` job is the only place that knows which
-trigger it was: it hands `tag` and `version` down, and on a manual run it fails early when no release
-exists for the tag. Because `verify` is skipped there, `build` has to carry a status-check condition
-(`!cancelled() && needs.resolve.result == 'success' && needs.verify.result != 'failure'`) — without it a
-skipped dependency would skip the build as well.
-
-Versions come from `release-please-config.json`, never by hand:
-
-- `initial-version` is what the very first release becomes. Without it release-please would start at
-  `1.0.0`.
-- `extra-files` writes the version into `wails.json`'s `info.productVersion` through a JSON path, which is
-  the single source the Makefile and the Windows resource read.
-- The `v` prefix is deliberately split: it is left on where GitHub displays it and stripped everywhere the
-  version is data. Tag and release name keep it (`v0.1.0-alpha`, release-please's default), while
-  `wails.json`, the asset names, `INSTALL.txt` and the version the binary reports read `0.1.0-alpha`. Two
-  things make that work and must not be "simplified": the `extra-files` updater and the action's `version`
-  output both carry the bare semver — only `tag_name` has the prefix — and the Makefile strips a leading
-  `v` from `git describe`. Never name an asset after `tag_name`.
-- `prerelease`, `versioning` and `prerelease-type` are set together and **must stay together**. The reason
-  for `prerelease: true` is not the numbering: it is what makes release-please mark the GitHub release as a
-  prerelease, which it does when the flag is set and the version either carries a label or has major `0`.
-  Without it a release named `0.1.0-alpha` would show up as a full release.
-- With `versioning: prerelease` the counter *after* the label moves and the numbers before it stand still:
-  `0.1.0-alpha` → `0.1.0-alpha.1` → `0.1.0-alpha.2`, whatever the commit type, for as long as the patch
-  number is `0`. That is deliberate — boring and predictable beats pretty numbers.
-- **Never set `versioning: prerelease` without `prerelease: true`.** That combination does not keep the
-  label, it *drops* it: the strategy bumps, then rebuilds the version from major, minor and patch alone, so
-  `0.1.0-alpha` would be released as `0.1.0`.
-- Because the numbers before the label no longer move on their own, getting to `0.2.0-alpha` or to a stable
-  version is a deliberate act: put `Release-As: 0.2.0-alpha` in the footer of a commit on `main`, which
-  every strategy honours ahead of its own calculation.
-- `bump-minor-pre-major` keeps a breaking change inside `0.x` until the project declares 1.0.
+The archive mirrors `~/.local`: `bin/`, `share/applications/<ApplicationID>.desktop`,
+`share/icons/hicolor/scalable/apps/<ApplicationID>.svg`, plus `INSTALL.md` rendered from
+`build/linux/INSTALL.md`. The `render` task fails on any `@PLACEHOLDER@` it does not fill.
 
 Frontend (from `frontend/`, package manager is **bun**, not npm):
 
 ```sh
-bun install
-bun run types    # vue-tsc --noEmit — the only type check; also runs as part of `bun run build`
+bun run types    # vue-tsc --noEmit, the only type check; not part of `bun run build`
 bun run lint     # eslint --fix
 bun run format   # prettier --write --no-editorconfig
-bun run build    # types + vite build
+bun run build    # vite build only
 ```
 
-`lint` and `format` are the developer-facing commands. CI calls the `lint:check`/`lint:fix` and
-`format:check`/`format:fix` variants instead, which add a cache location the workflow restores between
-runs — `lint:fix` also carries `--quiet || true`, so never point a human at it.
+CI calls the `lint:check`/`lint:fix` and `format:check`/`format:fix` variants, which add a cache location;
+`lint:fix` carries `--quiet || true`, so never point a human at it.
 
-There are no tests in this repository yet (no `*_test.go`, no frontend test runner). Verify changes by
-running the app.
+There are no tests (no `*_test.go`, no frontend test runner). Verify changes by running the app.
 
-`frontend/bindings/` is generated but **tracked**, so a fresh checkout type-checks and lints without a Go
-toolchain. After adding, removing, or changing an **exported** method on `transport.Adapter`, a DTO, or an
-event registered with `application.RegisterEvent`, run `make bindings` and commit the result together with
-the change; stale bindings make the frontend fail at a distance, and nothing else catches it.
-
-`make bindings` runs `wails3 generate bindings -ts`, which analyses the Go source without running the
-application, so it works while the service is running. Leave out `-b`: it makes the bindings import the
-runtime from `/wails/runtime.js`, which only the running application serves, so `vue-tsc` can resolve
-neither the runtime nor the event types. The frontend depends on `@wailsio/runtime` instead, pinned to the
-exact version of the Go module — bump both together.
+`frontend/bindings/` is generated but **tracked**, so a checkout type-checks without a Go toolchain. After
+changing an **exported** method on `transport.Adapter`, a DTO, or an event registered with
+`application.RegisterEvent`, run `task common:generate:bindings` and commit the result; CI fails on stale
+bindings. It runs `wails3 generate bindings -ts` without `-b`: `-b` imports the runtime from
+`/wails/runtime.js`, which only the running app serves, so `vue-tsc` could resolve neither the runtime nor the
+event types. `@wailsio/runtime` in `package.json` is pinned to the exact Go module version; bump both together.
 
 Event types reach the frontend in two parts. `bindings/github.com/wailsapp/wails/v3/internal/eventdata.d.ts`
 fills `Events.CustomEvents`, which is why `tsconfig.json` includes `bindings/**/*.d.ts`; without it every
 event's `data` is silently `any`. `eventcreate.ts` turns the data into DTO classes at runtime and is loaded
 by the `@wailsio/runtime/plugins/vite` plugin in `vite.config.ts`, not by any import. The runtime types are
-parameterised on the event *name* (`Events.WailsEvent<'translation'>`), never on the data type.
+parameterized on the event *name* (`Events.WailsEvent<'translation'>`), never on the data type.
+
+## CI and releases
+
+Work happens on branches from `main`, landing through a pull request. CI only triggers on `feature/`,
+`hotfix/`, `chore/`, `docs/`, `refactor/` and `test/`. `main` is protected and must always install.
+
+`.github/workflows/ci.yml` has two jobs: one auto-formats and commits back, the other checks (frontend checks,
+gofmt, `go vet`, `go test`, `go mod verify`, unchanged `go mod tidy`, `govulncheck`, `task archive UPX=false`
+with `desktop-file-validate`, current bindings, a CLI smoke test). Wails v3 compiles its Linux frontend
+through cgo without a build tag, so every Go step needs the GTK4/WebKitGTK 6.0 dev packages.
+
+`.github/actions/setup-wails` installs those packages, checks `pkg-config webkitgtk-6.0`, optionally
+`desktop-file-utils` and UPX 5.2.1 (inputs `desktop-file-utils`, `upx`), and `wails3` at the `go.mod` version.
+
+`.github/workflows/release.yml` runs on every push to `main`:
+
+1. `release-please` keeps the release PR up to date, or, once it is merged, tags and creates the release.
+   Only then is `release_created` set, which gates the rest.
+2. `resolve` hands `tag` and `version` down. It is the only job that knows the trigger.
+3. `verify` runs the CI workflow again.
+4. `build` runs `task archive` on `ubuntu-24.04`, the oldest runner with GTK ≥ 4.10, after checking
+   `build/config.yml` against the release version.
+5. `publish` attaches the archive and a `SHA256SUMS` file.
+
+`workflow_dispatch` with a `tag` input rebuilds the assets of an existing release
+(`gh workflow run release.yml -f tag=v0.1.0-alpha`). That path skips `release-please` (it can never create or
+move a release) and `verify` (an old tree can fail on newly published vulnerabilities), and `resolve` fails
+early when no release exists. Because `verify` may be skipped, `build` needs
+`!cancelled() && needs.resolve.result == 'success' && needs.verify.result != 'failure'`.
+
+Versions come from `release-please-config.json`, never by hand:
+
+- `initial-version` is the first release; otherwise release-please starts at `1.0.0`.
+- `extra-files` (`generic` updater) rewrites the line marked `x-release-please-version` in
+  `build/config.yml`, the single source the Taskfiles read.
+- The `v` prefix is split: tag and release name keep it (`v0.1.0-alpha`), everything that is data (config,
+  asset names, `INSTALL.md`, `--version`) reads `0.1.0-alpha`. The updater and the action's `version` output
+  carry the bare semver, only `tag_name` has the prefix. Never name an asset after `tag_name`.
+- `prerelease`, `versioning` and `prerelease-type` **must stay together**. `prerelease: true` makes the GitHub
+  release a prerelease. **Never set `versioning: prerelease` without it:** that drops the label, so
+  `0.1.0-alpha` would be released as `0.1.0`.
+- With `versioning: prerelease` only the counter after the label moves (`0.1.0-alpha` → `0.1.0-alpha.1`),
+  whatever the commit type. To reach `0.2.0-alpha` or a stable version, put `Release-As: 0.2.0-alpha` in the
+  footer of a commit on `main`.
+- `bump-minor-pre-major` keeps a breaking change inside `0.x` until 1.0.
 
 ## Runtime files
 
-- Config: `~/.config/quick-translate/config.yml` — created with a commented default template on first
-  start (`internal/config/file.go`), mode `0600` in a `0700` directory because it holds the provider keys.
-  Existing installs are narrowed on start by `narrow()` in the same file.
-- History DB (SQLite, pure-Go driver): `~/.local/share/quick-translate/history.db` (`$XDG_DATA_HOME`) —
+- Config: `~/.config/quick-translate/config.yml` (`system.Settings`) — created with a commented default
+  template on first start (`internal/config/file.go`) because it holds the provider keys.
+- History DB (SQLite, pure-Go driver): `~/.local/share/quick-translate/history.db` (`system.History`) —
   data the user produced and cannot re-fetch, so neither next to the hand-written config nor in the cache,
-  which cleanup tools may empty. Directory `0700`, database `0600`; it holds every translated text.
-- Language cache (gob, 7-day TTL, one file per provider): `~/.cache/quick-translate/translations/<slug>.gob`.
-- IPC socket: `$XDG_RUNTIME_DIR/quick-translate.sock` (falls back to the temp dir).
+  which cleanup tools may empty. It holds every translated text.
+- Language cache (gob, 7-day TTL, one file per provider): `~/.cache/quick-translate/translations/<slug>.gob`
+  — one row, `system.Languages`, addressed with the file name as a part.
 
-Written by `quick-translate --install`, all resolved through the freedesktop base directories, so
-`XDG_DATA_HOME` and `XDG_CONFIG_HOME` are honoured:
+Every one of those directories is `0700` and every file inside them `0600`, and none of it is written in the
+package that reads the file: the path, the permissions and the purge all come from the one table in
+`internal/system/files.go`. A package is handed a `*system.FileService` and asks it for a resource by name
+(`files.Path(system.Settings)`), never building a path or a mode of its own, so the layout of an installation
+is stated once. `github.com/adrg/xdg` resolves the base directories there, never by reading `XDG_*` out of
+the environment by hand.
 
-- Desktop entry: `~/.local/share/applications/quick-translate.desktop`. The KDE flavour is the same entry
-  plus `X-KDE-Shortcuts`, installed under the same name so switching flavours replaces it.
-- Icon: `~/.local/share/icons/hicolor/<size>/apps/quicktranslate.png` in eight sizes (16 … 256),
-  referenced by name from the entry. The name carries no dash on purpose: an icon name the current theme
-  does not know is retried with everything after its last dash cut off, so `quick-translate` resolves to
-  Breeze's unrelated `quick` icon before hicolor is ever reached. Verify a change with `kiconfinder6
-  quicktranslate`, which is the loader Plasma itself uses.
-- Autostart: `~/.config/systemd/user/quick-translate.service`, or `~/.config/autostart/quick-translate.desktop`
-  when no systemd user manager answers. Systemd refusing the unit does not fail the install — the manager
-  fixes its unit search path when it starts, so a session whose `XDG_CONFIG_HOME` differs from the one it
-  saw cannot see a unit written now. That costs only the autostart, so it is reported with the commands to
-  repeat by hand, and `--status` reports that state separately from a unit that was never installed.
-- Window rules (KDE only): merged into `~/.config/kwinrulesrc`, which has no drop-in directory.
+Installed by whoever unpacks the release archive into `~/.local`, and only ever *read* by the binary, which
+reports them under `--status`. Both are named `<ApplicationID>`, because the portal grants the global
+shortcut to the id the desktop entry is named after:
+
+- Desktop entry: `~/.local/share/applications/io.github.manuelschoene.QuickTranslate.desktop`, generated by
+  `generate:dotdesktop` in `build/linux/Taskfile.yml` from `build/linux/app.desktop`.
+- Icon: `~/.local/share/icons/hicolor/scalable/apps/io.github.manuelschoene.QuickTranslate.svg`, one SVG.
+  GTK4 ignores `Options.Icon` and `LinuxWindow.Icon`, so the `Icon=` key of the entry is the only way a
+  window gets an icon at all.
+
+Written by the running application, and removed again by `--purge`:
+
+- Autostart: `~/.config/autostart/io.github.manuelschoene.QuickTranslate.desktop`, written on every start by
+  `Integration.ServiceStartup` through `app.Autostart`. The identifier is the application id and not
+  Wails' derived slug, because the desktop turns the entry into a unit named after the file and the portal
+  derives the application's identity from that unit. There is no systemd unit and no restart on failure any
+  more.
+- Window rules (KDE only): merged into `~/.config/kwinrulesrc`, which has no drop-in directory, by
+  `ensureRules` on every start. It builds what the file would have to look like and writes only when that
+  differs from what is there, so the usual start writes nothing and a rule the user broke is repaired.
 
 ## Backend architecture
 
@@ -159,7 +152,10 @@ Strict one-direction layering; each layer only knows the one below it:
 
 ```
 main.go → transport (Adapter) → core (Core) → config · clipboard · history · language · provider → models
-main.go → desktop
+main.go → system
+main.go → cli → system
+
+config · history · language · core · transport · cli → system   (a *FileService, handed in)
 ```
 
 - **models** — plain structs (`Translation`, `Language`, `LanguagePreferences`) and the `Provider`
@@ -180,26 +176,76 @@ main.go → desktop
   text/languages/provider combination returns the cached translation rather than paying the API again.
 - **transport** — `Adapter` is the *only* type bound into Wails; its exported methods are the frontend
   API and its DTOs (`TranslationDto`, `LanguageDto`, `ProviderDto`, `FullDto`) are the wire format.
-  `ipc.go` implements the single-instance socket; `Connect()` in `main.go` returns true when another
-  instance took the request over.
-- **desktop** — the installation, a side branch that only `main.go` reaches and that knows nothing about
-  the rest of the app. `Install`/`Uninstall`/`Status` are the whole API; the per-OS work sits behind build
-  tags the way `clipboard` and `transport` do it, with `linux.go` (icon, entry, systemd or XDG autostart),
-  `kde.go` (the KWin rule merge) and `unsupported.go` for the operating systems that follow later. The
-  files it writes are `text/template`s embedded from `internal/desktop/assets/linux/`, rendered with the
-  path of the *running* binary, so the install never copies or moves anything itself. The icon set beside
-  them (`assets/linux/icons/<size>.png`) is checked in rather than scaled at runtime; `make icons`
-  re-renders it from `art/quick-translate.png` and is the only target that needs ImageMagick. `Purge()` is
-  the one place that knows all three per-user directories at once (`<config|data|cache>/quick-translate`);
-  if `config`, `history` or `language` ever moves its files, `paths` in `linux.go` has to follow.
+  `Show()` and `Restore()` are exported for the global shortcut and the second-instance callback, which
+  live outside the frontend, and carry `//wails:ignore` so the bindings generator leaves them out.
+- **system** — where the application meets the operating system it runs in: every path it touches, and what
+  it has to write to be found by the desktop. It knows nothing about the rest of the app, but the rest reads
+  its paths, so it is the bottom of the tree rather than a side branch. `ApplicationID`, `Shortcut`,
+  `TrayLabel` and `TrayTooltip` live here, and every other place that needs a name or the keys reads them
+  from here. `IntegrationService` is handed an `Actions` struct of the functions the shortcut and the tray
+  entries trigger rather than importing `transport`, which is what keeps the direction.
+  `FileService` (`files.go`) is the one table of every file and directory of an installation: each row
+  carries what the file is for, where it lives, the permissions it is created with, who put it there and the
+  directory row it sits in. Its `Path`/`Exists`/`Read`/`Write`/`EnsureFile`/`EnsureDirectory`/`Narrow`/`Remove`
+  are what every package uses instead of building a path, an `os.MkdirAll` or a `Chmod` of its own, and a row
+  addressed with extra parts serves a directory of files such as the language cache. **A file that moves, or
+  a new one, is a row in that table and nowhere else.**
+  There is no package-level instance and no accessor: `wireServices` in `main.go` builds one with
+  `system.NewFileService()` and gives it to the two Wails services, and the `Adapter` passes it into the
+  core, which passes it into `config`, `history` and `language`. `cli.Run` builds one of its own,
+  because the command line runs before the application exists and nothing can hand it one. It is not
+  registered with Wails: registering it would make the bindings generator expose `Read`, `Write` and `Remove`
+  to the frontend, which has no business reaching the file system.
+  The `category` of a row is what makes the rest derive from it — `internal`, `data`, `registered`,
+  `installed` and `merged`: `Removals`, `Purge` and `Status` walk the table rather than listing what they
+  know, `Remove` refuses a row the release archive installed and the one file the user owns, and an
+  `internal` row is only ever handed out as a path, which keeps the report at the granularity the user cares
+  about. Every other category carries the `name` the user knows the file by, so the table says which rows are
+  reported instead of leaving it to an empty field. `Purge` answers with what it removed and prints nothing;
+  `cli` renders it.
+  What differs per operating system is only the table, so `files.go` carries the type, every operation and
+  the rows every operating system shares, while `entries()` is defined once per build tag: `linux.go` adds
+  the desktop entry, the icon, the autostart and the KWin rule file, and `unsupported.go` adds nothing,
+  which leaves a not-yet-supported operating system with working per-user paths and no integration.
+  `integrate`/`Purge`/`Removals`/`Status` are likewise defined per operating system rather than wrapped — only
+  the three the command line calls are exported, the integration is reached through its service — and
+  `kde.go` holds the KWin rule merge, the only thing the application writes that cannot ship as a file in
+  the release archive. `integration.go` is the Wails service that integrates, registers the autostart, binds
+  the global shortcut and puts the application into the tray at startup, and the place a settings view will
+  reach for to switch any of them; it is the one file of the package that knows Wails. None of its failures
+  are returned: a non-nil return from `ServiceStartup` takes the whole application down.
+  The tray is the only thing on screen while the application runs hidden. It is a StatusNotifierItem over
+  the session bus on Linux, which Plasma shows natively and GNOME only with the AppIndicator extension, and
+  Wails answers a missing host through the error handler rather than a failure. Its icon has to be a PNG —
+  `art/tray.png`, written by `task art` from `art/icon.svg` and committed, because the binary embeds it.
+  The embed lives in `main.go` and the bytes are handed in: `//go:embed` cannot reach out of its own
+  directory, so a file under `art/` is out of reach from `internal/system`.
+- **cli** — the commands the binary understands besides starting the application (`--status`, `--purge`,
+  `--version`, `--help`), and the only place that renders anything for a terminal. `system` answers with
+  data and prints nothing the CLI has to parse, so a command is one entry in the table in `command.go` plus
+  the function it names, in a file of its own (`usage.go`, `status.go`, `purge.go`); the usage text is built
+  from that same table. Runs before `application.New`, and has to: the single-instance lock is taken inside
+  it, so a command reaching that far would be forwarded to the running instance and exit silently.
+  A command reaches the user only through the `interaction` it is handed (`interaction.go`): it embeds
+  `io.Writer`, so printing is unchanged, and adds `confirm(confirmation)` for a yes-or-no question. The
+  only implementation is `terminal`, over the streams the binary was started with, and it is built once in
+  `Run` — a second one would open a second buffered reader on the same input. A `confirmation` carries the
+  question, the words before the `[y/N]` and what an empty answer falls back to; nothing but a single `y`
+  or `n` counts, and an input that ended falls back rather than asking again, which is what keeps a command
+  from hanging where there is no terminal.
 
-Two paths reach the frontend, and both must stay supported:
+Three paths reach the frontend, and all of them must stay supported:
 
 1. **Frontend-initiated** — a bound `Adapter` method returns a DTO (or a Go error, which Wails rejects
    the promise with as a plain string).
-2. **Shortcut-initiated** — the socket wakes `Adapter.show()`, which emits the events `translating`,
-   then `translation` or `error`. These names are duplicated as constants in
-   `internal/transport/adapter.go` and `frontend/src/services/events.ts`; change both together.
+2. **Shortcut-initiated** — the global shortcut calls `Adapter.Show()`, which emits the events
+   `translating`, then `translation` or `error`.
+3. **Second launch** — `OnSecondInstanceLaunch` calls `Adapter.Restore()`, which emits `restored` with a
+   `FullDto`, because a stored translation brings its own provider and languages with it. An empty or
+   disabled history is printed and swallowed; the window is open either way.
+
+The four event names are duplicated as constants in `internal/transport/adapter.go` and
+`frontend/src/services/events.ts`; change both together.
 
 Mutation calls that change languages or the provider re-translate the current text before returning
 (`retranslate()`), which is why they answer with state rather than nothing. Provider changes and history
@@ -242,7 +288,7 @@ anyway.
 - `services/report.ts` — `report()` notes a failure and shows the error view, `reportQuietly()` only
   notes it.
 - `services/wire.ts` — the only place that knows Go field names; maps DTOs onto state.
-- `services/events.ts` — the three backend events, mirrored from `internal/transport/adapter.go`.
+- `services/events.ts` — the four backend events, mirrored from `internal/transport/adapter.go`.
 - `lib/` — pure helpers with no app state: `cn`, `keyboard` (`onKey`), `search`, and `reactivity`
   (`readonlyRefs`, which wraps a state group in `readonly` + `toRefs` so components can only read).
 - Types live with what owns them: `Language` and the DTOs in the generated `@bind` modules, `ViewName` in
@@ -256,7 +302,7 @@ anyway.
 ## Conventions
 
 - Go: a full-sentence prose doc comment above every function, including unexported ones, describing
-  behaviour and edge cases rather than restating the signature. Frontend files use the same prose style
+  behavior and edge cases rather than restating the signature. Frontend files use the same prose style
   in TSDoc blocks.
 - Error strings are user-facing GUI text: capitalized, punctuated full sentences that usually tell the
   user what to do ("Please set 'history.max_entries' …"). Wrap with `%w` when the cause matters.
@@ -280,19 +326,19 @@ anyway.
 ## Documentation is part of the change
 
 The prose files in this repository are maintained code, not decoration. They are the only description of
-behaviour a user or a contributor ever sees, and with no test suite there is nothing that contradicts them
+behavior a user or a contributor ever sees, and with no test suite there is nothing that contradicts them
 when they drift. **A change is not finished until the files that describe it are true again.**
 
 Before calling any change done, walk this list and update what the change touched:
 
 | Changing … | Check |
 |---|---|
-| CLI commands or flags | `README.md`, `CONTRIBUTING.md`, the `usage` string in `main.go` |
-| `make` targets or variables | `README.md`, `CONTRIBUTING.md`, the `help` target in the `Makefile` |
-| Where files are written, or their permissions | `README.md` (uninstalling), `SECURITY.md`, "Runtime files" above |
+| CLI commands or flags | `README.md`, `CONTRIBUTING.md`, the command table in `internal/cli/command.go` |
+| Tasks or task variables | `README.md`, `CONTRIBUTING.md`, the task's `desc`/`summary` in the Taskfile |
+| Where files are written, or their permissions | `internal/system/files.go`, `README.md`, `SECURITY.md` |
 | Configuration keys | `README.md`, the `defaultYml` template in `internal/config/file.go` |
 | What the app sends over the network, or stores | `SECURITY.md` |
-| Prerequisites, dependency or tool versions | `README.md`, `CONTRIBUTING.md`, "Commands" above |
+| Prerequisites, dependency or tool versions | `README.md`, `build/linux/INSTALL.md`, `.github/actions/`, "Commands" above |
 | Backend types or package boundaries | `architecture.mmd`, "Backend architecture" above |
 | Conventions, tooling, workflow | `CONTRIBUTING.md`, "Conventions" above |
 | Runtime paths, permissions, layering | this file |
@@ -302,7 +348,7 @@ Three rules that apply to all of them:
 - **Verify the claim, do not assume it.** Documentation rots quietly. This repository has already shipped a
   README that told users to edit `provider.yaml` when the code created `config.yml`, and that pinned a Wails
   version two minor releases behind. Both survived because nobody re-read them against the code. When you
-  touch a documented behaviour, open the file and check the sentence, do not trust that it was right.
+  touch a documented behavior, open the file and check the sentence, do not trust that it was right.
 - **`README.md`, `CONTRIBUTING.md` and `SECURITY.md` are for users and contributors.** Internal planning
   notes and review documents stay out of them; do not link the working documents in the repository root
   from the public-facing files.

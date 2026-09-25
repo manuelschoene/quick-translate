@@ -1,195 +1,111 @@
 # Contributing
 
-Thank you for looking at Quick Translate. Contributions are welcome.
+Thank you for looking at Quick Translate. The project is in **alpha** and maintained by one person, so for
+anything larger than a small fix, please ask first:
 
-The project is in **alpha** and maintained by one person, so please read the two sections below before you
-start writing code — they will save you the most time.
-
-## Questions go to me
-
-There is no team and no triage rota. Anything you are unsure about — whether a feature fits, whether a bug
-is already known, whether an approach is the one I would take — please ask me directly:
-
-- **[Open an issue](https://github.com/manuelschoene/quick-translate/issues)** — preferred, because the
-  answer is then useful to the next person as well.
+- **[Open an issue](https://github.com/manuelschoene/quick-translate/issues)** (preferred, the answer helps
+  the next person too)
 - **Email:** [schoene-manuel@gmx.de](mailto:schoene-manuel@gmx.de)
-
-For anything larger than a small fix, asking first is genuinely worth it. The project has a direction that
-is not fully visible from the code yet.
-
-## There are no tests
-
-This is the part to be aware of. **The repository contains no test suite** — no `*_test.go`, no frontend
-test runner, nothing you can run to find out whether your change broke something. That is a known gap and
-it is on the list for the stable release, but today it means:
-
-- **Nothing catches a regression for you.** Please verify your change by running the application.
-- If you want to add tests, that contribution is very welcome on its own. `internal/language/matching.go`,
-  the KWin rule merge in `internal/desktop/kde.go` and the window queries in `internal/history/db.go` are
-  the places where tests would earn their keep first.
-
-What *is* available are the checks that find errors without running anything. Continuous integration runs
-all of them on your pull request, but running them yourself first is far quicker than waiting for a red
-build.
-
-### Backend
-
-```sh
-go vet ./...     # the only automated backend check there is
-gofmt -l .       # must print nothing
-make build       # compiles the frontend and the application
-```
-
-### Frontend
-
-Run these from `frontend/`. The package manager is **bun**, not npm.
-
-```sh
-bun install
-bun run types    # vue-tsc --noEmit — the type check, and the closest thing to a test suite
-bun run lint     # ESLint: import order, unused imports, and it fixes what it can
-bun run format   # Prettier: 4-space indent, single quotes, 120 columns, Tailwind class sorting
-```
-
-`bun run types` is the one to take seriously. `verbatimModuleSyntax` is on, so a type imported as a value
-resolves to a missing export in the browser and takes the whole module graph down at runtime — the type
-check is what catches that, and nothing else will.
-
-Note that `format` and `lint` do different jobs and neither replaces the other: import sorting is an ESLint
-concern here, not a Prettier one. Please do not add an import-sorting Prettier plugin — the two would fight.
 
 ## Getting set up
 
-The prerequisites, the build and the installation are described in the [README](README.md). In short:
+The requirements are listed in the [README](README.md#from-source). Then:
 
 ```sh
-make dev         # run with live reload
-make build       # -> build/bin/quick-translate; UPX=0 skips the slow compression
-make install     # build, install the binary, register it with the desktop
-make help        # every target and variable
+task dev                        # run with live reload
+task build                      # -> bin/quick-translate
+task build DEV=true             # faster: no production tags, no compression
+task archive                    # -> bin/*.tar.gz, everything a release ships
+task art                        # re-render art/tray.png and art/wordmark.svg (needs Inkscape)
+task common:generate:bindings   # regenerate frontend/bindings/
+task --list                     # everything else
 ```
 
-The WebKit build tag is detected with `pkg-config`, so you never write it by hand.
+The frontend uses **bun**, not npm. From `frontend/`:
+
+```sh
+bun run types    # vue-tsc: the type check
+bun run lint     # ESLint, fixes what it can
+bun run format   # Prettier
+```
+
+## There are no tests
+
+The repository has **no test suite**, so nothing catches a regression for you. **Verify your change by running
+the application.** Tests are very welcome as a contribution of their own: `internal/language/matching.go`,
+`internal/system/kde.go` and `internal/history/db.go` would profit first.
+
+Take `bun run types` seriously. `verbatimModuleSyntax` is on, so a type imported as a value breaks the whole
+frontend at runtime, and the type check is the only thing that notices. `bun run build` does not run it.
 
 ## Code conventions
 
-The codebase is fairly consistent; matching what is around your change matters more than any rule below.
+Matching the code around your change matters more than any rule below.
 
-- **Go:** a full-sentence prose doc comment above every function, including unexported ones. Describe what
-  it does and which edge cases it handles, rather than restating the signature.
-- **Error strings are user-facing GUI text.** Capitalised, punctuated, and where possible they tell the
-  user what to do: `"No target language is set. Please choose the language you want to translate into."`
-  Wrap with `%w` when the cause matters.
-- **Failures that only cost a feature** (an unreadable history, an unresolvable detected language) are
-  printed and swallowed. Only failures that make the application unusable are returned as errors.
-- **Frontend:** the same prose style in TSDoc blocks. Components and views only ever talk to composables;
-  `services/wire.ts` is the only module that knows Go field names.
-- **Platform-specific code** goes behind build tags, in the same shape as `internal/clipboard/linux.go`,
-  `internal/transport/unix.go` and `internal/desktop/linux.go`.
-- **`architecture.mmd`** is a Mermaid class diagram of the Go packages. Please update it when backend types
-  or package boundaries change.
-- After changing an **exported** method on `transport.Adapter`, a DTO or a registered event, run
-  `make bindings` and **commit the files in `frontend/bindings/` with your change**. They are generated but
-  tracked, so that a checkout type-checks and lints without a Go toolchain — and CI fails if they are out of
-  date. The generator reads the Go source without starting the application, so Quick Translate can keep
-  running while you do it.
+- **Go:** a prose doc comment above every function, unexported ones included, that describes behavior and
+  edge cases rather than the signature.
+- **Error strings are GUI text:** capitalized full sentences that tell the user what to do. Wrap with `%w`
+  when the cause matters.
+- **Failures that only cost a feature** are printed and swallowed. Only failures that make the application
+  unusable are returned.
+- **Frontend:** the same prose style in TSDoc. Components only talk to composables, and `services/wire.ts` is
+  the only module that knows Go field names.
+- **Files and paths:** every path and permission comes from the table in `internal/system/files.go`. Never
+  build a path of your own.
+- **Platform-specific code** goes behind build tags, like `internal/clipboard/linux.go`.
+- **Import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
+- **Commit generated files:**
+  - `frontend/bindings/`, after changing an exported method on `transport.Adapter`, a DTO or a registered
+    event. CI fails when they are stale.
+  - `art/tray.png` and `art/wordmark.svg`, after changing a source in `art/`.
+- **`architecture.mmd`:** update it when backend types or package boundaries change.
 
 ## Using AI assistants
 
-AI assistants are welcome here, and there is nothing to disclose or flag when you use one. A good patch is
-a good patch regardless of how it was written.
+Welcome, and nothing to disclose. But there are no tests, so before opening a pull request:
 
-What does not work is code that nobody has read. Before you open a pull request, please make sure that:
+- **You can explain every line.**
+- **You have run it:** built, installed, used the feature.
+- **It follows the conventions above.** Assistants tend to drift from the doc comments and the error strings.
 
-- **You can explain every line** — what it does and why it is there.
-- **You have actually run it.** Built it, installed it, used the feature. Not "the diff looks reasonable".
-- **It follows the conventions above.** Assistants drift away from them, particularly the prose doc comment
-  on every function and the error strings that are written as user-facing GUI text.
-
-The reason is the section further up: there are no tests. Nothing in this repository catches a change that
-looks plausible and is subtly wrong, so the only thing between that and a release is a person having
-understood the code. If you cannot answer a question about your own pull request, it is not ready yet.
-
-`CLAUDE.md` in the repository root carries the architecture and these conventions in the form assistants
-read best — pointing yours at it will save you most of the drift.
+`CLAUDE.md` carries the architecture and conventions in a form assistants read well.
 
 ## Pull requests
 
-Branch off `main`, name the branch after what it carries, and open a pull request back into `main`. The
-prefix is what continuous integration watches, so it has to be one of these: `feature/…` for anything new,
-`hotfix/…` for an urgent fix, and `chore/…`, `docs/…`, `refactor/…` or `test/…` for the rest. A push to a
-branch named anything else runs no checks until the pull request opens.
+Branch off `main` and open a pull request back into it. CI only runs on branches named `feature/…`,
+`hotfix/…`, `chore/…`, `docs/…`, `refactor/…` or `test/…`. `main` is protected and must stay installable.
 
-There is no long-lived development branch: `main` is protected, every change arrives through a pull
-request, and `main` is what people clone and build — so it has to stay installable at all times. Released
-versions are downloaded from the
-[releases page](https://github.com/manuelschoene/quick-translate/releases); `main` is the nightly state.
-
-Continuous integration runs on every push to one of those branches and on every pull request:
-
-- The first job **fixes** rather than checks. It runs `gofmt -s -w`, ESLint and Prettier and commits the
-  result back to your branch, so a forgotten formatting run is not something you have to fix by hand. It
-  never fails the build.
-- The second job **checks**: `gofmt`, `go vet`, `go test`, `go mod verify`, a `go mod tidy` that has to
-  leave `go.mod` and `go.sum` unchanged, `govulncheck`, the TypeScript check, ESLint, Prettier, a full
-  `make build`, and `desktop-file-validate` over the desktop entry the binary generates.
-
-One thing to know if you work **from a fork**: the auto-fix job cannot push to your branch, because a pull
-request from a fork gets a read-only token. It is skipped rather than failing, so please run
-`gofmt -s -w .` and `bun run format` yourself before opening the pull request.
-
-**Use [Conventional Commits](https://www.conventionalcommits.org/) in the pull request title.** This is the
-one hard requirement, and not a stylistic one: the titles are what `release-please` reads off `main` to
-decide that a release is due at all and to write the changelog. While the project is in alpha the version
-itself only counts up (`0.1.0-alpha.1`, `0.1.0-alpha.2`, …) no matter which type you use, but the type is
-what groups your change in the changelog — and it is what will pick the version once the alpha ends:
-
-```
-<type>: <description>
-```
-
-Common types: `feat`, `fix`, `refactor`, `docs`, `chore`, `perf`, `test`, `build`, `ci`.
-
-Examples from this repository:
+**The title must be a [Conventional Commit](https://www.conventionalcommits.org/).** release-please reads it
+to write the changelog and decide when a release is due:
 
 ```
 feat: Added keyboard navigation in language selection
 fix: Fixed inconsistencies with ESLint
-refactor: Sharpened backend interface and restructured frontend logic
+feat!: Changed the configuration format     # ! marks a breaking change
 ```
 
-Add a `!` after the type for a breaking change (`feat!: …`) and say in the description what breaks.
+Common types: `feat`, `fix`, `refactor`, `docs`, `chore`, `perf`, `test`, `build`, `ci`.
 
-In the body, please describe **how you verified the change** — since nothing is automated, that is the only
-signal I have. "Ran `make install`, pressed the shortcut on Wayland/KDE, translated a selection, stepped
-through the history" is worth far more than "works".
+In the description, say **how you verified the change**. For the desktop integration, the clipboard or the
+installation, name your distribution, desktop and session type (Wayland or X11). The pull request template
+scaffolds this.
 
-If your change touches the desktop integration, the clipboard or the installation, please say which
-distribution, desktop environment and session type (Wayland or X11) you tested on. Those paths differ a lot
-between setups and I can only test my own.
+### What CI does
 
-Opening a pull request fills the body from `.github/pull_request_template.md`, which scaffolds all of that:
-why the change is needed, what changed and why it looks that way, how you verified it, and anything that
-has to happen by hand after merging. The comments in it are guidance and do not render — delete the
-sections that do not apply rather than leaving them empty, and a one-line fix does not need all four.
+1. **Fix:** runs `gofmt -s -w`, ESLint and Prettier and commits the result to your branch. It never fails.
+   From a fork it cannot push, so run `gofmt -s -w .` and `bun run format` yourself.
+2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, `go vet`, `go test`,
+   `go mod verify`, an unchanged `go mod tidy` and `govulncheck`. Then it builds the release archive
+   (`task archive UPX=false`), validates the desktop entry, checks that `frontend/bindings/` is current and runs
+   `--version`, `--help` and `--status` on the built binary.
 
 ## Reporting bugs
 
-[Open an issue](https://github.com/manuelschoene/quick-translate/issues/new/choose) and pick the bug
-report. The form asks for what makes a report actionable, and it is worth having ready:
-
-- The output of `quick-translate --status`, which names the build and shows what is installed where
-- Your distribution, desktop environment and session type (Wayland or X11)
-- Which clipboard tool you have installed (`wl-clipboard`, `xclip` or `xsel`)
-- The journal, `journalctl --user -u quick-translate.service -n 50`, which also reports which clipboard
-  backend the application picked
-
-None of that is bureaucracy: the desktop integration and the clipboard behave differently on nearly every
-setup, and without those details a report usually cannot be reproduced at all.
-
-For anything that looks like a security problem, please read [SECURITY.md](SECURITY.md) first.
+[Open an issue](https://github.com/manuelschoene/quick-translate/issues/new/choose) with the bug report form.
+The desktop integration and the clipboard behave differently on nearly every setup, so the form asks for
+`--version`, `--status`, your distribution, desktop and session type. For security problems, read
+[SECURITY.md](SECURITY.md) first.
 
 ## License
 
-By contributing you agree that your contribution is licensed under the
-[Apache License 2.0](LICENSE), the same as the rest of the project.
+By contributing you agree that your contribution is licensed under the [Apache License 2.0](LICENSE).
