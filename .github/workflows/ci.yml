@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # The event is part of the group: a push and the pull request of the same branch share a head ref, so
+    # without it the pull request run cancels the push run, which then shows up as a failed check.
     concurrency:
-      group: ${{ github.workflow }}-lint-${{ github.event.pull_request.head.ref || github.ref_name }}
+      group: ${{ github.workflow }}-lint-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}
       cancel-in-progress: true
 
     steps:
@@ -77,7 +79,7 @@ jobs:
     permissions:
       contents: read
     concurrency:
-      group: ${{ github.workflow }}-test-${{ github.event.pull_request.head.ref || github.ref_name }}
+      group: ${{ github.workflow }}-test-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}
       cancel-in-progress: true
 
     steps:
