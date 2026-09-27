@@ -71,8 +71,8 @@ func (i *IntegrationService) showInTray() {
 
 	tray := i.app.SystemTray.New()
 
-	tray.SetLabel(TrayLabel)
-	tray.SetTooltip(TrayTooltip)
+	tray.SetLabel(AppName)
+	tray.SetTooltip(trayTooltip)
 	tray.SetIcon(i.trayIcon)
 	tray.SetMenu(menu)
 

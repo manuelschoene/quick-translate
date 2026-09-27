@@ -50,7 +50,7 @@ func main() {
 // Creates the application with its options, but does not yet register any services or windows. The second instance callback is handed in, because the lock it answers is taken in here, before anything it could reach exists.
 func createApp(onSecondInstance func()) *application.App {
 	return application.New(application.Options{
-		Name:        "Quick Translate",
+		Name:        system.AppName,
 		Description: "Translate your selected text anywhere",
 		Linux: application.LinuxOptions{
 			ApplicationID: system.ApplicationID, // Required for application matching with desktop entry, KWin rules, etc.
@@ -68,7 +68,7 @@ func createApp(onSecondInstance func()) *application.App {
 // Registers the main window of the application, which is a frameless webview window that is always on top and cannot be resized. The window is hidden in production builds, but shown in debug builds.
 func registerWindows(app *application.App) {
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "Quick Translate",
+		Title:            system.AppName,
 		Width:            480,
 		Height:           300,
 		AlwaysOnTop:      true,

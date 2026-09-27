@@ -17,12 +17,13 @@ type FileService struct {
 
 // Represents a file or directory with metadata
 type entry struct {
-	resource Resource // Identifying key
-	category category
-	name     string // Name displayed to the user, depending on the operating system. Internal entries have no name.
-	path     string
-	mode     os.FileMode // Targeted permissions. Non-application owned resources have expected values.
-	parent   Resource    // Pointer to directory row. Zero when it sits in a directory the application does not own.
+	resource  Resource // Identifying key
+	category  category
+	name      string // Name displayed to the user, depending on the operating system. Internal entries have no name.
+	path      string
+	mode      os.FileMode // Targeted permissions. Non-application owned resources have expected values.
+	parent    Resource    // Pointer to directory row. Zero when it sits in a directory the application does not own.
+	directory bool        // Marks a directory row, the only kind of row Remove() deletes recursively.
 }
 
 // File or directory the application reads or writes to. Named after what it holds, as the path changes between operating systems.
@@ -30,13 +31,13 @@ type Resource int
 
 const (
 	Autostart Resource = iota + 1 // Counted from one, so the zero value marks a non-application owned directory, which is not a resource
-	CacheRoot
 	ConfigRoot
+	Database
 	DataRoot
-	History
 	Icon
-	Languages
 	Launcher
+	NotificationCategories
+	NotificationRoot
 	Settings
 	WindowRules
 )
@@ -51,9 +52,6 @@ const (
 	merged                         // Merged into user-owned files; written, reported, not removed
 	registered                     // System integration inside user directories; written, reported, removed
 )
-
-// Used for path creation and directory names
-const appSlug = "quick-translate"
 
 // Returned if the requested resource is not available on the running operating system.
 var errNoRow = errors.New("Quick Translate does not know where to keep one of its files on this operating system.")
@@ -185,7 +183,7 @@ func (f *FileService) Narrow(r Resource, parts ...string) {
 	fmt.Printf("Narrowed the permissions of '%s', which is not meant to be readable by other users.\n", path)
 }
 
-// Removes a resource and reports whether it existed. Merged and installed categories are not removed. Checks if directories are owned by the application to avoid removing unexpected directories. Returns an error if the resource cannot be removed.
+// Removes a resource and reports whether it existed. Merged and installed categories are not removed. Directories are only removed at the path of a directory row. Returns an error if the resource cannot be removed.
 func (f *FileService) Remove(r Resource, parts ...string) (bool, error) {
 	row := f.row(r)
 	if row == nil {
@@ -211,7 +209,7 @@ func (f *FileService) Remove(r Resource, parts ...string) (bool, error) {
 		return true, nil
 	}
 
-	if filepath.Base(path) != appSlug {
+	if !row.directory || path != row.path {
 		return false, fmt.Errorf("Refusing to remove '%s', which is not a directory of Quick Translate.", path)
 	}
 
@@ -310,16 +308,16 @@ func (e *entry) failure(verb string, path string, err error) error {
 
 // The entries every operating system shares, built from base directories. Operating systems that have different base directories must define their own entries() instead.
 func userEntries() []entry {
-	cacheRoot := filepath.Join(xdg.CacheHome, appSlug)
 	configRoot := filepath.Join(xdg.ConfigHome, appSlug)
 	dataRoot := filepath.Join(xdg.DataHome, appSlug)
+	notificationsRoot := filepath.Join(xdg.ConfigHome, AppName)
 
 	return []entry{
-		{resource: CacheRoot, name: "Language cache", path: cacheRoot, mode: 0700, category: data},
-		{resource: ConfigRoot, name: "Configuration", path: configRoot, mode: 0700, category: data},
-		{resource: DataRoot, name: "History", path: dataRoot, mode: 0700, category: data},
-		{resource: History, path: filepath.Join(dataRoot, "history.db"), mode: 0600, category: internal, parent: DataRoot},
-		{resource: Languages, path: filepath.Join(cacheRoot, "translations"), mode: 0700, category: internal, parent: CacheRoot},
+		{resource: ConfigRoot, name: "Configuration", path: configRoot, mode: 0700, category: data, directory: true},
+		{resource: DataRoot, name: "Application data", path: dataRoot, mode: 0700, category: data, directory: true},
+		{resource: NotificationRoot, name: "Notifications", path: notificationsRoot, mode: 0700, category: data, directory: true},
+		{resource: Database, path: filepath.Join(dataRoot, appSlug+".db"), mode: 0600, category: internal, parent: DataRoot},
 		{resource: Settings, path: filepath.Join(configRoot, "config.yml"), mode: 0600, category: internal, parent: ConfigRoot},
+		{resource: NotificationCategories, path: filepath.Join(notificationsRoot, "notification-categories.json"), mode: 0600, category: internal, parent: NotificationRoot},
 	}
 }
