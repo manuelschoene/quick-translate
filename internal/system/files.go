@@ -13,7 +13,7 @@ import (
 
 // Manages file operations and abstracts the paths of the running operating systems
 type FileService struct {
-	table []entry
+	table  []entry
 	logger *slog.Logger
 }
 

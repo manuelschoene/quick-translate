@@ -1,17 +1,47 @@
-//go:build linux
-
 package system
 
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/adrg/xdg"
 )
+
+// All file entries for Linux: shared entries, desktop session entries and KWin rules. Not written files are necessary for status reports.
+func entries() []entry {
+	return append(userEntries(),
+		entry{
+			resource: Autostart,
+			name:     "Autostart",
+			path:     filepath.Join(xdg.ConfigHome, "autostart", ApplicationID+".desktop"), // Defined by the XDG Autostart specification
+			mode:     0644,                                                                 // Expected mode as Wails manages the file
+			category: registered,
+		},
+		entry{
+			resource: Icon,
+			name:     "Icon",
+			path:     filepath.Join(xdg.DataHome, "icons", "hicolor", "scalable", "apps", ApplicationID+".svg"),
+			mode:     0644,
+			category: installed,
+		},
+		entry{
+			resource: Launcher,
+			name:     "Desktop entry",
+			path:     filepath.Join(xdg.DataHome, "applications", ApplicationID+".desktop"),
+			mode:     0644,
+			category: installed,
+		},
+		entry{
+			resource: WindowRules,
+			name:     "Window rules",
+			path:     filepath.Join(xdg.ConfigHome, "kwinrulesrc"),
+			mode:     0644,
+			category: merged, // Merged as KWin uses a single INI style file for all rules
+		},
+	)
+}
 
 // Removes all files and modifications the application has written for the user. Returns the files that were present and removed and an error containing all remove failures. The KWin rules are only removed if they were installed and KWin is reconfigured. Does not fail on the first error to try to remove as many files as possible.
 func Purge(files *FileService) ([]File, error) {
@@ -35,7 +65,9 @@ func Purge(files *FileService) ([]File, error) {
 		failures = append(failures, err)
 	case gone:
 		removed = append(removed, files.file(WindowRules, true))
-		reconfigureKWin(func(msg string) { fmt.Println(msg) })
+		if err := reconfigureKWin(); err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	return removed, errors.Join(failures...)
@@ -82,64 +114,4 @@ func executablePath() (string, error) {
 	}
 
 	return executable, nil
-}
-
-// Integrates with the part of the system the user owns. For KDE Plasma, window rules are merged into KWin's settings. For other desktops, there is nothing to integrate yet. Returns an error if the rule file cannot be read or written.
-func integrate(files *FileService) error {
-	if !isKDE() {
-		return nil
-	}
-
-	return ensureRules(files)
-}
-
-// Reports whether the current desktop session is KDE Plasma. Needed for window rules integration specific to KWin. XDG_CURRENT_DESKTOP is a colon-separated list of environment names, and the desktop sets it to "KDE" for Plasma. The check is case-insensitive.
-func isKDE() bool {
-	for name := range strings.SplitSeq(os.Getenv("XDG_CURRENT_DESKTOP"), ":") {
-		if strings.EqualFold(name, "KDE") {
-			return true
-		}
-	}
-
-	return false
-}
-
-// All file entries for Linux: shared entries, desktop session entries and KWin rules. Not written files are necessary for status reports.
-func entries() []entry {
-	return append(userEntries(),
-		entry{
-			resource: Autostart,
-			name:     "Autostart",
-			path:     filepath.Join(xdg.ConfigHome, "autostart", ApplicationID+".desktop"), // Defined by the XDG Autostart specification
-			mode:     0644,                                                                 // Expected mode as Wails manages the file
-			category: registered,
-		},
-		entry{
-			resource: Icon,
-			name:     "Icon",
-			path:     filepath.Join(xdg.DataHome, "icons", "hicolor", "scalable", "apps", ApplicationID+".svg"),
-			mode:     0644,
-			category: installed,
-		},
-		entry{
-			resource: Launcher,
-			name:     "Desktop entry",
-			path:     filepath.Join(xdg.DataHome, "applications", ApplicationID+".desktop"),
-			mode:     0644,
-			category: installed,
-		},
-		entry{
-			resource: WindowRules,
-			name:     "Window rules",
-			path:     filepath.Join(xdg.ConfigHome, "kwinrulesrc"),
-			mode:     0644,
-			category: merged, // Merged as KWin uses a single INI style file for all rules
-		},
-	)
-}
-
-// Configures the standard logger to write to stderr without any timestamps or prefixes as systemd does include its own. Does not create the logger instance.
-func configureLogger() {
-	log.SetFlags(0)
-	log.SetOutput(os.Stderr)
 }

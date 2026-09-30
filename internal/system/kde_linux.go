@@ -1,13 +1,15 @@
-//go:build linux
-
 package system
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/godbus/dbus/v5"
 )
 
 // The group the window rules are written to. KWin addresses every rule by a name of its own, so a fixed one lets the installation replace and remove exactly its own rule without ever touching the rules the user has made.
@@ -202,7 +204,9 @@ func ensureRules(files *FileService) error {
 	}
 
 	files.logger.Info(fmt.Sprintf("Merged the window rules of Quick Translate into '%s'.", files.Path(WindowRules)))
-	reconfigureKWin(func(msg string) { files.logger.Warn(msg) })
+	if err := reconfigureKWin(); err != nil {
+		files.logger.Warn(err.Error())
+	}
 
 	return nil
 }
@@ -238,16 +242,28 @@ func rulesInstalled(files *FileService) bool {
 	return findGroup(parseGroups(content), rulesGroup) != nil
 }
 
-// Asks KWin to read its settings again, so the window rules take effect without a logout. KWin is only reachable over the session bus of a running Plasma session, which is why a failure is reported and swallowed. LogFunc is called with a message that should be logged as a warning, so the caller can decide how to log it.
-func reconfigureKWin(logFunc func(string)) {
-	name := "dbus-send"
-	args := []string{"--session", "--dest=org.kde.KWin", "--type=method_call", "/KWin", "org.kde.KWin.reconfigure"}
+// Asks KWin to read its settings again, so the window rules take effect without a logout. Without a running Plasma session there is no KWin to ask, which is not an error. Returns an error if the session bus cannot be reached or KWin refuses the call.
+func reconfigureKWin() error {
+	conn, err := dbus.ConnectSessionBus()
+	if err != nil {
+		return fmt.Errorf("Could not reach the session bus to reload the window rules: %w", err)
+	}
+	defer conn.Close()
 
-	if _, err := exec.LookPath(name); err != nil {
-		return
+	// Bounded, because the integration runs on the main thread before the application's loop starts.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = conn.Object("org.kde.KWin", "/KWin").CallWithContext(ctx, "org.kde.KWin.reconfigure", 0).Err
+
+	var dbusErr dbus.Error
+	if errors.As(err, &dbusErr) && dbusErr.Name == "org.freedesktop.DBus.Error.ServiceUnknown" {
+		return nil
 	}
 
-	if out, err := exec.Command(name, args...).CombinedOutput(); err != nil {
-		logFunc(fmt.Sprintf("Could not run '%s': %v. %s", name, err, strings.TrimSpace(string(out))))
+	if err != nil {
+		return fmt.Errorf("Could not ask KWin to reload the window rules: %w", err)
 	}
+
+	return nil
 }

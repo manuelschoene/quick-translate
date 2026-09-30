@@ -33,7 +33,7 @@ bun run format   # Prettier
 
 The repository has **no test suite**, so nothing catches a regression for you. **Verify your change by running
 the application.** Tests are very welcome as a contribution of their own: `internal/language/matching.go`,
-`internal/system/kde.go` and `internal/history/db.go` would profit first.
+`internal/system/kde_linux.go` and `internal/history/db.go` would profit first.
 
 Take `bun run types` seriously. `verbatimModuleSyntax` is on, so a type imported as a value breaks the whole
 frontend at runtime, and the type check is the only thing that notices. `bun run build` does not run it.

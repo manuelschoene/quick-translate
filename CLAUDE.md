@@ -204,16 +204,18 @@ config · history · language · core · transport · cli → system   (a *FileS
   reported instead of leaving it to an empty field. `Purge` answers with what it removed and prints nothing;
   `cli` renders it.
   What differs per operating system is only the table, so `files.go` carries the type, every operation and
-  the rows every operating system shares, while `entries()` is defined once per build tag: `linux.go` adds
-  the desktop entry, the icon, the autostart and the KWin rule file, and `unsupported.go` adds nothing,
-  which leaves a not-yet-supported operating system with working per-user paths and no integration.
-  `integrate`/`Purge`/`Removals`/`Status` are likewise defined per operating system rather than wrapped — only
-  the three the command line calls are exported, the integration is reached through its service — and
-  `kde.go` holds the KWin rule merge, the only thing the application writes that cannot ship as a file in
-  the release archive. `integration.go` is the Wails service that integrates, registers the autostart, binds
-  the global shortcut and puts the application into the tray at startup, and the place a settings view will
-  reach for to switch any of them; it is the one file of the package that knows Wails. None of its failures
-  are returned: a non-nil return from `ServiceStartup` takes the whole application down.
+  the rows every operating system shares, while `entries()` is defined once per operating system:
+  `files_linux.go` adds the desktop entry, the icon, the autostart and the KWin rule file, and `unsupported.go`
+  adds nothing, which leaves a not-yet-supported operating system with working per-user paths and no integration.
+  `integrate`/`Purge`/`Removals`/`Status`/`configureLogger` are likewise defined per operating system rather than
+  wrapped — only the three the command line calls are exported, the integration is reached through its service.
+  On Linux each sits next to the shared file it belongs to (`files_linux.go`, `integration_linux.go`,
+  `logger_linux.go`); the `_linux` suffix is the build constraint. `kde_linux.go` holds the KWin rule merge, the
+  only thing the application writes that cannot ship as a file in the release archive, and asks KWin to reload
+  it over the session bus through `godbus`. `integration.go` is the Wails service that integrates, registers
+  the autostart, binds the global shortcut and puts the application into the tray at startup, and the place a
+  settings view will reach for to switch any of them; it is the one file of the package that knows Wails. None
+  of its failures are returned: a non-nil return from `ServiceStartup` takes the whole application down.
   The tray is the only thing on screen while the application runs hidden. It is a StatusNotifierItem over
   the session bus on Linux, which Plasma shows natively and GNOME only with the AppIndicator extension, and
   Wails answers a missing host through the error handler rather than a failure. Its icon has to be a PNG —

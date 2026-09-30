@@ -21,6 +21,9 @@ const Shortcut = "Super+Shift+T"
 // Tooltip shown by the desktop for the tray icon. The keys are spelled the way Wails and GNOME name them; KDE Plasma calls the same key Meta.
 const trayTooltip = AppName + " — " + Shortcut
 
+// Wraps the configureLogger function to be only called once, to prevent multiple repeated configurations.
+var configure = sync.OnceFunc(configureLogger)
+
 type File struct {
 	Name    string // What the user knows the file as, e.g., "Desktop entry" or "Configuration"
 	Path    string
@@ -36,7 +39,7 @@ type Report struct {
 
 // Creates a new structured logger that has been configured to fit the operating system's logging capabilities. The logger is a singleton, so calling this function multiple times returns the same instance. The logger is configured only once. Uses the default logger from the slog package.
 func NewLogger() *slog.Logger {
-	sync.OnceFunc(configureLogger)()
+	configure()
 
 	return slog.Default()
 }
