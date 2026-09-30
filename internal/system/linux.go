@@ -5,8 +5,8 @@ package system
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -35,7 +35,7 @@ func Purge(files *FileService) ([]File, error) {
 		failures = append(failures, err)
 	case gone:
 		removed = append(removed, files.file(WindowRules, true))
-		reconfigureKWin()
+		reconfigureKWin(func(msg string) { fmt.Println(msg) })
 	}
 
 	return removed, errors.Join(failures...)
@@ -104,17 +104,6 @@ func isKDE() bool {
 	return false
 }
 
-// Runs a command without treating failures as errors. The command is only run if it is installed and errors are reported without stopping the application.
-func runOptional(name string, args ...string) {
-	if _, err := exec.LookPath(name); err != nil {
-		return
-	}
-
-	if out, err := exec.Command(name, args...).CombinedOutput(); err != nil {
-		fmt.Printf("Could not run '%s': %v. %s\n", name, err, strings.TrimSpace(string(out)))
-	}
-}
-
 // All file entries for Linux: shared entries, desktop session entries and KWin rules. Not written files are necessary for status reports.
 func entries() []entry {
 	return append(userEntries(),
@@ -147,4 +136,10 @@ func entries() []entry {
 			category: merged, // Merged as KWin uses a single INI style file for all rules
 		},
 	)
+}
+
+// Configures the standard logger to write to stderr without any timestamps or prefixes as systemd does include its own. Does not create the logger instance.
+func configureLogger() {
+	log.SetFlags(0)
+	log.SetOutput(os.Stderr)
 }

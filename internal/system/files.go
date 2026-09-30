@@ -3,6 +3,7 @@ package system
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -13,6 +14,7 @@ import (
 // Manages file operations and abstracts the paths of the running operating systems
 type FileService struct {
 	table []entry
+	logger *slog.Logger
 }
 
 // Represents a file or directory with metadata
@@ -58,7 +60,7 @@ var errNoRow = errors.New("Quick Translate does not know where to keep one of it
 
 // Creates a new file service configured with the paths for the running operating system. Resolves the base paths once as they do not change.
 func NewFileService() *FileService {
-	return &FileService{table: entries()}
+	return &FileService{table: entries(), logger: NewLogger()}
 }
 
 // Returns the location of a resource with the given parts appended. Returns an empty path for a non-existing resource on the running operating system.
@@ -176,11 +178,11 @@ func (f *FileService) Narrow(r Resource, parts ...string) {
 	}
 
 	if err := os.Chmod(path, mode); err != nil {
-		fmt.Printf("Could not narrow the permissions of '%s': %v\n", path, err)
+		f.logger.Warn(fmt.Sprintf("Could not narrow the permissions of '%s': %v", path, err))
 		return
 	}
 
-	fmt.Printf("Narrowed the permissions of '%s', which is not meant to be readable by other users.\n", path)
+	f.logger.Info(fmt.Sprintf("Narrowed the permissions of '%s', which is not meant to be readable by other users.", path))
 }
 
 // Removes a resource and reports whether it existed. Merged and installed categories are not removed. Directories are only removed at the path of a directory row. Returns an error if the resource cannot be removed.

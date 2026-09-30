@@ -5,6 +5,7 @@ package system
 import (
 	"bytes"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -200,8 +201,8 @@ func ensureRules(files *FileService) error {
 		return err
 	}
 
-	fmt.Printf("Merged the window rules of Quick Translate into '%s'.\n", files.Path(WindowRules))
-	reconfigureKWin()
+	files.logger.Info(fmt.Sprintf("Merged the window rules of Quick Translate into '%s'.", files.Path(WindowRules)))
+	reconfigureKWin(func(msg string) { files.logger.Warn(msg) })
 
 	return nil
 }
@@ -237,7 +238,16 @@ func rulesInstalled(files *FileService) bool {
 	return findGroup(parseGroups(content), rulesGroup) != nil
 }
 
-// Asks KWin to read its settings again, so the window rules take effect without a logout. KWin is only reachable over the session bus of a running Plasma session, which is why a failure is reported and swallowed.
-func reconfigureKWin() {
-	runOptional("dbus-send", "--session", "--dest=org.kde.KWin", "--type=method_call", "/KWin", "org.kde.KWin.reconfigure")
+// Asks KWin to read its settings again, so the window rules take effect without a logout. KWin is only reachable over the session bus of a running Plasma session, which is why a failure is reported and swallowed. LogFunc is called with a message that should be logged as a warning, so the caller can decide how to log it.
+func reconfigureKWin(logFunc func(string)) {
+	name := "dbus-send"
+	args := []string{"--session", "--dest=org.kde.KWin", "--type=method_call", "/KWin", "org.kde.KWin.reconfigure"}
+
+	if _, err := exec.LookPath(name); err != nil {
+		return
+	}
+
+	if out, err := exec.Command(name, args...).CombinedOutput(); err != nil {
+		logFunc(fmt.Sprintf("Could not run '%s': %v. %s", name, err, strings.TrimSpace(string(out))))
+	}
 }

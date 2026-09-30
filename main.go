@@ -55,6 +55,7 @@ func createApp(onSecondInstance func()) *application.App {
 		Linux: application.LinuxOptions{
 			ApplicationID: system.ApplicationID, // Required for application matching with desktop entry, KWin rules, etc.
 		},
+		Logger: system.NewLogger(),
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},

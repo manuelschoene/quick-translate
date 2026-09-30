@@ -32,3 +32,6 @@ func entries() []entry {
 func integrate(_ *FileService) error {
 	return nil
 }
+
+// No configuration needed for non-Linux systems, as the default logger is already suitable.
+func configureLogger() {}

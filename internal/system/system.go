@@ -1,6 +1,10 @@
 package system
 
-import "strings"
+import (
+	"log/slog"
+	"strings"
+	"sync"
+)
 
 // The application ID is used by the system to identify the application and match it with the autostart entry, window rules, global shorcut and desktop entry. Reverse DNS syntax is required by GTK and D-Bus.
 const ApplicationID = "io.github.manuelschoene.QuickTranslate"
@@ -28,4 +32,11 @@ type Report struct {
 	Environment string // System or desktop environment name, e.g., "KDE"
 	Integration []File // Files that are part of the integration, e.g., desktop entry and window rules
 	UserFiles   []File // Files with application data inside the user's home directory, e.g., configuration and history
+}
+
+// Creates a new structured logger that has been configured to fit the operating system's logging capabilities. The logger is a singleton, so calling this function multiple times returns the same instance. The logger is configured only once. Uses the default logger from the slog package.
+func NewLogger() *slog.Logger {
+	sync.OnceFunc(configureLogger)()
+
+	return slog.Default()
 }
