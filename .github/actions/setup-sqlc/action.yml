@@ -1,0 +1,13 @@
+name: Setup sqlc
+author: Manuel Schöne <schoene-manuel@gmx.de>
+description: Installs sqlc at the version the code in internal/store/db was generated with.
+
+runs:
+  using: composite
+  steps:
+    # Pinned, because every generated file names the sqlc version, so another one fails the check for current code.
+    # The exact version without the "v"; the action builds the download URL from it and resolves neither "latest" nor a range.
+    - name: Setup sqlc
+      uses: sqlc-dev/setup-sqlc@v5.0.0
+      with:
+        sqlc-version: "1.31.1"

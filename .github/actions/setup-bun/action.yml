@@ -1,5 +1,5 @@
 name: Setup Bun
-author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+author: Manuel Schöne <schoene-manuel@gmx.de>
 description: Sets up Bun and installs the frontend dependencies.
 
 runs:

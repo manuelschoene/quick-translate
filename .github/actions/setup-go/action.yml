@@ -1,5 +1,5 @@
 name: Setup Go
-author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+author: Manuel Schöne <schoene-manuel@gmx.de>
 description: Sets up Go and downloads the module dependencies.
 
 runs:

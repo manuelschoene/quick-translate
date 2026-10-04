@@ -69,10 +69,11 @@ Build requirements, besides the packages above:
 - **gcc** and **pkgconf**, for the cgo bindings to GTK and WebKit
 - The development packages of **GTK4** and **WebKitGTK 6.0** (`libgtk-4-dev libwebkitgtk-6.0-dev` on Debian and Ubuntu)
 - **UPX** >= 5.2.0, which compresses release builds. `DEV=true` or `UPX=false` skip it.
-- The **Wails CLI** at the version in `go.mod`, and **Task**:
+- The **Wails CLI** at the version in `go.mod`, **sqlc** 1.31.1, which generates the database code, and **Task**:
 
 ```sh
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.23
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 go install github.com/go-task/task/v3/cmd/task@latest
 ```
 

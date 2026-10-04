@@ -123,6 +123,20 @@ jobs:
         uses: ./.github/actions/setup-wails
         with:
           desktop-file-utils: "true"
+      
+      - name: Setup sqlc
+        uses: ./.github/actions/setup-sqlc
+
+      # The generated sqlc code must be committed for static analysis to pass.
+      - name: Check the generated sqlc code is current
+        shell: bash
+        run: |
+          changes=$(sqlc diff)
+          if [[ -n "$changes" ]]; then
+            echo "::error::The generated sqlc code is out of date. Run 'wails3 task common:generate:db' and commit the changes."
+            echo "$changes"
+            exit 1
+          fi
 
       - name: Check formatting
         shell: bash

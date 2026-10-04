@@ -1,0 +1,23 @@
+version: "2"
+
+sql:
+  - engine: "sqlite"
+    queries: "internal/store/queries"
+    schema: "internal/store/migrations"
+    gen:
+      go:
+        package: "db"
+        out: "internal/store/db"
+        emit_interface: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        omit_unused_structs: true
+        overrides:
+          - column: "providers.id"
+            go_type: "quick-translate/internal/models.ProviderID"
+          - column: "provider_languages.provider_id"
+            go_type: "quick-translate/internal/models.ProviderID"
+          - column: "translations.provider_id"
+            go_type: "quick-translate/internal/models.ProviderID"
+    strict_function_checks: true
+    strict_order_by: true

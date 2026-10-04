@@ -11,6 +11,23 @@ tasks:
     cmds:
       - go mod tidy
 
+  generate:db:
+    label: generate:db # Same checksum for `common:` and `linux:common:`, see generate:bindings.
+    desc: Generates type-safe idiomatic Go code from SQL
+    summary: Analyses the migrations and queries inside the `store` package and generates the code in `store/db` using sqlc.
+    run: once
+    sources:
+      - internal/store/migrations/**/*.sql
+      - internal/store/queries/**/*.sql
+      - sqlc.yml
+    generates:
+      - internal/store/db/**/*
+    preconditions:
+      - sh: command -v sqlc
+        msg: "sqlc not found."
+    cmds:
+      - sqlc generate
+
   generate:bindings:
     label: generate:bindings # Task keys the checksum by name, so `common:` and `linux:common:` would regenerate each.
     desc: Generates the frontend bindings

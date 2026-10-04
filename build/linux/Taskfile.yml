@@ -39,6 +39,7 @@ tasks:
     internal: true
     deps:
       - task: common:go:mod:tidy
+      - task: common:generate:db
       - task: common:build:frontend
         vars:
           BUILD_FLAGS:

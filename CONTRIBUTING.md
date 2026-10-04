@@ -18,6 +18,7 @@ task build DEV=true             # faster: no production tags, no compression
 task archive                    # -> bin/*.tar.gz, everything a release ships
 task art                        # re-render art/tray.png and art/wordmark.svg (needs Inkscape)
 task common:generate:bindings   # regenerate frontend/bindings/
+task common:generate:db         # regenerate internal/store/db/ with sqlc
 task --list                     # everything else
 ```
 
@@ -95,9 +96,9 @@ scaffolds this.
 1. **Fix:** runs `gofmt -s -w`, ESLint and Prettier and commits the result to your branch. It never fails.
    From a fork it cannot push, so run `gofmt -s -w .` and `bun run format` yourself.
 2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, `go vet`, `go test`,
-   `go mod verify`, an unchanged `go mod tidy` and `govulncheck`. Then it builds the release archive
-   (`task archive UPX=false`), validates the desktop entry, checks that `frontend/bindings/` is current and runs
-   `--version`, `--help` and `--status` on the built binary.
+   `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that `internal/store/db/` is current
+   (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`), validates the desktop entry,
+   checks that `frontend/bindings/` is current and runs `--version`, `--help` and `--status` on the built binary.
 
 ## Reporting bugs
 
