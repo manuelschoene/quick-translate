@@ -61,15 +61,6 @@ ORDER BY
 LIMIT
     1;
 
--- name: HasTranslations :one
-SELECT
-    EXISTS (
-        SELECT
-            1
-        FROM
-            translations
-    );
-
 -- name: HasPreviousTranslation :one
 SELECT
     EXISTS (

@@ -111,23 +111,6 @@ func (q *Queries) HasPreviousTranslation(ctx context.Context, arg HasPreviousTra
 	return exists, err
 }
 
-const hasTranslations = `-- name: HasTranslations :one
-SELECT
-    EXISTS (
-        SELECT
-            1
-        FROM
-            translations
-    )
-`
-
-func (q *Queries) HasTranslations(ctx context.Context) (bool, error) {
-	row := q.db.QueryRowContext(ctx, hasTranslations)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
-
 const latestTranslation = `-- name: LatestTranslation :one
 SELECT
     id, text, translation, created_at, provider_id, source_tag, target_tag, detection

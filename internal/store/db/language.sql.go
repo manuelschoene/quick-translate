@@ -33,6 +33,41 @@ func (q *Queries) DeleteExpiredLanguages(ctx context.Context, expiredBefore int6
 	return result.RowsAffected()
 }
 
+const deleteOrphanLanguages = `-- name: DeleteOrphanLanguages :execrows
+DELETE FROM languages
+WHERE
+    tag NOT IN (
+        SELECT
+            tag
+        FROM
+            provider_languages
+    )
+    AND tag NOT IN (
+        SELECT
+            target_tag
+        FROM
+            translations
+    )
+    AND tag NOT IN (
+        SELECT
+            source_tag
+        FROM
+            translations
+        WHERE
+            source_tag IS NOT NULL
+    )
+`
+
+// Deletes languages that neither a provider nor the history references.
+// source_tag is filtered for NULL, because a NULL inside NOT IN matches nothing.
+func (q *Queries) DeleteOrphanLanguages(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteOrphanLanguages)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteProviderLanguages = `-- name: DeleteProviderLanguages :exec
 DELETE FROM provider_languages
 WHERE
@@ -51,7 +86,7 @@ VALUES
     (?1) ON CONFLICT DO NOTHING
 `
 
-// Tags are shared by every provider and never removed, because the history references them.
+// Tags are shared by every provider. DeleteOrphanLanguages removes those nothing references any more.
 func (q *Queries) InsertLanguage(ctx context.Context, tag string) error {
 	_, err := q.db.ExecContext(ctx, insertLanguage, tag)
 	return err
@@ -122,7 +157,7 @@ func (q *Queries) ListProviderLanguages(ctx context.Context, providerID models.P
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListProviderLanguagesRow{}
+	var items []ListProviderLanguagesRow
 	for rows.Next() {
 		var i ListProviderLanguagesRow
 		if err := rows.Scan(

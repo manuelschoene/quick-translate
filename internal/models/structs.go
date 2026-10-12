@@ -17,7 +17,17 @@ type LanguagePreferences struct {
 }
 
 type Translation struct {
-	ID                                                          int
-	CreatedAt                                                   time.Time
-	Source, Target, Text, Translation, DetectedSource, Provider string
+	ID          int64
+	Text        string
+	Translation string
+	CreatedAt   time.Time
+	ProviderID  ProviderID
+	SourceTag   *string
+	TargetTag   string
+	Detection   bool
+}
+
+type Provider struct {
+	ID                 ProviderID
+	LanguagesUpdatedAt time.Time
 }

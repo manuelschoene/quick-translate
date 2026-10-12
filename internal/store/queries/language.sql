@@ -13,7 +13,7 @@ ORDER BY
     pl.tag;
 
 -- name: InsertLanguage :exec
--- Tags are shared by every provider and never removed, because the history references them.
+-- Tags are shared by every provider. DeleteOrphanLanguages removes those nothing references any more.
 INSERT INTO
     languages (tag)
 VALUES
@@ -49,4 +49,30 @@ WHERE
             providers
         WHERE
             languages_updated_at < sqlc.arg (expired_before)
+    );
+
+-- name: DeleteOrphanLanguages :execrows
+-- Deletes languages that neither a provider nor the history references.
+-- source_tag is filtered for NULL, because a NULL inside NOT IN matches nothing.
+DELETE FROM languages
+WHERE
+    tag NOT IN (
+        SELECT
+            tag
+        FROM
+            provider_languages
+    )
+    AND tag NOT IN (
+        SELECT
+            target_tag
+        FROM
+            translations
+    )
+    AND tag NOT IN (
+        SELECT
+            source_tag
+        FROM
+            translations
+        WHERE
+            source_tag IS NOT NULL
     );

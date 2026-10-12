@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"log"
 	"os"
 
 	"quick-translate/internal/cli"
@@ -43,7 +42,8 @@ func main() {
 
 	err := app.Run()
 	if err != nil {
-		log.Fatal(err)
+		system.NewLogger().Error("application run", "error", err)
+		os.Exit(1)
 	}
 }
 
