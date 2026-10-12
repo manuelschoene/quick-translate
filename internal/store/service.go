@@ -23,6 +23,7 @@ type Service struct {
 	queries *db.Queries
 }
 
+// Creates a new store service instance. The service will not be connected to the database yet. Connection is established on application startup.
 func New(f *system.FileService, l *slog.Logger) *Service {
 	return &Service{
 		files:  f,

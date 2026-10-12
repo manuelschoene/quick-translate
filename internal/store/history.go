@@ -3,8 +3,8 @@ package store
 import (
 	"context"
 	"fmt"
-	"quick-translate/internal/store/db"
 	"quick-translate/internal/models"
+	"quick-translate/internal/store/db"
 	"time"
 )
 
