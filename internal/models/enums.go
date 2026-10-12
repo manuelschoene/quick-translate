@@ -6,3 +6,24 @@ type ProviderID int64
 const (
 	DeepL ProviderID = 1
 )
+
+// The slugs the config file names the providers by.
+var providerSlugs = map[ProviderID]string{
+	DeepL: "deepl",
+}
+
+// Returns the slug of the provider, empty for an unknown ID.
+func (id ProviderID) String() string {
+	return providerSlugs[id]
+}
+
+// Returns the provider ID for a slug; false if no provider has that slug.
+func ProviderIDFromSlug(slug string) (ProviderID, bool) {
+	for id, s := range providerSlugs {
+		if s == slug {
+			return id, true
+		}
+	}
+
+	return 0, false
+}

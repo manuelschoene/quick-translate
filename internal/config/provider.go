@@ -1,87 +1,49 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"maps"
 	"quick-translate/internal/models"
-	"quick-translate/internal/system"
 	"slices"
-
-	"go.yaml.in/yaml/v4"
 )
 
-type defaultProvider struct {
-	DefaultProvider string `yaml:"default_provider"`
+// Returns the default provider. Fails if it is not set; whether it is configured is not checked.
+//
+//wails:ignore
+func (s *Service) DefaultProvider() (models.ProviderID, error) {
+	if s.config.defaultProvider == 0 {
+		return 0, errors.New("config: default provider not set")
+	}
+
+	return s.config.defaultProvider, nil
 }
 
-type provider struct {
-	Provider map[string]yaml.Node `yaml:"provider"`
+// Returns every configured provider, sorted by ID. Fails if there is none.
+//
+//wails:ignore
+func (s *Service) Providers() ([]models.ProviderID, error) {
+	if len(s.config.providers) == 0 {
+		return nil, errors.New("config: no provider configured")
+	}
+
+	return slices.Sorted(maps.Keys(s.config.providers)), nil
 }
 
-// Reads the default provider slug from the configuration file. Returns an error if reading the configuration file fails or if the default provider is not set. The slug is not verified for existence in the list of providers.
-func DefaultProvider(files *system.FileService) (string, error) {
-	if err := initFile(files); err != nil {
-		return "", err
+// Returns a decoder for the configuration of the given provider. The error means not configured, the decoder's error means configured but unreadable.
+//
+//wails:ignore
+func (s *Service) Provider(id models.ProviderID) (decode func(into any) error, err error) {
+	node, ok := s.config.providers[id]
+	if !ok {
+		return nil, fmt.Errorf("config: provider %q not configured", id)
 	}
 
-	def := &defaultProvider{}
-	if err := readStruct(files, def); err != nil {
-		return "", fmt.Errorf("Could not read default provider: %w", err)
-	}
-
-	val := def.DefaultProvider
-	if len(val) == 0 {
-		return "", fmt.Errorf("Default provider is not set. Please set the default provider in the configuration file.")
-	}
-
-	return val, nil
-}
-
-// Reads the list of configured provider slugs from the configuration file. Returns an error if reading the configuration file fails, if any of the slugs in the list are not in the list of allowed providers or no provider is found in the configuration file.
-func ListProviders(files *system.FileService, slugs []string) ([]string, error) {
-	if err := initFile(files); err != nil {
-		return nil, err
-	}
-
-	prov := &provider{}
-	if err := readStruct(files, prov); err != nil {
-		return nil, fmt.Errorf("Could not read providers: %w", err)
-	}
-
-	var list []string
-	for k := range prov.Provider {
-		if !slices.Contains(slugs, k) {
-			return nil, fmt.Errorf("Provider '%s' is not in the list of allowed providers: %v", k, slugs)
+	return func(into any) error {
+		if err := node.Decode(into); err != nil {
+			return fmt.Errorf("config: decode provider %q: %w", id, err)
 		}
 
-		list = append(list, k)
-	}
-
-	if len(list) == 0 {
-		return nil, fmt.Errorf("No providers found in the configuration file. Please add at least one provider.")
-	}
-
-	return list, nil
-}
-
-// Reads the configuration for a specific provider from the configuration file and decodes it into the provided config struct. Returns an error if reading the configuration file fails, if the provider is not configured in the configuration file, or if decoding the configuration fails.
-func LoadProvider[T models.Provider](files *system.FileService, slug string, config *T) error {
-	if err := initFile(files); err != nil {
-		return err
-	}
-
-	prov := &provider{}
-	if err := readStruct(files, prov); err != nil {
-		return fmt.Errorf("Could not read providers: %w", err)
-	}
-
-	node, ok := prov.Provider[slug]
-	if !ok {
-		return fmt.Errorf("Provider '%s' is not configured in the configuration file", slug)
-	}
-
-	if err := node.Decode(config); err != nil {
-		return fmt.Errorf("Could not decode provider '%s' configuration: %w", slug, err)
-	}
-
-	return nil
+		return nil
+	}, nil
 }

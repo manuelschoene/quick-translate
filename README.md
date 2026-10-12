@@ -105,7 +105,7 @@ quick-translate --version   # which build this is
 
 ## Configuration
 
-The configuration lives in `~/.config/quick-translate/config.yml` and is created with a commented template on the first start.
+The configuration lives in `~/.config/quick-translate/config.yml` and is created with a commented template on the first start. The application then exits until you have filled it in; it also refuses to start while the file cannot be read.
 
 | Key                                    | Meaning                                                                                          |
 |----------------------------------------|--------------------------------------------------------------------------------------------------|

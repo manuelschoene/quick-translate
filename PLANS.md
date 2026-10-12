@@ -13,7 +13,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 
 | Service | Owns | Bound | Internal (`//wails:ignore`) |
 |---|---|---|---|
-| `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(slug)`, `Preferences`, `HistoryLimit` |
+| `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(id)`, `Preferences`, `HistoryLimit` |
 | `provider` | Catalog, current slug and instance | `Providers()`, `Current()`, `Select(slug)` | `Instance()`, `OnChange(hook)` |
 | `language` | The `Collection`: lists, preferences, source, target, detected | `Options()`, `Selection()`, `SetSource`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(tag)` |
 | `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
@@ -23,8 +23,8 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 
 - **Registration:** a type is registered with Wails only if the frontend calls it or it needs
   `ServiceStartup`/`ServiceShutdown`. Every exported method the frontend must not reach carries `//wails:ignore`.
-  `store` is registered for its lifecycle only. `config` is registered only if it needs `ServiceStartup`, and
-  never exposes provider configuration. `system.FileService` is not registered.
+  `store` and `config` are registered for their lifecycle only; `config` never exposes provider
+  configuration. `system.FileService` is not registered.
 - **No window service.** The frontend hides itself with `Window.Hide()` from `@wailsio/runtime` (verified).
   Showing stays in Go.
 - `core`, `transport`, the DTOs and `history.History` are removed.
@@ -73,15 +73,17 @@ actions := system.Actions{
   - Configured before `application.New` and not in a service: Wails logs `Platform Info` from `application.New`
     and some errors from `Run` before any `ServiceStartup` (verified in a production build).
   - Scope: new and moved code logs through it. Untouched packages keep `fmt.Printf` for now.
-- **`ServiceStartup` never returns an error**, except in the store: a non-nil return shuts the app down.
+- **`ServiceStartup` never returns an error**, except in the store and in `config`: a non-nil return shuts the app
+  down.
   - It runs on the main OS thread before the GTK loop, so it must not wait for anything that needs the loop.
-- **Fatal failure** (store cannot open or migrate): log it, send a desktop notification through Wails'
-  `services/notifications`, and return the error from `ServiceStartup`. Wails then shuts down every service
-  already started, and `main.go` logs the error from `app.Run()` and exits non-zero.
+- **Fatal failure** (store cannot open or migrate, config file broken or just written): send a desktop
+  notification through Wails' `services/notifications` and return the error from `ServiceStartup`, without
+  logging it. Wails then shuts down every service already started, and `main.go` logs the error from `app.Run()`
+  once and exits non-zero.
   - The notifier connects to D-Bus only in its own startup, which is why it is registered first.
   - A failure inside `application.New` can only reach the log.
-- **"Not configured yet" is not fatal.** `provider` answers with the configuration error until a default provider
-  can be built. `language` and `translation` fail through it with the same message.
+- **"Not configured yet" is not fatal** once the file exists. `provider` answers with the configuration error until
+  a default provider can be built. `language` and `translation` fail through it with the same message.
 - **Never call a service inside `InvokeSync`/`InvokeAsync`.**
   - Verified: no other Wails callback (bound methods, shortcut, tray, menu, second instance, event listeners,
     window hooks) runs on the UI thread.
@@ -153,17 +155,17 @@ internal/store/migrations/
 
 ## Models - Open
 
-Postponed until the other packages are moved onto the services. `internal/models` holds `ProviderID`, `Language`,
-`LanguagePreferences`, `Translation` and `Provider` (the stored fetch time); the old `Provider` interface was
-removed, so `provider`, `language`, `core` and `config` do not build until it has a new home.
+Postponed until the other packages are moved onto the services. `internal/models` holds `ProviderID` with its slug
+mapping, `Language`, `Translation` and `Provider` (the stored fetch time); the old `Provider` interface was
+removed, so `provider`, `language` and `core` do not build until it has a new home. `LanguagePreferences` moved
+to `config` *(done)*.
 
 - **Constraint:** `ProviderID` must stay in a package `store/db` can import without a cycle; `store` itself is
   not one (`store → db → store`).
 - **Constraint:** `Language` must not come from `store/db` while `provider` produces it and `db` imports the
   package `ProviderID` lives in.
-- **Candidates:** the `Provider` interface to `provider` or its consumers, `LanguagePreferences` to `config`,
-  the stored `Provider` renamed so it is not mistaken for the interface, and the `ProviderID` ↔ slug mapping next
-  to the enum.
+- **Candidates:** the `Provider` interface to `provider` or its consumers, and the stored `Provider` renamed so it
+  is not mistaken for the interface.
 
 ## Files (`internal/system`) - Done except the notification file
 
@@ -184,20 +186,20 @@ removed, so `provider`, `language`, `core` and `config` do not build until it ha
 - **`Remove` checks rows instead of names.** *(done)* A directory is removed only if its path is the path of a
   row marked `directory`.
 
-## Configuration (`config`)
+## Configuration (`config`) - Done
 
 | Consumer | Reads |
 |---|---|
-| `provider` | `DefaultProvider`, `Providers`, `Provider(slug)` |
+| `provider` | `DefaultProvider`, `Providers`, `Provider(id)` |
 | `language` | `Preferences` |
 | `history` | `HistoryLimit` |
 
 Provider configuration goes through a decoder, because a Go method cannot be generic:
 
 ```go
-func (s *Service) Provider(slug string) (decode func(into any) error, err error)
+func (s *Service) Provider(id models.ProviderID) (decode func(into any) error, err error)
 
-decode, err := s.config.Provider(provider.SlugDeepl)
+decode, err := s.config.Provider(models.DeepL)
 instance := provider.NewDeepl()
 err = decode(instance)
 ```
@@ -205,6 +207,15 @@ err = decode(instance)
 - The error from `Provider` means not configured; the error from `decode` means configured but unreadable.
 - Today the decoder is `yaml.Node.Decode`. In Part 2 the settings repository backs the same signature.
 - The default provider is read once at startup. `Select()` changes only the running process.
+- **Startup:** `ServiceStartup` writes the template if the file is missing and then fails, so the user fills it
+  in before the app starts. Otherwise it reads, decodes and validates the whole file once (a negative
+  `max_entries` is broken) and keeps it in memory; edits need a restart. A broken file fails startup.
+- `Preferences()` and `HistoryLimit()` return no error, since the file is validated at startup. `Providers()`
+  returns the configured providers sorted by ID.
+- **Provider IDs, not slugs:** the file keeps the slugs; `load()` resolves them to `models.ProviderID` through
+  `models.ProviderIDFromSlug`, and an unknown slug is a broken file. `ProviderID.String()` returns the slug.
+- **Errors** are lowercase and prefixed with `config: `, like the store's.
+- Every getter carries `//wails:ignore`.
 
 ## Provider switch
 
@@ -290,7 +301,8 @@ including the provider key. This goes into the release notes and `build/linux/IN
    notification file is left for step 5.
 2. **`store`:** *(done)* migrations, `sqlc`, the history, language and provider repositories. `history.History`
    and the gob cache go once their consumers use the repositories (step 4).
-3. **`config.Service`** over the existing YAML functions.
+3. **`config.Service`:** *(done)* the YAML file read once in `ServiceStartup`, getters on the service, provider IDs
+   instead of slugs. `core` keeps calling the removed free functions until step 4 replaces it.
 4. **Backend services with the adapter as a facade.** The adapter delegates and keeps building the DTOs, so the
    frontend stays untouched while locks and hooks are checked.
 5. **Events and getters, notifications service, registration order.** The adapter and the new bindings run side
@@ -311,7 +323,7 @@ step.
 ## Why
 
 Today the user must write a file by hand before anything works. It holds the provider key in plain text and
-is re-read on every access. Settings move into the store, get validated as they are entered, and get migrations
+is only read at startup, so every change needs a restart. Settings move into the store, get validated as they are entered, and get migrations
 for free.
 
 ## Settings in the store

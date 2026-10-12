@@ -119,7 +119,8 @@ Versions come from `release-please-config.json`, never by hand:
 ## Runtime files
 
 - Config: `~/.config/quick-translate/config.yml` (`system.Settings`) — created with a commented default
-  template on first start (`internal/config/file.go`) because it holds the provider keys.
+  template on first start (`internal/config/file.go`) because it holds the provider keys. That start then
+  fails, as does every start with a broken file; otherwise it is read once in `config.Service.ServiceStartup`.
 - History DB (SQLite, pure-Go driver): `~/.local/share/quick-translate/history.db` (`system.History`) —
   data the user produced and cannot re-fetch, so neither next to the hand-written config nor in the cache,
   which cleanup tools may empty. It holds every translated text.
@@ -314,8 +315,8 @@ anyway.
 - Go: a full-sentence prose doc comment above every function, including unexported ones, describing
   behavior and edge cases rather than restating the signature. Frontend files use the same prose style
   in TSDoc blocks.
-- Error strings are user-facing GUI text: capitalized, punctuated full sentences that usually tell the
-  user what to do ("Please set 'history.max_entries' …"). Wrap with `%w` when the cause matters.
+- Error strings follow Go style: lowercase, no trailing punctuation, prefixed with the package and
+  wrapped with `%w` for context (`config: decode file: …`).
 - Failures that only cost a feature (unreadable history, unresolvable detected language, unstorable
   translation) are printed to stdout and swallowed; only failures that make the app unusable are
   returned as errors.
@@ -346,7 +347,7 @@ Before calling any change done, walk this list and update what the change touche
 | CLI commands or flags | `README.md`, `CONTRIBUTING.md`, the command table in `internal/cli/command.go` |
 | Tasks or task variables | `README.md`, `CONTRIBUTING.md`, the task's `desc`/`summary` in the Taskfile |
 | Where files are written, or their permissions | `internal/system/files.go`, `README.md`, `SECURITY.md` |
-| Configuration keys | `README.md`, the `defaultYml` template in `internal/config/file.go` |
+| Configuration keys | `README.md`, the `fileTemplate` template in `internal/config/file.go` |
 | What the app sends over the network, or stores | `SECURITY.md` |
 | Prerequisites, dependency or tool versions | `README.md`, `build/linux/INSTALL.md`, `.github/actions/`, "Commands" above |
 | Backend types or package boundaries | `architecture.mmd`, "Backend architecture" above |

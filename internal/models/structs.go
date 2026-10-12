@@ -12,10 +12,6 @@ type Language struct {
 	Stable bool   `json:"stable"`
 }
 
-type LanguagePreferences struct {
-	Source, Target string
-}
-
 type Translation struct {
 	ID          int64
 	Text        string

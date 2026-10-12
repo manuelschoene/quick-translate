@@ -3,12 +3,13 @@ package config
 import (
 	"fmt"
 
+	"quick-translate/internal/models"
 	"quick-translate/internal/system"
 
 	"go.yaml.in/yaml/v4"
 )
 
-const defaultYml = `# <=== Language Preferences ===>
+const fileTemplate = `# <=== Language Preferences ===>
 #
 # The language preferences section allows you to specify your preferred source and target languages for translation.
 # Use an BCP 47 language tag (e.g. "en" for English, "de" for German) to specify the source and target languages.
@@ -56,30 +57,71 @@ default_provider: ""
 provider: {}
 `
 
-// Creates the config file with the commented default template when it is not there yet, and narrows the permissions of one an earlier version created readable for everyone else on the machine. Returns an error if the file can not be written.
-func initFile(files *system.FileService) error {
-	created, err := files.EnsureFile(system.Settings, []byte(defaultYml))
-	if err != nil {
-		return fmt.Errorf("Could not create config file: %w", err)
-	}
-
-	if created {
-		fmt.Println("Could not find config file. Created a new one with default values at: " + files.Path(system.Settings))
-	}
-
-	return nil
+type file struct {
+	LanguagePreferences LanguagePreferences `yaml:"language_preferences"`
+	History             struct {
+		MaxEntries *int `yaml:"max_entries"`
+	} `yaml:"history"`
+	DefaultProvider string               `yaml:"default_provider"`
+	Provider        map[string]yaml.Node `yaml:"provider"`
 }
 
-// Reads a struct from the config file. The struct must have YAML tags from the "go.yaml.in/yaml/v4" package. Every caller runs initFile first, so the file is there; one that is empty leaves the struct at its own defaults. The function will return an error if the file can not be read or if the struct cannot be decoded from it.
-func readStruct[T any](files *system.FileService, x *T) error {
-	content, err := files.Read(system.Settings)
+// The validated content of the config file, with provider slugs resolved to IDs.
+type config struct {
+	preferences     LanguagePreferences
+	historyLimit    int
+	defaultProvider models.ProviderID // Zero when not set
+	providers       map[models.ProviderID]yaml.Node
+}
+
+// Reads, decodes and validates the config file.
+func (s *Service) load() (*config, error) {
+	content, err := s.files.Read(system.Settings)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("config: read file: %w", err)
 	}
 
-	if err := yaml.Unmarshal(content, x); err != nil {
-		return fmt.Errorf("Could not decode YAML from config file: %w", err)
+	f := new(file)
+	if err := yaml.Unmarshal(content, f); err != nil {
+		return nil, fmt.Errorf("config: decode file: %w", err)
 	}
 
-	return nil
+	return validate(f)
+}
+
+// Validates the config file content and returns the validated config. An empty file leaves every option at its default; an unknown provider slug is an error.
+func validate(f *file) (*config, error) {
+	c := &config{
+		preferences:  f.LanguagePreferences,
+		historyLimit: defaultMaxEntries,
+		providers:    make(map[models.ProviderID]yaml.Node, len(f.Provider)),
+	}
+
+	if f.History.MaxEntries != nil {
+		if *f.History.MaxEntries < 0 {
+			return nil, fmt.Errorf("config: history.max_entries must not be negative, got %d", *f.History.MaxEntries)
+		}
+
+		c.historyLimit = *f.History.MaxEntries
+	}
+
+	if f.DefaultProvider != "" {
+		id, ok := models.ProviderIDFromSlug(f.DefaultProvider)
+		if !ok {
+			return nil, fmt.Errorf("config: default_provider: unknown provider %q", f.DefaultProvider)
+		}
+
+		c.defaultProvider = id
+	}
+
+	for slug, node := range f.Provider {
+		id, ok := models.ProviderIDFromSlug(slug)
+		if !ok {
+			return nil, fmt.Errorf("config: provider: unknown provider %q", slug)
+		}
+
+		c.providers[id] = node
+	}
+
+	return c, nil
 }

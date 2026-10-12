@@ -45,8 +45,8 @@ Matching the code around your change matters more than any rule below.
 
 - **Go:** a prose doc comment above every function, unexported ones included, that describes behavior and
   edge cases rather than the signature.
-- **Error strings are GUI text:** capitalized full sentences that tell the user what to do. Wrap with `%w`
-  when the cause matters.
+- **Error strings follow Go style:** lowercase, no trailing punctuation, prefixed with the package and wrapped
+  with `%w` for context (`config: decode file: …`).
 - **Failures that only cost a feature** are printed and swallowed. Only failures that make the application
   unusable are returned.
 - **Frontend:** the same prose style in TSDoc. Components only talk to composables, and `services/wire.ts` is
