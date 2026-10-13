@@ -7,31 +7,10 @@ package db
 
 import (
 	"context"
+	"strings"
 
 	"quick-translate/internal/models"
 )
-
-const deleteExpiredLanguages = `-- name: DeleteExpiredLanguages :execrows
-DELETE FROM provider_languages
-WHERE
-    provider_id IN (
-        SELECT
-            id
-        FROM
-            providers
-        WHERE
-            languages_updated_at < ?1
-    )
-`
-
-// Keeps the provider rows, which the history references.
-func (q *Queries) DeleteExpiredLanguages(ctx context.Context, expiredBefore int64) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteExpiredLanguages, expiredBefore)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
 
 const deleteOrphanLanguages = `-- name: DeleteOrphanLanguages :execrows
 DELETE FROM languages
@@ -128,6 +107,52 @@ func (q *Queries) InsertProviderLanguage(ctx context.Context, arg InsertProvider
 	return err
 }
 
+const listLanguagesUpdatedAt = `-- name: ListLanguagesUpdatedAt :many
+SELECT
+    id,
+    languages_updated_at
+FROM
+    providers
+WHERE
+    id IN (/*SLICE:ids*/?)
+ORDER BY
+    id
+`
+
+// A provider without a row has never been fetched and is left out.
+func (q *Queries) ListLanguagesUpdatedAt(ctx context.Context, ids []models.ProviderID) ([]Provider, error) {
+	query := listLanguagesUpdatedAt
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Provider
+	for rows.Next() {
+		var i Provider
+		if err := rows.Scan(&i.ID, &i.LanguagesUpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProviderLanguages = `-- name: ListProviderLanguages :many
 SELECT
     pl.tag,
@@ -178,4 +203,25 @@ func (q *Queries) ListProviderLanguages(ctx context.Context, providerID models.P
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertProvider = `-- name: UpsertProvider :exec
+INSERT INTO
+    providers (id, languages_updated_at)
+VALUES
+    (?1, ?2) ON CONFLICT (id) DO
+UPDATE
+SET
+    languages_updated_at = excluded.languages_updated_at
+`
+
+type UpsertProviderParams struct {
+	ID                 models.ProviderID
+	LanguagesUpdatedAt int64
+}
+
+// Records when the provider's languages were fetched and creates its row on the first fetch.
+func (q *Queries) UpsertProvider(ctx context.Context, arg UpsertProviderParams) error {
+	_, err := q.db.ExecContext(ctx, upsertProvider, arg.ID, arg.LanguagesUpdatedAt)
+	return err
 }

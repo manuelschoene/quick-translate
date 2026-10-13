@@ -18,7 +18,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 | `language` | The `Collection`: lists, preferences, source, target, detected | `Options()`, `Selection()`, `SetSource`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(tag)` |
 | `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
 | `history` | Limit, cursor | `Navigation()`, `Previous()`, `Next()` | `Latest()` |
-| `store` | SQLite connection, repositories | – | `NewHistory()`, `NewLanguage()`, `NewProvider()` |
+| `store` | SQLite connection, repositories | – | `NewHistory()`, `NewLanguage()` |
 | `system.IntegrationService` | unchanged | – | – |
 
 - **Registration:** a type is registered with Wails only if the frontend calls it or it needs
@@ -99,30 +99,38 @@ actions := system.Actions{
   returned.
 - **`store.New(files, logger)`** takes the logger, which logs with `category=store`; each repository adds
   `repository=<name>` and the migration `step=migration`.
-- **Repositories** are concrete types that return `models`; no generated type leaves `store`. `NewHistory()`,
-  `NewLanguage()` and `NewProvider()` carry `//wails:ignore` and return nil before `ServiceStartup`.
+- **Repositories** are concrete types that return `models`; no generated type leaves `store`. `NewHistory()`
+  and `NewLanguage()` carry `//wails:ignore` and return nil before `ServiceStartup`.
   - `History`: `Append(*t)` sets ID and creation time, `Previous(id, window)`, `Next(id)`, `Latest()`,
     `HasPrevious(id, window)`, `HasNext(id)`. A translation that is not stored yet (ID 0) has no previous one;
     the caller steps back through `Latest()` instead.
   - `Language`: `Get(id)` returns the languages, empty when none are stored. `Put(id, langs)` replaces the
-    provider's rows and records now as the fetch time, in one transaction. `DeleteExpired(ttl)` deletes the
-    languages of every provider fetched longer than `ttl` ago, then the tags neither a provider nor the history
-    references.
-  - `Provider`: `Get(id)` returns the fetch time, `Upsert(provider)`.
+    provider's rows, records now as the fetch time and deletes the tags neither a provider nor the history
+    references, in one transaction. `FetchedAt(ids)` returns the fetch time of each given provider; one missing
+    from the map was never fetched. `Delete(id)` deletes the provider's languages and the orphaned tags, but
+    keeps the `providers` row and its fetch time.
+  - `Provider`: removed together with `models.Provider`, which only carried the fetch time. Part 2 brings the
+    repository back for the settings and for deleting a provider's row.
 - **Errors:** a lookup without a row returns `store.ErrNotFound` in the chain (`errors.Is`), never
   `sql.ErrNoRows`, so no caller needs `database/sql`. Errors are lowercase and wrapped once per layer.
-- **Transactions** only where several statements must apply together (`Put`, `DeleteExpired`, every migration).
+- **Transactions** only where several statements must apply together (`Put`, `Delete`, every migration).
   Single reads and writes run directly. Nothing inside a transaction may use the `*sql.DB` or the plain queries:
   with one connection that deadlocks.
 - **Language cache**, normalized; a new field on `models.Language` means a new migration:
   - `providers (id, languages_updated_at)`: the id is the `models.ProviderID` enum, never `iota`, because the
-    history references it. The row is kept when its languages expire.
+    history references it. The fetch time lives here because the provider id dictates its lifetime; the settings
+    join this row in Part 2 and are updated independently of it.
   - `languages (tag)`: every tag any provider or translation uses, shared between providers.
   - `provider_languages (provider_id, tag, name, source, target, stable)`, deleted with its provider.
   - Timestamps are Unix seconds (`INTEGER`), turned into `time.Time` in the repositories.
 
-  `language` keeps the TTL and the background refresh:
-  - `DeleteExpired(ttl)` runs once at startup and replaces the cleanup of other providers' caches.
+  `language` keeps the TTL and the background refresh. The TTL marks a list as stale, never as deleted:
+  - Deleting by age would save a few rows, but force a blocking fetch when a provider is used again after a long
+    time, and leave nothing to show when that start is offline.
+  - `language` asks `FetchedAt` for the configured providers, keeps serving the cached lists and refreshes the
+    stale ones in the background through `Put`. A failed refresh keeps the old list.
+  - Languages are deleted only with their provider (Part 2). A provider removed from `config.yml` keeps its rows
+    until then; no reconcile at startup is planned.
   - The refresh is tracked with a `sync.WaitGroup`, and `language.ServiceShutdown` waits for it before the store
     closes.
 - **History:** `translations` references the provider and both tags. `source_tag` is the detected language when
@@ -156,7 +164,7 @@ internal/store/migrations/
 ## Models - Open
 
 Postponed until the other packages are moved onto the services. `internal/models` holds `ProviderID` with its slug
-mapping, `Language`, `Translation` and `Provider` (the stored fetch time); the old `Provider` interface was
+mapping, `Language` and `Translation`; the stored `Provider` is removed *(done)*. The old `Provider` interface was
 removed, so `provider`, `language` and `core` do not build until it has a new home. `LanguagePreferences` moved
 to `config` *(done)*.
 
@@ -164,8 +172,7 @@ to `config` *(done)*.
   not one (`store → db → store`).
 - **Constraint:** `Language` must not come from `store/db` while `provider` produces it and `db` imports the
   package `ProviderID` lives in.
-- **Candidates:** the `Provider` interface to `provider` or its consumers, and the stored `Provider` renamed so it
-  is not mistaken for the interface.
+- **Candidates:** the `Provider` interface to `provider` or its consumers.
 
 ## Files (`internal/system`) - Done except the notification file
 
@@ -351,6 +358,7 @@ Each consequence is a hook that `config` calls on the owning service:
 | Change | Consequence |
 |---|---|
 | Provider auth key | Invalidate that provider's language cache |
+| Provider removed | `LanguageRepository.Delete`, then the provider's row through `ProviderRepository` |
 | Default provider | `provider.Select` |
 | `history.max_entries` 0 → >0 | `history` starts recording |
 | Language preferences | `language` resolves them again; the frontend retranslates |

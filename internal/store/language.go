@@ -37,8 +37,10 @@ func (r *LanguageRepository) Get(ctx context.Context, ID models.ProviderID) ([]m
 	return languages, nil
 }
 
-// Replaces the languages of the given provider in one transaction and records now as their fetch time. Creates the provider row if it does not exist yet.
+// Replaces the languages of the given provider in one transaction, records now as their fetch time and deletes the languages nothing references any more. Creates the provider row if it does not exist yet.
 func (r *LanguageRepository) Put(ctx context.Context, ID models.ProviderID, languages []models.Language) error {
+	var orphans int64
+
 	err := transaction(ctx, r.conn, r.queries, func(query *db.Queries) error {
 		if err := query.UpsertProvider(ctx, db.UpsertProviderParams{
 			ID:                 ID,
@@ -68,6 +70,13 @@ func (r *LanguageRepository) Put(ctx context.Context, ID models.ProviderID, lang
 			}
 		}
 
+		count, err := query.DeleteOrphanLanguages(ctx)
+		if err != nil {
+			return fmt.Errorf("delete orphan languages: %w", err)
+		}
+
+		orphans = count
+
 		return nil
 	})
 
@@ -75,36 +84,50 @@ func (r *LanguageRepository) Put(ctx context.Context, ID models.ProviderID, lang
 		return fmt.Errorf("put languages: %w", err)
 	}
 
+	r.logger.Info("deleted orphan languages", slog.Int64("count", orphans))
+
 	return nil
 }
 
-// Deletes the languages of every provider fetched longer than ttl ago, then the languages neither a provider nor the history references any more.
-func (r *LanguageRepository) DeleteExpired(ctx context.Context, ttl time.Duration) error {
-	var count, countOrphan int64
+// Returns when the languages of the given providers were fetched. A provider missing from the map has never been fetched.
+func (r *LanguageRepository) FetchedAt(ctx context.Context, IDs []models.ProviderID) (map[models.ProviderID]time.Time, error) {
+	rows, err := r.queries.ListLanguagesUpdatedAt(ctx, IDs)
+	if err != nil {
+		return nil, fmt.Errorf("get languages fetch time: %w", err)
+	}
+
+	fetched := make(map[models.ProviderID]time.Time, len(rows))
+	for _, row := range rows {
+		fetched[row.ID] = time.Unix(row.LanguagesUpdatedAt, 0)
+	}
+
+	return fetched, nil
+}
+
+// Deletes the languages of the given provider, then the languages nothing references any more. The provider row and its fetch time are kept, because the history references it.
+func (r *LanguageRepository) Delete(ctx context.Context, ID models.ProviderID) error {
+	var orphans int64
 
 	err := transaction(ctx, r.conn, r.queries, func(query *db.Queries) error {
-		c, err := query.DeleteExpiredLanguages(ctx, time.Now().Add(-ttl).Unix())
-		if err != nil {
-			return fmt.Errorf("delete expired languages: %w", err)
+		if err := query.DeleteProviderLanguages(ctx, ID); err != nil {
+			return fmt.Errorf("delete provider languages: %w", err)
 		}
 
-		co, err := query.DeleteOrphanLanguages(ctx)
+		count, err := query.DeleteOrphanLanguages(ctx)
 		if err != nil {
 			return fmt.Errorf("delete orphan languages: %w", err)
 		}
 
-		count = c
-		countOrphan = co
+		orphans = count
 
 		return nil
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("delete languages: %w", err)
 	}
 
-	r.logger.Info("deleted expired languages", slog.Int64("count", count))
-	r.logger.Info("deleted orphan languages", slog.Int64("count", countOrphan))
+	r.logger.Info("deleted orphan languages", slog.Int64("count", orphans))
 
 	return nil
 }

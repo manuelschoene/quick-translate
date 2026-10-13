@@ -22,8 +22,3 @@ type Translation struct {
 	TargetTag   string
 	Detection   bool
 }
-
-type Provider struct {
-	ID                 ProviderID
-	LanguagesUpdatedAt time.Time
-}

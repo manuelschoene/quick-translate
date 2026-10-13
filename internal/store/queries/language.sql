@@ -38,19 +38,6 @@ VALUES
         sqlc.arg (stable)
     ) ON CONFLICT DO NOTHING;
 
--- name: DeleteExpiredLanguages :execrows
--- Keeps the provider rows, which the history references.
-DELETE FROM provider_languages
-WHERE
-    provider_id IN (
-        SELECT
-            id
-        FROM
-            providers
-        WHERE
-            languages_updated_at < sqlc.arg (expired_before)
-    );
-
 -- name: DeleteOrphanLanguages :execrows
 -- Deletes languages that neither a provider nor the history references.
 -- source_tag is filtered for NULL, because a NULL inside NOT IN matches nothing.
@@ -76,3 +63,25 @@ WHERE
         WHERE
             source_tag IS NOT NULL
     );
+
+-- name: UpsertProvider :exec
+-- Records when the provider's languages were fetched and creates its row on the first fetch.
+INSERT INTO
+    providers (id, languages_updated_at)
+VALUES
+    (sqlc.arg (id), sqlc.arg (languages_updated_at)) ON CONFLICT (id) DO
+UPDATE
+SET
+    languages_updated_at = excluded.languages_updated_at;
+
+-- name: ListLanguagesUpdatedAt :many
+-- A provider without a row has never been fetched and is left out.
+SELECT
+    id,
+    languages_updated_at
+FROM
+    providers
+WHERE
+    id IN (sqlc.slice (ids))
+ORDER BY
+    id;

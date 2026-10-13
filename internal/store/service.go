@@ -133,16 +133,3 @@ func (s *Service) NewLanguage() *LanguageRepository {
 		queries: s.queries,
 	}
 }
-
-// Creates a new provider repository instance. Returns nil if called before service startup and no database connection is established.
-//
-//wails:ignore
-func (s *Service) NewProvider() *ProviderRepository {
-	if s.conn == nil {
-		return nil
-	}
-
-	return &ProviderRepository{
-		queries: s.queries,
-	}
-}
