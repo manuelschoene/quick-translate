@@ -33,15 +33,15 @@ func (s *Service) Providers() ([]models.ProviderID, error) {
 // Returns a decoder for the configuration of the given provider. The error means not configured, the decoder's error means configured but unreadable.
 //
 //wails:ignore
-func (s *Service) Provider(id models.ProviderID) (decode func(into any) error, err error) {
-	node, ok := s.config.providers[id]
+func (s *Service) Provider(ID models.ProviderID) (decode func(into any) error, err error) {
+	node, ok := s.config.providers[ID]
 	if !ok {
-		return nil, fmt.Errorf("config: provider %q not configured", id)
+		return nil, fmt.Errorf("config: provider %q not configured", ID)
 	}
 
 	return func(into any) error {
 		if err := node.Decode(into); err != nil {
-			return fmt.Errorf("config: decode provider %q: %w", id, err)
+			return fmt.Errorf("config: decode provider %q: %w", ID, err)
 		}
 
 		return nil

@@ -106,21 +106,21 @@ func validate(f *file) (*config, error) {
 	}
 
 	if f.DefaultProvider != "" {
-		id, ok := models.ProviderIDFromSlug(f.DefaultProvider)
+		ID, ok := models.ProviderIDFromSlug(f.DefaultProvider)
 		if !ok {
 			return nil, fmt.Errorf("config: default_provider: unknown provider %q", f.DefaultProvider)
 		}
 
-		c.defaultProvider = id
+		c.defaultProvider = ID
 	}
 
 	for slug, node := range f.Provider {
-		id, ok := models.ProviderIDFromSlug(slug)
+		ID, ok := models.ProviderIDFromSlug(slug)
 		if !ok {
 			return nil, fmt.Errorf("config: provider: unknown provider %q", slug)
 		}
 
-		c.providers[id] = node
+		c.providers[ID] = node
 	}
 
 	return c, nil

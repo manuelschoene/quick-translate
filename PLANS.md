@@ -13,7 +13,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 
 | Service | Owns | Bound | Internal (`//wails:ignore`) |
 |---|---|---|---|
-| `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(id)`, `Preferences`, `HistoryLimit` |
+| `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(ID)`, `Preferences`, `HistoryLimit` |
 | `provider` | Catalog, current translator | `Providers()`, `Current()`, `Select(ID)` | `Translator()`, `Fetcher(ID)`, `OnChange(hook)` |
 | `language` | The `Collection`: lists, preferences, source, target, detected | `Options()`, `Selection()`, `SetSource`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(tag)` |
 | `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
@@ -101,13 +101,13 @@ actions := system.Actions{
   `repository=<name>` and the migration `step=migration`.
 - **Repositories** are concrete types that return `models`; no generated type leaves `store`. `NewHistory()`
   and `NewLanguage()` carry `//wails:ignore` and return nil before `ServiceStartup`.
-  - `History`: `Append(*t)` sets ID and creation time, `Previous(id, window)`, `Next(id)`, `Latest()`,
-    `HasPrevious(id, window)`, `HasNext(id)`. A translation that is not stored yet (ID 0) has no previous one;
+  - `History`: `Append(*t)` sets ID and creation time, `Previous(ID, window)`, `Next(ID)`, `Latest()`,
+    `HasPrevious(ID, window)`, `HasNext(ID)`. A translation that is not stored yet (ID 0) has no previous one;
     the caller steps back through `Latest()` instead.
-  - `Language`: `Get(id)` returns the languages, empty when none are stored. `Put(id, langs)` replaces the
+  - `Language`: `Get(ID)` returns the languages, empty when none are stored. `Put(ID, langs)` replaces the
     provider's rows, records now as the fetch time and deletes the tags neither a provider nor the history
-    references, in one transaction. `FetchedAt(ids)` returns the fetch time of each given provider; one missing
-    from the map was never fetched. `Delete(id)` deletes the provider's languages and the orphaned tags, but
+    references, in one transaction. `FetchedAt(IDs)` returns the fetch time of each given provider; one missing
+    from the map was never fetched. `Delete(ID)` deletes the provider's languages and the orphaned tags, but
     keeps the `providers` row and its fetch time.
   - `Provider`: removed together with `models.Provider`, which only carried the fetch time. Part 2 brings the
     repository back for the settings and for deleting a provider's row.
@@ -202,14 +202,14 @@ replaced inside `provider` *(done)*; `language` and `core` do not build until th
 
 | Consumer | Reads |
 |---|---|
-| `provider` | `DefaultProvider`, `Providers`, `Provider(id)` |
+| `provider` | `DefaultProvider`, `Providers`, `Provider(ID)` |
 | `language` | `Preferences` |
 | `history` | `HistoryLimit` |
 
 Provider configuration goes through a decoder, because a Go method cannot be generic:
 
 ```go
-func (s *Service) Provider(id models.ProviderID) (decode func(into any) error, err error)
+func (s *Service) Provider(ID models.ProviderID) (decode func(into any) error, err error)
 
 decode, err := s.config.Provider(models.DeepL)
 instance := provider.NewDeepl()
