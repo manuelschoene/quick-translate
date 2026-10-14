@@ -14,7 +14,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 | Service | Owns | Bound | Internal (`//wails:ignore`) |
 |---|---|---|---|
 | `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(id)`, `Preferences`, `HistoryLimit` |
-| `provider` | Catalog, current slug and instance | `Providers()`, `Current()`, `Select(slug)` | `Instance()`, `OnChange(hook)` |
+| `provider` | Catalog, current translator | `Providers()`, `Current()`, `Select(ID)` | `Translator()`, `Fetcher(ID)`, `OnChange(hook)` |
 | `language` | The `Collection`: lists, preferences, source, target, detected | `Options()`, `Selection()`, `SetSource`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(tag)` |
 | `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
 | `history` | Limit, cursor | `Navigation()`, `Previous()`, `Next()` | `Latest()` |
@@ -36,7 +36,7 @@ models · system                                   (bottom, unchanged)
 store        → system, models
 config       → system
 provider     → config
-language     → store, config            ← provider reports switches through a hook
+language     → store, config, provider  ← provider reports switches through a hook; `Fetcher(ID)` takes no lock
 translation  → provider, language, clipboard   ← history records through a hook
 history      → store, config, provider, language, translation
 ```
@@ -165,14 +165,19 @@ internal/store/migrations/
 
 Postponed until the other packages are moved onto the services. `internal/models` holds `ProviderID` with its slug
 mapping, `Language` and `Translation`; the stored `Provider` is removed *(done)*. The old `Provider` interface was
-removed, so `provider`, `language` and `core` do not build until it has a new home. `LanguagePreferences` moved
-to `config` *(done)*.
+replaced inside `provider` *(done)*; `language` and `core` do not build until they move onto the services.
+`LanguagePreferences` moved to `config` *(done)*.
 
 - **Constraint:** `ProviderID` must stay in a package `store/db` can import without a cycle; `store` itself is
   not one (`store → db → store`).
 - **Constraint:** `Language` must not come from `store/db` while `provider` produces it and `db` imports the
   package `ProviderID` lives in.
-- **Candidates:** the `Provider` interface to `provider` or its consumers.
+- **Provider interface** *(done)*: providers implement the unexported `provider.implementation`
+  (`translate(ctx, Request) (Result, error)`, `languages(ctx)`) and get one row in `registry`. Consumers get two
+  immutable wrappers: `*Translator` (the current provider, swapped on `Select`) and `*Fetcher` (built on demand
+  for any configured provider). Neither takes a lock, so requests never run under the provider lock and several
+  fetchers can run at once. The package hands every provider the shared HTTP client with the request timeout.
+  Settings are decoded through the config decoder and validated when a provider is built.
 
 ## Files (`internal/system`) - Done except the notification file
 
@@ -226,21 +231,25 @@ err = decode(instance)
 
 ## Provider switch
 
-`provider.Select(slug)` runs as one sequence while holding the provider lock:
+`provider.Select(ID)` runs as one sequence while holding the provider lock:
 
-1. **Build the provider** through the config decoder. If this fails, stop.
-2. **Build the language list:** call `language`'s hook with the slug, the instance and whether it detects. This
-   may fetch over the network. If it fails, `language` keeps its state and emits nothing, and the hook returns
-   the error.
+1. **Build the provider** through the config decoder and list the configured providers for the event. If either
+   fails, stop.
+2. **Build the language list:** call the hooks, in the order they were added, with a `*Fetcher`, whose `Info()`
+   carries the ID, the name and whether it detects. The first error stops the switch. This may fetch over the
+   network. If it fails, `language` keeps its state and emits
+   nothing, and the hook returns the error.
 3. **Commit and emit only if both succeeded:**
    - `language` swaps its `Collection` and emits `languages:changed`, then `selection:changed`.
-   - After the hook returns, `provider` swaps its slug and instance and emits `provider:changed`.
+   - After the hook returns, `provider` swaps its translator and emits `provider:changed` *(done)*.
 
-`Current()` and `Instance()` wait while a switch is running; that is accepted in exchange for consistency.
+`Current()` and `Translator()` wait while a switch is running; that is accepted in exchange for consistency.
+`Fetcher(ID)` never waits: the background refresh builds one per stale provider from `FetchedAt` and may run them
+concurrently.
 
-A translation reads `provider.Instance()` and `language.Snapshot()` separately. The snapshot carries the slug
-its `Collection` was built for.
-- If the two slugs differ, it reads both again. The second read waits for the switch to finish.
+A translation reads `provider.Translator()` and `language.Snapshot()` separately. The snapshot carries the ID
+its `Collection` was built for, the translator carries it in `Info()`.
+- If the two IDs differ, it reads both again. The second read waits for the switch to finish.
 - `Collection` drops its `provider` field, which is set but never read.
 
 ## Translation and history

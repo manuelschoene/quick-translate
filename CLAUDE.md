@@ -167,12 +167,14 @@ main.go → cli → system
 config · history · language · core · transport · cli → system   (a *FileService, handed in)
 ```
 
-- **models** — plain structs (`Translation`, `Language`, `LanguagePreferences`) and the `Provider`
-  interface. Has no dependencies; every other package speaks in these types.
-- **provider** — one file per translation service plus a registry: `All()` maps slug → "supports
-  language detection". Adding a provider means: implement `models.Provider`, add the slug constant and
-  the `All()` entry, and add a case to `buildProvider` in `internal/core/provider.go`. Provider structs
-  carry their own `yaml` tags and are filled by `config.LoadProvider`.
+- **models** — `ProviderID` with its slug mapping and the plain structs `Translation` and `Language`. Has no
+  dependencies; every other package speaks in these types.
+- **provider** — one file per translation service plus a `registry` (name, detection, build function).
+  Adding a provider means: add the `models.ProviderID` and its slug, write a file implementing the unexported
+  `implementation` interface with a settings struct that is decoded and validated in its build function, and
+  add the `registry` row. The package hands every provider the shared HTTP client and timeout. `Service` hands
+  out immutable `*Translator` (current provider) and `*Fetcher` (any configured provider) values, which are
+  used without a lock.
 - **language** — `Collection` holds the current source/target/detected tags plus the provider's language
   lists, built through `NewBuilder()`. Tags are BCP 47 and validated with `golang.org/x/text/language`.
   `LanguageDetectionTag` (`"auto"`) is a virtual tag: it is never part of the language lists, and a
