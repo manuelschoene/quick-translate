@@ -35,3 +35,8 @@ func integrate(_ *FileService) error {
 
 // No configuration needed for non-Linux systems, as the default logger is already suitable.
 func configureLogger() {}
+
+// Answers with ErrUnsupported, as the locale is not detected on this operating system yet.
+func locale() (string, error) {
+	return "", ErrUnsupported
+}

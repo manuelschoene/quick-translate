@@ -4,7 +4,7 @@
 
 `core.Core` owns every piece of state behind one mutex, and `transport.Adapter` answers every call with DTOs
 that bundle all of it. Both go away. Each piece of state gets one owning service that talks to the frontend
-through its own bindings and events. The packages underneath (`language.Collection`, `clipboard`, the providers,
+through its own bindings and events. The packages underneath (the language matching, `clipboard`, the providers,
 the history SQL) keep their logic; only their wiring and interfaces change.
 
 ## Services
@@ -15,7 +15,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 |---|---|---|---|
 | `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(ID)`, `Preferences`, `HistoryLimit` |
 | `provider` | Catalog, current translator | `Providers()`, `Current()`, `Select(ID)` | `Translator()`, `Fetcher(ID)`, `OnChange(hook)` |
-| `language` | The `Collection`: lists, preferences, source, target, detected | `Options()`, `Selection()`, `SetSource`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(tag)` |
+| `language` | The catalog (lists, preferences) and the selection | `Options()`, `Selection()`, `SetSource`, `Detect`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(ID, tag)` |
 | `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
 | `history` | Limit, cursor | `Navigation()`, `Previous()`, `Next()` | `Latest()` |
 | `store` | SQLite connection, repositories | – | `NewHistory()`, `NewLanguage()` |
@@ -36,7 +36,7 @@ models · system                                   (bottom, unchanged)
 store        → system, models
 config       → system
 provider     → config
-language     → store, config, provider  ← provider reports switches through a hook; `Fetcher(ID)` takes no lock
+language     → store, config, provider, system  ← provider reports switches through a hook; `Fetcher(ID)` takes no lock
 translation  → provider, language, clipboard   ← history records through a hook
 history      → store, config, provider, language, translation
 ```
@@ -124,15 +124,18 @@ actions := system.Actions{
   - `provider_languages (provider_id, tag, name, source, target, stable)`, deleted with its provider.
   - Timestamps are Unix seconds (`INTEGER`), turned into `time.Time` in the repositories.
 
-  `language` keeps the TTL and the background refresh. The TTL marks a list as stale, never as deleted:
+  `language` keeps the TTL (7 days) and the background refresh. The TTL marks a list as stale, never as deleted:
   - Deleting by age would save a few rows, but force a blocking fetch when a provider is used again after a long
     time, and leave nothing to show when that start is offline.
-  - `language` asks `FetchedAt` for the configured providers, keeps serving the cached lists and refreshes the
-    stale ones in the background through `Put`. A failed refresh keeps the old list.
+  - *(done)* `language.refresher` runs in one goroutine, started in `language.ServiceStartup`. It makes a pass at
+    start and one per provider switch, so a process that is never restarted still refreshes. Triggers coalesce.
+  - A pass asks `FetchedAt` for the configured providers, fetches the stale and the never-fetched ones, at most 3
+    at a time, and stores each through `Put`. A failed or empty fetch keeps the old list.
+  - A refreshed list of the current provider replaces the running catalog, keeping the selection where it can.
   - Languages are deleted only with their provider (Part 2). A provider removed from `config.yml` keeps its rows
     until then; no reconcile at startup is planned.
-  - The refresh is tracked with a `sync.WaitGroup`, and `language.ServiceShutdown` waits for it before the store
-    closes.
+  - The refresher runs on the application context, which Wails cancels before any `ServiceShutdown`;
+    `language.ServiceShutdown` waits for it to end before the store closes.
 - **History:** `translations` references the provider and both tags. `source_tag` is the detected language when
   `detection` is set and NULL if it could not be resolved; without detection it is required.
 - **SQL with `sqlc`:**
@@ -165,7 +168,7 @@ internal/store/migrations/
 
 Postponed until the other packages are moved onto the services. `internal/models` holds `ProviderID` with its slug
 mapping, `Language` and `Translation`; the stored `Provider` is removed *(done)*. The old `Provider` interface was
-replaced inside `provider` *(done)*; `language` and `core` do not build until they move onto the services.
+replaced inside `provider` *(done)*; `core` does not build until it is removed.
 `LanguagePreferences` moved to `config` *(done)*.
 
 - **Constraint:** `ProviderID` must stay in a package `store/db` can import without a cycle; `store` itself is
@@ -236,9 +239,9 @@ err = decode(instance)
 1. **Build the provider** through the config decoder and list the configured providers for the event. If either
    fails, stop.
 2. **Build the language list:** call the hooks, in the order they were added, with a `*Fetcher`, whose `Info()`
-   carries the ID, the name and whether it detects. The first error stops the switch. This may fetch over the
-   network. If it fails, `language` keeps its state and emits
-   nothing, and the hook returns the error.
+   carries the ID, the name and whether it detects. The first error stops the switch. `language` reads the stored
+   list and fetches over the network only if none is stored, so a switch to a known provider works offline. If it
+   fails, `language` keeps its state and emits nothing, and the hook returns the error.
 3. **Commit and emit only if both succeeded:**
    - `language` swaps its `Collection` and emits `languages:changed`, then `selection:changed`.
    - After the hook returns, `provider` swaps its translator and emits `provider:changed` *(done)*.
@@ -250,7 +253,10 @@ concurrently.
 A translation reads `provider.Translator()` and `language.Snapshot()` separately. The snapshot carries the ID
 its `Collection` was built for, the translator carries it in `Info()`.
 - If the two IDs differ, it reads both again. The second read waits for the switch to finish.
-- `Collection` drops its `provider` field, which is set but never read.
+- *(done)* The `Collection` and its builder are replaced by an immutable catalog per provider, which carries the
+  ID and builds its matchers once, and a `Selection` value. Detection is a boolean (`Selection.Detection`), no
+  longer the virtual `"auto"` tag. Every rule maps a selection to a new one, so a failure changes nothing.
+- The locale the target language falls back to comes from `system.IntegrationService.Locale()`, read once.
 
 ## Translation and history
 
@@ -269,7 +275,7 @@ for the first load.
 | Event | Payload | Emitted by |
 |---|---|---|
 | `languages:changed` | `language.Options{Detection, PreferredSource, PreferredTarget, SourceLanguages, TargetLanguages}` | language, on a rebuild |
-| `selection:changed` | `language.Selection{Source, Target, DetectedSource}` | language |
+| `selection:changed` | `language.Selection{Detection, Source, Target, Detected}` | language |
 | `provider:changed` | `provider.State{Current, Providers}` | provider |
 | `translation:started` / `:changed` / `:failed` | –, the translation, the message | translation |
 | `history:changed` | `history.Navigation{HasPrevious, HasNext}` | history |

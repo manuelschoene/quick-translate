@@ -175,11 +175,15 @@ config · history · language · core · transport · cli → system   (a *FileS
   add the `registry` row. The package hands every provider the shared HTTP client and timeout. `Service` hands
   out immutable `*Translator` (current provider) and `*Fetcher` (any configured provider) values, which are
   used without a lock.
-- **language** — `Collection` holds the current source/target/detected tags plus the provider's language
-  lists, built through `NewBuilder()`. Tags are BCP 47 and validated with `golang.org/x/text/language`.
-  `LanguageDetectionTag` (`"auto"`) is a virtual tag: it is never part of the language lists, and a
-  provider is asked to detect when the source tag is empty. Setting one language may switch or drop the
-  other when they collide, so callers must read both back after a change.
+- **language** — `Service` owns an immutable `catalog` per provider (the lists, preferred first, the resolved
+  preferences and one `golang.org/x/text/language` matcher per list, built once) and the `Selection`. Detection
+  is the boolean `Selection.Detection`, not a tag. The rules in `selection.go` are pure functions from one
+  selection to the next, so a failed change leaves nothing half done; setting one language may switch or drop
+  the other when they collide, which is why every change emits the whole selection. The lists come from
+  `store.LanguageRepository`: the provider hook reads the stored list and fetches only if there is none, and
+  `refresher` refreshes stale and never-fetched lists in the background (7-day TTL, at most 3 requests at
+  once) at startup and after every provider switch. The target language falls back to the locale
+  `system.IntegrationService.Locale()` reports.
 - **core** — the single stateful owner (provider, collection, current translation, history) behind one
   `sync.Mutex`. Every exported method locks; unexported helpers are documented "Requires the lock to be
   held" and must be called with it. State swaps happen atomically (`c.providerSlug, c.provider, c.langs
@@ -218,15 +222,17 @@ config · history · language · core · transport · cli → system   (a *FileS
   the rows every operating system shares, while `entries()` is defined once per operating system:
   `files_linux.go` adds the desktop entry, the icon, the autostart and the KWin rule file, and `unsupported.go`
   adds nothing, which leaves a not-yet-supported operating system with working per-user paths and no integration.
-  `integrate`/`Purge`/`Removals`/`Status`/`configureLogger` are likewise defined per operating system rather than
-  wrapped — only the three the command line calls are exported, the integration is reached through its service.
-  On Linux each sits next to the shared file it belongs to (`files_linux.go`, `integration_linux.go`,
-  `logger_linux.go`); the `_linux` suffix is the build constraint. `kde_linux.go` holds the KWin rule merge, the
-  only thing the application writes that cannot ship as a file in the release archive, and asks KWin to reload
-  it over the session bus through `godbus`. `integration.go` is the Wails service that integrates, registers
-  the autostart, binds the global shortcut and puts the application into the tray at startup, and the place a
-  settings view will reach for to switch any of them; it is the one file of the package that knows Wails. None
-  of its failures are returned: a non-nil return from `ServiceStartup` takes the whole application down.
+  `integrate`/`Purge`/`Removals`/`Status`/`configureLogger`/`locale` are likewise defined per operating system
+  rather than wrapped — only the three the command line calls are exported, the integration is reached through
+  its service, and the locale through `IntegrationService.Locale()` (`locale.go`). On Linux each sits next to the
+  shared file it belongs to (`files_linux.go`, `integration_linux.go`, `logger_linux.go`, `locale_linux.go`,
+  which reads `LC_ALL`, `LC_MESSAGES` and `LANG` in libc's order); the `_linux` suffix is the build constraint.
+  `kde_linux.go` holds the KWin rule merge, the only thing the application writes that cannot ship as a file in
+  the release archive, and asks KWin to reload it over the session bus through `godbus`. `integration.go` is the
+  Wails service that integrates, registers the autostart, binds the global shortcut and puts the application into
+  the tray at startup, and the place a settings view will reach for to switch any of them; it is the one file of
+  the package that knows Wails. None of its failures are returned: a non-nil return from `ServiceStartup` takes
+  the whole application down.
   The tray is the only thing on screen while the application runs hidden. It is a StatusNotifierItem over
   the session bus on Linux, which Plasma shows natively and GNOME only with the AppIndicator extension, and
   Wails answers a missing host through the error handler rather than a failure. Its icon has to be a PNG —
