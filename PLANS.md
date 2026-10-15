@@ -16,6 +16,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 | `config` | Access to the configuration | – | `DefaultProvider`, `Providers`, `Provider(ID)`, `Preferences`, `HistoryLimit` |
 | `provider` | Catalog, current translator | `Providers()`, `Current()`, `Select(ID)` | `Translator()`, `Fetcher(ID)`, `OnChange(hook)` |
 | `language` | The catalog (lists, preferences) and the selection | `Options()`, `Selection()`, `SetSource`, `Detect`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(ID, tag)` |
+| `clipboard` | The backend (program or library), selected at startup | – | `Read(ctx)`, `Write(ctx, text)` |
 | `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
 | `history` | Limit, cursor | `Navigation()`, `Previous()`, `Next()` | `Latest()` |
 | `store` | SQLite connection, repositories | – | `NewHistory()`, `NewLanguage()` |
@@ -37,6 +38,8 @@ store        → system, models
 config       → system
 provider     → config
 language     → store, config, provider, system  ← provider reports switches through a hook; `Fetcher(ID)` takes no lock
+clipboard    → –                                ← no lock around reads and writes: the programs are separate
+                                                  processes, and the library serializes its own calls
 translation  → provider, language, clipboard   ← history records through a hook
 history      → store, config, provider, language, translation
 ```
@@ -60,7 +63,8 @@ actions := system.Actions{
 
 ## Startup, errors and logging - Half done
 
-- **Registration order:** notifications, store, config, provider, language, translation, history, integration.
+- **Registration order:** notifications, store, config, provider, language, clipboard, translation, history,
+  integration.
   Wails starts services in this order and shuts them down in reverse.
 - **Logger:** *(done)* `system.NewLogger()` configures the `log` package once per operating system (Linux:
   stderr, no timestamp, because the journal adds its own) and returns `slog.Default()`, so every call answers the
@@ -73,8 +77,8 @@ actions := system.Actions{
   - Configured before `application.New` and not in a service: Wails logs `Platform Info` from `application.New`
     and some errors from `Run` before any `ServiceStartup` (verified in a production build).
   - Scope: new and moved code logs through it. Untouched packages keep `fmt.Printf` for now.
-- **`ServiceStartup` never returns an error**, except in the store and in `config`: a non-nil return shuts the app
-  down.
+- **`ServiceStartup` never returns an error**, except in the store, `config` and `clipboard` (no program to reach
+  the clipboard is installed): a non-nil return shuts the app down.
   - It runs on the main OS thread before the GTK loop, so it must not wait for anything that needs the loop.
 - **Fatal failure** (store cannot open or migrate, config file broken or just written): send a desktop
   notification through Wails' `services/notifications` and return the error from `ServiceStartup`, without
