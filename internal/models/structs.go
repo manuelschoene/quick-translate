@@ -13,12 +13,12 @@ type Language struct {
 }
 
 type Translation struct {
-	ID          int64
-	Text        string
-	Translation string
-	CreatedAt   time.Time
-	ProviderID  ProviderID
-	SourceTag   *string
-	TargetTag   string
-	Detection   bool
+	ID          int64      `json:"id"`
+	Text        string     `json:"text"`
+	Translation string     `json:"translation"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	ProviderID  ProviderID `json:"providerId"`
+	SourceTag   *string    `json:"sourceTag"` // Detected language while detecting; nil if it was not resolved
+	TargetTag   string     `json:"targetTag"`
+	Detection   bool       `json:"detection"`
 }

@@ -270,6 +270,15 @@ its `Collection` was built for, the translator carries it in `Info()`.
 - The cursor (today `core.translation.ID`) moves into `history`.
 - **A history step** calls provider, language, translation and history in that order, and each emits its own
   events. `history.Latest()` works the same way, which replaces the `restored` event.
+- *(done)* `translation` holds two locks. `work` serializes translations from `translation:started` to
+  `:changed`/`:failed`; `mutex` guards the current translation and the hooks and is never held during a request,
+  so `Current()` and `Show()` never wait for the network. Lock order: `work` → provider, language, the hooks →
+  `mutex`. The hooks run after `translation:changed`, holding `work` but not `mutex`, so `history` may call
+  `Show()` under its own lock.
+- *(done)* An unchanged repeat (same text, provider, detection, source and target) answers with the current
+  translation: no request, no hook, but still `translation:started` and `:changed`.
+- *(done)* While detecting, the stored `SourceTag` is the detected language as `language` resolved it, read back
+  through `Snapshot()` after `SetDetected`; nil if it is unknown.
 
 ## Events
 
