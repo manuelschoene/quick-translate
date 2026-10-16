@@ -277,6 +277,12 @@ its `Collection` was built for, the translator carries it in `Info()`.
   `Show()` under its own lock.
 - *(done)* An unchanged repeat (same text, provider, detection, source and target) answers with the current
   translation: no request, no hook, but still `translation:started` and `:changed`.
+- *(done)* `history` holds the limit, the repository and the cursor: the ID of the shown entry, 0 when the shown
+  translation is not stored (nothing shown yet, or `Append` failed). From 0, `Previous()` steps to the newest
+  entry and there is no next one. A step holds the history lock while it calls `provider.Select`,
+  `language.Adopt` and `translation.Show`; a failing `Select` (the provider is no longer configured) is logged
+  and the entry shown anyway, so one entry cannot block the navigation. A failed `Append` is logged, never
+  returned.
 - *(done)* While detecting, the stored `SourceTag` is the detected language as `language` resolved it, read back
   through `Snapshot()` after `SetDetected`; nil if it is unknown.
 
