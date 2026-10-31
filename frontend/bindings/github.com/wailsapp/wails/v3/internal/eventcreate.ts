@@ -8,19 +8,32 @@ import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as transport$0 from "../../../../../quick-translate/internal/transport/models.js";
+import * as language$0 from "../../../../../quick-translate/internal/language/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as models$0 from "../../../../../quick-translate/internal/models/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as provider$0 from "../../../../../quick-translate/internal/provider/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as translation$0 from "../../../../../quick-translate/internal/translation/models.js";
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
-        "restored": $$createType1,
-        "translation": $$createType3,
+        "history:changed": $$createType0,
+        "languages:changed": $$createType1,
+        "provider:changed": $$createType2,
+        "selection:changed": $$createType3,
+        "translation:changed": $$createType4,
     }));
 }
 
 // Private type creation functions
-const $$createType0 = transport$0.FullDto.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = transport$0.TranslationDto.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
+const $$createType0 = translation$0.Navigation.createFrom;
+const $$createType1 = language$0.Options.createFrom;
+const $$createType2 = provider$0.State.createFrom;
+const $$createType3 = language$0.Selection.createFrom;
+const $$createType4 = models$0.Translation.createFrom;
 
 configure();
