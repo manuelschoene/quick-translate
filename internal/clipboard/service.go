@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"quick-translate/internal/system"
 	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -21,20 +22,31 @@ type backend interface {
 }
 
 type Service struct {
-	logger *slog.Logger
+	notifier *system.Notifier
+	logger   *slog.Logger
 
 	mutex   sync.Mutex
 	current backend // Nil before ServiceStartup
 }
 
 // Creates the service. The backend is selected in ServiceStartup.
-func New(logger *slog.Logger) *Service {
-	return &Service{logger: logger.With("category", "clipboard")}
+func New(notifier *system.Notifier, logger *slog.Logger) *Service {
+	return &Service{notifier: notifier, logger: logger.With("category", "clipboard")}
 }
 
 // Selects the backend. Fails if the clipboard cannot be reached, on Linux with ErrNoTool if no program is
-// installed, which shuts the application down.
-func (s *Service) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
+// installed, which notifies the user and shuts the application down.
+func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	if err := s.start(ctx); err != nil {
+		s.notifier.StartupFailed(err)
+		return err
+	}
+
+	return nil
+}
+
+// Selects the backend once.
+func (s *Service) start(_ context.Context) error {
 	b, err := newBackend()
 	if err != nil {
 		return err

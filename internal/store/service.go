@@ -17,22 +17,34 @@ import (
 var migrations embed.FS
 
 type Service struct {
-	conn    *sql.DB
-	files   *system.Files
-	logger  *slog.Logger
-	queries *db.Queries
+	conn     *sql.DB
+	files    *system.Files
+	notifier *system.Notifier
+	logger   *slog.Logger
+	queries  *db.Queries
 }
 
 // Creates a new store service instance. The service will not be connected to the database yet. Connection is established on application startup.
-func New(f *system.Files, l *slog.Logger) *Service {
+func New(f *system.Files, n *system.Notifier, l *slog.Logger) *Service {
 	return &Service{
-		files:  f,
-		logger: l.With("category", "store"),
+		files:    f,
+		notifier: n,
+		logger:   l.With("category", "store"),
 	}
 }
 
-// Connects to the database and initializes the queries. Ensures the database file exists. Shuts down the application if the connection fails. Called by Wails on application startup.
+// Connects to the database and initializes the queries. Ensures the database file exists. Shuts down the application if the connection fails, after notifying the user. Called by Wails on application startup.
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	if err := s.start(ctx); err != nil {
+		s.notifier.StartupFailed(err)
+		return err
+	}
+
+	return nil
+}
+
+// Opens and migrates the database. Closes the connection again if the migration fails.
+func (s *Service) start(ctx context.Context) error {
 	path, err := s.createOrGetDatabaseFile()
 	if err != nil {
 		return fmt.Errorf("database: %w", err)

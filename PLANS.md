@@ -82,6 +82,8 @@ actions := system.Actions{
   logging it. Wails then shuts down every service already started, and `main.go` logs the error from `app.Run()`
   once and exits non-zero.
   - The notifier connects to D-Bus only in its own startup, which is why it is registered first.
+  - *(done)* `system.Notifier` wraps the Wails service, so none of its methods are bound; it never fails its own
+    startup and sends nothing without a session bus. `store`, `config` and `clipboard` call `StartupFailed(err)`.
   - A failure inside `application.New` can only reach the log.
 - **"Not configured yet" is not fatal** once the file exists. `provider` answers with the configuration error until
   a default provider can be built. `language` and `translation` fail through it with the same message.
@@ -183,7 +185,7 @@ replaced inside `provider` *(done)*; `core` does not build until it is removed.
   fetchers can run at once. The package hands every provider the shared HTTP client with the request timeout.
   Settings are decoded through the config decoder and validated when a provider is built.
 
-## Files (`internal/system`) - Done except the notification file
+## Files (`internal/system`) - Done
 
 - **`system.AppName = "Quick Translate"`**, next to `ApplicationID`. *(done)*
   - `main.go` takes `Options.Name` and the window title from it, and `TrayLabel` becomes `AppName`.
@@ -198,7 +200,7 @@ replaced inside `provider` *(done)*; `core` does not build until it is removed.
   `os.UserConfigDir()/<Options.Name>`, a path that cannot be configured. It creates the directory `0755` and
   the file `0644`.
   - Fix: `system` creates the directory with `0700` and the file with `0600` (content `{}`) before the service
-    starts, and Wails keeps those modes. *(open: lands with the notifications service in step 5)*
+    starts, and Wails keeps those modes. *(done: `system.Notifier`)*
 - **`Remove` checks rows instead of names.** *(done)* A directory is removed only if its path is the path of a
   row marked `directory`.
 

@@ -32,11 +32,14 @@ whether I consider it a vulnerability, and credit you in the release notes unles
   `~/.local/share/quick-translate/history.db`. `history.max_entries: 0` turns it off, and
   `quick-translate purge` deletes it.
 - **Cache:** `~/.cache/quick-translate` only holds the languages a provider supports.
+- **Notifications:** `~/.config/Quick Translate/notification-categories.json` is written by the notification
+  service on every shutdown and holds no data of yours.
 - **Permissions:** every directory above is created with mode `0700`, every file with `0600`.
 - **Clipboard:** read and written through an external program (`wl-paste`/`wl-copy`, `xclip` or `xsel`),
   looked up on `PATH`.
-- **Session bus:** nothing of yours goes over it. The application owns two names and, under Wayland, holds
-  one portal session:
+- **Session bus:** nothing of yours goes over it, except the error message of a failed start, which can name a
+  file path and is sent to the notification daemon (`org.freedesktop.Notifications`). The application owns two
+  names and, under Wayland, holds one portal session:
   - `io.github.manuelschoene.QuickTranslate.SingleInstance`, so that a second start reaches the running one
   - `org.kde.StatusNotifierItem-<pid>-1` for the tray icon
   - a session with the desktop portal for the global shortcut

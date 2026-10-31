@@ -10,21 +10,33 @@ import (
 )
 
 type Service struct {
-	config *config
-	files  *system.Files
-	logger *slog.Logger
+	config   *config
+	files    *system.Files
+	notifier *system.Notifier
+	logger   *slog.Logger
 }
 
 // Creates a new config service instance. The config file is read on application startup.
-func New(files *system.Files, logger *slog.Logger) *Service {
+func New(files *system.Files, notifier *system.Notifier, logger *slog.Logger) *Service {
 	return &Service{
-		files:  files,
-		logger: logger.With("category", "config"),
+		files:    files,
+		notifier: notifier,
+		logger:   logger.With("category", "config"),
 	}
 }
 
-// Creates the config file from the template, or reads and validates the existing one. Shuts down the application if the template was just written or the file is broken. Called by Wails on application startup.
+// Creates the config file from the template, or reads and validates the existing one. Shuts down the application if the template was just written or the file is broken, after notifying the user. Called by Wails on application startup.
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	if err := s.start(ctx); err != nil {
+		s.notifier.StartupFailed(err)
+		return err
+	}
+
+	return nil
+}
+
+// Writes the template if the file is missing, otherwise reads and validates it.
+func (s *Service) start(_ context.Context) error {
 	path := s.files.Path(system.Settings)
 
 	created, err := s.files.EnsureFile(system.Settings, []byte(fileTemplate))

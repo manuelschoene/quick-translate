@@ -126,6 +126,11 @@ Versions come from `release-please-config.json`, never by hand:
   which cleanup tools may empty. It holds every translated text.
 - Language cache (gob, 7-day TTL, one file per provider): `~/.cache/quick-translate/translations/<slug>.gob`
   — one row, `system.Languages`, addressed with the file name as a part.
+- Notification categories: `~/.config/Quick Translate/notification-categories.json`
+  (`system.NotificationCategories`) — written by Wails' notification service on every shutdown into
+  `os.UserConfigDir()/<Options.Name>`, a path that cannot be configured. `system.Notifier` creates it first
+  (`{}`, `0600` in a `0700` directory), because Wails keeps the modes of what already exists. The notifier is
+  registered first and sends a notification when `store`, `config` or `clipboard` fail their startup.
 
 Every one of those directories is `0700` and every file inside them `0600`, and none of it is written in the
 package that reads the file: the path, the permissions and the purge all come from the one table in
