@@ -12,7 +12,7 @@
 		<img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-blue.svg">
 	</a>
 	<a href="https://go.dev">
-		<img alt="Go" src="https://img.shields.io/badge/Go-1.26.8-00ADD8?logo=go&logoColor=white">
+		<img alt="Go" src="https://img.shields.io/badge/Go-1.27.3-00ADD8?logo=go&logoColor=white">
 	</a>
 	<a href="https://vuejs.org">
 		<img alt="Vue.js" src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js">
@@ -65,14 +65,14 @@ cp -r share ~/.local/
 
 Build requirements, besides the packages above:
 
-- **Go** >= 1.26.8 and **Bun** >= 1.3.14
+- **Go** >= 1.27.3 and **Bun** >= 1.3.14
 - **gcc** and **pkgconf**, for the cgo bindings to GTK and WebKit
 - The development packages of **GTK4** and **WebKitGTK 6.0** (`libgtk-4-dev libwebkitgtk-6.0-dev` on Debian and Ubuntu)
 - **UPX** >= 5.2.0, which compresses release builds. `DEV=true` or `UPX=false` skip it.
 - The **Wails CLI** at the version in `go.mod`, **sqlc** 1.31.1, which generates the database code, and **Task**:
 
 ```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.23
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
 go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 go install github.com/go-task/task/v3/cmd/task@latest
 ```

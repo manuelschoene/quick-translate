@@ -275,8 +275,9 @@ Three paths reach the frontend, and all of them must stay supported:
    `FullDto`, because a stored translation brings its own provider and languages with it. An empty or
    disabled history is printed and swallowed; the window is open either way.
 
-The four event names are duplicated as constants in `internal/transport/adapter.go` and
-`frontend/src/services/events.ts`; change both together.
+Event names are declared once, as constants in each service's `service.go` registered with
+`application.RegisterEvent`. The bindings generator writes them to `frontend/bindings/events/index.ts`
+(`@events`), which the composables import, so a renamed event fails the type check instead of going quiet.
 
 Mutation calls that change languages or the provider re-translate the current text before returning
 (`retranslate()`), which is why they answer with state rather than nothing. Provider changes and history
@@ -335,7 +336,8 @@ own call arrive, so never read state right after an `await`.
   (`Button`, `Panel`, `LoadingTextarea`, and the toolbars, which forward it down to `Panel`); one that
   is never styled from the outside declares none. Templates address props as `props.x`, never bare.
 - Import aliases (kept in sync in `vite.config.ts` **and** `tsconfig.json`): `@`, `@assets`, `@comp`,
-  `@lay`, `@lib`, `@services`, `@use`, `@views`, `@bind`.
+  `@lay`, `@lib`, `@services`, `@use`, `@views`, `@bind`, and `@events` (the generated event name constants,
+  a single module rather than a directory).
 
 ## Conventions
 
