@@ -2,8 +2,9 @@
 // `--wails-draggable` and what applies `--default-contextmenu`. Importing it here keeps both working
 // regardless of which other module happens to import something from it.
 import '@wailsio/runtime';
+import { router } from '@/router';
 import { createApp } from 'vue';
 import App from './App.vue';
 import './style.css';
 
-createApp(App).mount('#app');
+createApp(App).use(router).mount('#app');

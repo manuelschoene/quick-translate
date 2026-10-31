@@ -284,7 +284,7 @@ steps return `FullDto`, because the selectable languages belong to the provider.
 
 ## Frontend architecture
 
-Vue 3 `<script setup>` + Tailwind v4 (no vue-router, no Pinia). Data flows one way:
+Vue 3 `<script setup>` + Tailwind v4 + vue-router (hash history, no Pinia). Data flows one way:
 
 ```
 views / components          only ever talk to composables
@@ -301,8 +301,11 @@ own call arrive, so never read state right after an `await`.
 
 - `src/state.ts` — the `reactive` state groups, the only mutable state in the app. Each group is written by
   its composable, read by components through it.
-- `src/router.ts` — `ViewName`, the `ViewName → Component` table and `route()`. The single door to
-  navigation; there is no vue-router. `component` is a `ref` the App renders with `<component :is>`.
+- `src/router.ts` — the route table, `ViewName` (derived from its names) and `route()`, a typed
+  `router.push({ name })` that also works outside of components (event handlers, `report()`). The App renders
+  `<RouterView>`. The history is `createWebHashHistory()`: a real path would be requested from the asset
+  server, which reserves `/wails/*` for the runtime and does not fall back to `index.html`, while the hash
+  never leaves the webview.
 - `composables/use*.ts` — the only thing views and components import. Each hands out read-only refs
   of its state group, the computeds derived from it (labels, sorted lists, resolved providers) and
   the actions that change it. The returned object is built once at module level and handed out as

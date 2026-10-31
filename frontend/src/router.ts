@@ -2,32 +2,35 @@ import ErrorView from '@views/ErrorView.vue';
 import SelectionSourceView from '@views/SelectionSourceView.vue';
 import SelectionTargetView from '@views/SelectionTargetView.vue';
 import TranslationView from '@views/TranslationView.vue';
-import { shallowRef, type Component } from 'vue';
-
-export type ViewName = 'translation' | 'error' | 'sourceSelection' | 'targetSelection';
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
 
 /**
- * The only place that decides which component a view name stands for. Typed against `ViewName`, so a
- * name without a component does not compile.
+ * Every view by name. The paths live in the hash and never reach the asset server, so they cannot collide with
+ * the `/wails/*` paths Wails serves.
  */
-const routes: Record<ViewName, Component> = {
-    translation: TranslationView,
-    error: ErrorView,
-    sourceSelection: SelectionSourceView,
-    targetSelection: SelectionTargetView,
-};
+const views = [
+    { name: 'translation', path: '/', component: TranslationView },
+    { name: 'error', path: '/error', component: ErrorView },
+    { name: 'sourceSelection', path: '/source', component: SelectionSourceView },
+    { name: 'targetSelection', path: '/target', component: SelectionTargetView },
+] as const satisfies readonly RouteRecordRaw[];
+
+export type ViewName = (typeof views)[number]['name'];
 
 /**
- * The view that is on screen. It starts on the translation, which is what the window is opened for,
- * and there is no state without one. Shallow, because a component definition is held as it is and
- * not turned into a reactive proxy.
+ * The router of the window. Hash history, because a real path would be requested from the asset server, which
+ * neither falls back to `index.html` nor leaves `/wails/*` to the frontend. An unknown path leads to the
+ * translation.
  */
-export const component = shallowRef<Component>(TranslationView);
+export const router = createRouter({
+    history: createWebHashHistory(),
+    routes: [...views, { path: '/:pathMatch(.*)*', redirect: '/' }],
+});
 
 /**
- * Takes the user to the given view. The component is mounted anew and not kept around, so a view
- * always starts fresh.
+ * Takes the user to the given view. Usable outside of components, such as from the event handlers. Going to the
+ * view already shown does nothing.
  */
 export function route(name: ViewName): void {
-    component.value = routes[name];
+    void router.push({ name });
 }
