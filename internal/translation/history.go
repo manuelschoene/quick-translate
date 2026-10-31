@@ -1,11 +1,10 @@
-package history
+package translation
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"quick-translate/internal/models"
 	"quick-translate/internal/store"
@@ -13,18 +12,11 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Emitted with Navigation after the cursor moved or a translation was recorded.
-const EventChanged = "history:changed"
-
-func init() {
-	application.RegisterEvent[Navigation](EventChanged)
-}
-
 var (
-	ErrDisabled   = errors.New("history: disabled, set history.max_entries above zero")
-	ErrNoPrevious = errors.New("history: no previous translation")
-	ErrNoNext     = errors.New("history: no next translation")
-	ErrEmpty      = errors.New("history: empty")
+	ErrHistoryDisabled = errors.New("translation: history disabled, set history.max_entries above zero")
+	ErrNoPrevious      = errors.New("translation: no previous translation")
+	ErrNoNext          = errors.New("translation: no next translation")
+	ErrHistoryEmpty    = errors.New("translation: history empty")
 )
 
 type Navigation struct {
@@ -42,59 +34,11 @@ type configuration interface {
 	HistoryLimit() int
 }
 
-// The part of the provider service the service uses.
-type providers interface {
-	Select(ID models.ProviderID) error
-}
-
-// The part of the language service the service uses.
-type languages interface {
-	Adopt(entry models.Translation) error
-}
-
-// The part of the translation service the service uses.
-type translations interface {
-	Show(entry models.Translation)
-	OnTranslated(hook func(models.Translation))
-}
-
-type Service struct {
-	app          *application.App
-	store        storage
-	config       configuration
-	providers    providers
-	languages    languages
-	translations translations
-	logger       *slog.Logger
-
-	mutex  sync.Mutex
-	repo   *store.HistoryRepository // Nil before ServiceStartup and while disabled
-	limit  int64                    // How many of the newest entries can be stepped through
-	cursor int64                    // ID of the shown entry; 0 if the shown translation is not stored
-}
-
-// Creates the service and registers its hook with the translation service.
-func New(app *application.App, store storage, config configuration, providers providers, languages languages, translations translations, logger *slog.Logger) *Service {
-	s := &Service{
-		app:          app,
-		store:        store,
-		config:       config,
-		providers:    providers,
-		languages:    languages,
-		translations: translations,
-		logger:       logger.With("category", "history"),
-	}
-
-	translations.OnTranslated(s.record)
-
-	return s
-}
-
-// Reads the limit and takes the repository. Never fails; without a store the history stays disabled.
+// Reads the history limit and takes the repository. Never fails; without a store the history stays disabled.
 func (s *Service) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
 	limit := s.config.HistoryLimit()
 	if limit <= 0 {
-		s.logger.Info("disabled")
+		s.logger.Info("history disabled")
 		return nil
 	}
 
@@ -104,19 +48,19 @@ func (s *Service) ServiceStartup(_ context.Context, _ application.ServiceOptions
 		return nil
 	}
 
-	s.mutex.Lock()
+	s.history.Lock()
 	s.repo, s.limit = repo, int64(limit)
-	s.mutex.Unlock()
+	s.history.Unlock()
 
-	s.logger.Info("enabled", slog.Int("limit", limit))
+	s.logger.Info("history enabled", slog.Int("limit", limit))
 
 	return nil
 }
 
-// Returns whether there is a translation to step to. Both are false while disabled.
+// Returns whether there is a translation to step to. Both are false while the history is disabled.
 func (s *Service) Navigation(ctx context.Context) (Navigation, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.history.Lock()
+	defer s.history.Unlock()
 
 	if s.repo == nil {
 		return Navigation{}, nil
@@ -162,11 +106,11 @@ func (s *Service) Latest() error {
 
 // Finds an entry and shows it with its provider and languages. Nothing changes if no entry is found.
 func (s *Service) step(ctx context.Context, find func(*store.HistoryRepository, int64) (models.Translation, error)) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.history.Lock()
+	defer s.history.Unlock()
 
 	if s.repo == nil {
-		return ErrDisabled
+		return ErrHistoryDisabled
 	}
 
 	entry, err := find(s.repo, s.cursor)
@@ -183,16 +127,19 @@ func (s *Service) step(ctx context.Context, find func(*store.HistoryRepository, 
 		s.logger.Warn("adopt languages of entry", slog.Int64("id", entry.ID), slog.Any("error", err))
 	}
 
-	s.translations.Show(entry)
+	s.mutex.Lock()
+	s.show(entry)
+	s.mutex.Unlock()
+
 	s.move(ctx, entry.ID)
 
 	return nil
 }
 
-// The translation hook: stores the translation and moves the cursor to it.
+// Stores a new translation and moves the cursor to it. Requires work to be held.
 func (s *Service) record(t models.Translation) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.history.Lock()
+	defer s.history.Unlock()
 
 	if s.repo == nil {
 		return
@@ -209,7 +156,7 @@ func (s *Service) record(t models.Translation) {
 	s.move(ctx, t.ID)
 }
 
-// Sets the cursor and emits the navigation. Requires the lock to be held.
+// Sets the cursor and emits the navigation. Requires history to be held.
 func (s *Service) move(ctx context.Context, cursor int64) {
 	s.cursor = cursor
 
@@ -218,10 +165,10 @@ func (s *Service) move(ctx context.Context, cursor int64) {
 		s.logger.Warn("read navigation", slog.Any("error", err))
 	}
 
-	s.app.Event.Emit(EventChanged, navigation)
+	s.app.Event.Emit(EventHistoryChanged, navigation)
 }
 
-// Reads whether there is an entry before and after the cursor. Requires the lock to be held and the repository
+// Reads whether there is an entry before and after the cursor. Requires history to be held and the repository
 // to be set.
 func (s *Service) navigation(ctx context.Context) (Navigation, error) {
 	// An unstored translation has nothing after it, and the newest entry before it.
@@ -232,7 +179,7 @@ func (s *Service) navigation(ctx context.Context) (Navigation, error) {
 		}
 
 		if err != nil {
-			return Navigation{}, fmt.Errorf("history: %w", err)
+			return Navigation{}, fmt.Errorf("translation: history: %w", err)
 		}
 
 		return Navigation{HasPrevious: true}, nil
@@ -240,21 +187,21 @@ func (s *Service) navigation(ctx context.Context) (Navigation, error) {
 
 	previous, err := s.repo.HasPrevious(ctx, s.cursor, s.limit)
 	if err != nil {
-		return Navigation{}, fmt.Errorf("history: %w", err)
+		return Navigation{}, fmt.Errorf("translation: history: %w", err)
 	}
 
 	next, err := s.repo.HasNext(ctx, s.cursor)
 	if err != nil {
-		return Navigation{}, fmt.Errorf("history: %w", err)
+		return Navigation{}, fmt.Errorf("translation: history: %w", err)
 	}
 
 	return Navigation{HasPrevious: previous, HasNext: next}, nil
 }
 
-// Returns the newest entry; ErrEmpty if there is none.
+// Returns the newest entry; ErrHistoryEmpty if there is none.
 func latest(ctx context.Context, repo *store.HistoryRepository) (models.Translation, error) {
 	entry, err := repo.Latest(ctx)
-	return entry, lookup(err, ErrEmpty)
+	return entry, lookup(err, ErrHistoryEmpty)
 }
 
 // Replaces store.ErrNotFound with the sentinel and prefixes any other error.
@@ -265,6 +212,6 @@ func lookup(err error, missing error) error {
 	case errors.Is(err, store.ErrNotFound):
 		return missing
 	default:
-		return fmt.Errorf("history: %w", err)
+		return fmt.Errorf("translation: history: %w", err)
 	}
 }

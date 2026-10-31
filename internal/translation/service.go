@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -12,20 +11,23 @@ import (
 	"quick-translate/internal/language"
 	"quick-translate/internal/models"
 	"quick-translate/internal/provider"
+	"quick-translate/internal/store"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 const (
-	EventStarted = "translation:started" // Emitted without data when a translation begins
-	EventChanged = "translation:changed" // Emitted with the translation that is shown now
-	EventFailed  = "translation:failed"  // Emitted with the message when a started translation fails
+	EventStarted        = "translation:started" // Emitted without data when a translation begins
+	EventChanged        = "translation:changed" // Emitted with the translation that is shown now
+	EventFailed         = "translation:failed"  // Emitted with the message when a started translation fails
+	EventHistoryChanged = "history:changed"     // Emitted with Navigation after the cursor moved or a translation was recorded.
 )
 
 func init() {
 	application.RegisterEvent[application.Void](EventStarted)
 	application.RegisterEvent[models.Translation](EventChanged)
 	application.RegisterEvent[string](EventFailed)
+	application.RegisterEvent[Navigation](EventHistoryChanged)
 }
 
 var (
@@ -38,12 +40,14 @@ var (
 // The part of the provider service the service uses.
 type providers interface {
 	Translator() (*provider.Translator, error)
+	Select(ID models.ProviderID) error
 }
 
 // The part of the language service the service uses.
 type languages interface {
 	Snapshot() (language.Snapshot, error)
 	SetDetected(ID models.ProviderID, tag string)
+	Adopt(entry models.Translation) error
 }
 
 // The part of the clipboard service the service uses.
@@ -52,24 +56,33 @@ type clipboard interface {
 	Write(ctx context.Context, text string) error
 }
 
+// Lock order: work → history → provider, language → mutex.
 type Service struct {
 	app       *application.App
+	store     storage
+	config    configuration
 	providers providers
 	languages languages
 	clipboard clipboard
 	logger    *slog.Logger
 
-	work sync.Mutex // Serializes translations, from started to changed or failed. Taken before mutex.
+	work sync.Mutex // Serializes translations, from started to changed or failed.
 
-	mutex   sync.Mutex // Guards the fields below, never a request.
+	history sync.Mutex               // Guards the history fields below.
+	repo    *store.HistoryRepository // Nil before ServiceStartup and while the history is disabled
+	limit   int64                    // How many of the newest entries can be stepped through
+	cursor  int64                    // ID of the shown entry; 0 if the shown translation is not stored
+
+	mutex   sync.Mutex // Guards the current translation, never a request.
 	current *models.Translation
-	hooks   []func(models.Translation)
 }
 
 // Creates the service.
-func New(app *application.App, providers providers, languages languages, clipboard clipboard, logger *slog.Logger) *Service {
+func New(app *application.App, store storage, config configuration, providers providers, languages languages, clipboard clipboard, logger *slog.Logger) *Service {
 	return &Service{
 		app:       app,
+		store:     store,
+		config:    config,
 		providers: providers,
 		languages: languages,
 		clipboard: clipboard,
@@ -124,27 +137,6 @@ func (s *Service) TranslateSelection() {
 	_ = s.run(s.app.Context(), s.selection)
 }
 
-// Shows a stored translation without calling the hooks.
-//
-//wails:ignore
-func (s *Service) Show(entry models.Translation) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.show(entry)
-}
-
-// Adds a hook every new translation is reported to, in the order they were added. A hook must not call back
-// into the service except through Show.
-//
-//wails:ignore
-func (s *Service) OnTranslated(hook func(models.Translation)) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.hooks = append(s.hooks, hook)
-}
-
 // Emits started, translates the text and ends with exactly one changed or failed. Requires work to be held.
 func (s *Service) run(ctx context.Context, text func(context.Context) (string, error)) error {
 	s.app.Event.Emit(EventStarted)
@@ -159,14 +151,11 @@ func (s *Service) run(ctx context.Context, text func(context.Context) (string, e
 
 	s.mutex.Lock()
 	s.show(t)
-	hooks := slices.Clone(s.hooks)
 	s.mutex.Unlock()
 
 	// After changed, so the history reports after the translation.
 	if fresh {
-		for _, hook := range hooks {
-			hook(t)
-		}
+		s.record(t)
 	}
 
 	return nil

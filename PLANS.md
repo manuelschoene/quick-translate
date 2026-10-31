@@ -17,8 +17,7 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 | `provider` | Catalog, current translator | `Providers()`, `Current()`, `Select(ID)` | `Translator()`, `Fetcher(ID)`, `OnChange(hook)` |
 | `language` | The catalog (lists, preferences) and the selection | `Options()`, `Selection()`, `SetSource`, `Detect`, `SetTarget`, `Switch` | `Snapshot()`, `Adopt(entry)`, `SetDetected(ID, tag)` |
 | `clipboard` | The backend (program or library), selected at startup | – | `Read(ctx)`, `Write(ctx, text)` |
-| `translation` | Current translation, clipboard | `Current()`, `Retranslate()`, `Copy()` | `TranslateSelection()`, `Show(entry)`, `OnTranslated(hook)` |
-| `history` | Limit, cursor | `Navigation()`, `Previous()`, `Next()` | `Latest()` |
+| `translation` | Current translation, clipboard, history limit and cursor | `Current()`, `Retranslate()`, `Copy()`, `Navigation()`, `Previous()`, `Next()` | `TranslateSelection()`, `Latest()` |
 | `store` | SQLite connection, repositories | – | `NewHistory()`, `NewLanguage()` |
 | `system.IntegrationService` | unchanged | – | – |
 
@@ -40,8 +39,7 @@ provider     → config
 language     → store, config, provider, system  ← provider reports switches through a hook; `Fetcher(ID)` takes no lock
 clipboard    → –                                ← no lock around reads and writes: the programs are separate
                                                   processes, and the library serializes its own calls
-translation  → provider, language, clipboard   ← history records through a hook
-history      → store, config, provider, language, translation
+translation  → store, config, provider, language, clipboard   ← also owns the history
 ```
 
 - Calls follow the arrows. A hook is a function registered at construction, so the package that reports
@@ -57,14 +55,13 @@ show := func() { window.Show(); window.Center() } // the *WebviewWindow register
 
 actions := system.Actions{
     Translate: func() { show(); translations.TranslateSelection() },
-    Open:      func() { show(); history.Latest() },
+    Open:      func() { show(); translations.Latest() },
 }
 ```
 
 ## Startup, errors and logging - Half done
 
-- **Registration order:** notifications, store, config, provider, language, clipboard, translation, history,
-  integration.
+- **Registration order:** notifications, store, config, provider, language, clipboard, translation, integration.
   Wails starts services in this order and shuts them down in reverse.
 - **Logger:** *(done)* `system.NewLogger()` configures the `log` package once per operating system (Linux:
   stderr, no timestamp, because the journal adds its own) and returns `slog.Default()`, so every call answers the
@@ -211,7 +208,7 @@ replaced inside `provider` *(done)*; `core` does not build until it is removed.
 |---|---|
 | `provider` | `DefaultProvider`, `Providers`, `Provider(ID)` |
 | `language` | `Preferences` |
-| `history` | `HistoryLimit` |
+| `translation` | `HistoryLimit` |
 
 Provider configuration goes through a decoder, because a Go method cannot be generic:
 
@@ -264,25 +261,23 @@ its `Collection` was built for, the translator carries it in `Info()`.
 
 ## Translation and history
 
-- `translation` reports every new translation through `OnTranslated`. `history` appends it, moves the cursor
-  and emits `history:changed`.
-- `history` shows a stored entry by calling `translation.Show(entry)`, which does not fire the hook.
-- The cursor (today `core.translation.ID`) moves into `history`.
-- **A history step** calls provider, language, translation and history in that order, and each emits its own
-  events. `history.Latest()` works the same way, which replaces the `restored` event.
-- *(done)* `translation` holds two locks. `work` serializes translations from `translation:started` to
-  `:changed`/`:failed`; `mutex` guards the current translation and the hooks and is never held during a request,
-  so `Current()` and `Show()` never wait for the network. Lock order: `work` → provider, language, the hooks →
-  `mutex`. The hooks run after `translation:changed`, holding `work` but not `mutex`, so `history` may call
-  `Show()` under its own lock.
+- *(done)* One package: the history lives in `translation` (`history.go`), so no hook connects them. After
+  `translation:changed`, `run()` records a new translation itself, which appends it, moves the cursor and emits
+  `history:changed`. Showing a stored entry does not record it.
+- The cursor (today `core.translation.ID`) moves into `translation`.
+- **A history step** calls provider and language, then shows the entry and moves the cursor, and each emits its
+  own events. `Latest()` works the same way, which replaces the `restored` event.
+- *(done)* `translation` holds three locks. `work` serializes translations from `translation:started` to
+  `:changed`/`:failed`; `history` guards the limit, the repository and the cursor; `mutex` guards the current
+  translation and is never held during a request, so `Current()` never waits for the network. Lock order:
+  `work` → `history` → provider, language → `mutex`. Recording runs holding `work` but not `mutex`.
 - *(done)* An unchanged repeat (same text, provider, detection, source and target) answers with the current
-  translation: no request, no hook, but still `translation:started` and `:changed`.
-- *(done)* `history` holds the limit, the repository and the cursor: the ID of the shown entry, 0 when the shown
-  translation is not stored (nothing shown yet, or `Append` failed). From 0, `Previous()` steps to the newest
-  entry and there is no next one. A step holds the history lock while it calls `provider.Select`,
-  `language.Adopt` and `translation.Show`; a failing `Select` (the provider is no longer configured) is logged
-  and the entry shown anyway, so one entry cannot block the navigation. A failed `Append` is logged, never
-  returned.
+  translation: no request, nothing recorded, but still `translation:started` and `:changed`.
+- *(done)* The cursor is the ID of the shown entry, 0 when the shown translation is not stored (nothing shown
+  yet, or `Append` failed). From 0, `Previous()` steps to the newest entry and there is no next one. A step
+  holds the history lock while it calls `provider.Select` and `language.Adopt` and shows the entry; a failing
+  `Select` (the provider is no longer configured) is logged and the entry shown anyway, so one entry cannot block
+  the navigation. A failed `Append` is logged, never returned.
 - *(done)* While detecting, the stored `SourceTag` is the detected language as `language` resolved it, read back
   through `Snapshot()` after `SetDetected`; nil if it is unknown.
 
@@ -297,7 +292,7 @@ for the first load.
 | `selection:changed` | `language.Selection{Detection, Source, Target, Detected}` | language |
 | `provider:changed` | `provider.State{Current, Providers}` | provider |
 | `translation:started` / `:changed` / `:failed` | –, the translation, the message | translation |
-| `history:changed` | `history.Navigation{HasPrevious, HasNext}` | history |
+| `history:changed` | `translation.Navigation{HasPrevious, HasNext}` | translation |
 
 - **Emission order is part of the contract** (the table's order). Whatever a later event is resolved against
   comes first, so a selected tag always finds its name in the list.
@@ -394,7 +389,7 @@ Each consequence is a hook that `config` calls on the owning service:
 | Provider auth key | Invalidate that provider's language cache |
 | Provider removed | `LanguageRepository.Delete`, then the provider's row through `ProviderRepository` |
 | Default provider | `provider.Select` |
-| `history.max_entries` 0 → >0 | `history` starts recording |
+| `history.max_entries` 0 → >0 | `translation` starts recording |
 | Language preferences | `language` resolves them again; the frontend retranslates |
 
 ## Entry points
