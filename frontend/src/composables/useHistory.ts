@@ -1,6 +1,7 @@
 import { historyState } from '@/state';
 import type { Navigation as NavigationModel } from '@bind/translation';
 import { Navigation, Next, Previous } from '@bind/translation/service';
+import { HistoryChanged } from '@events';
 import { on } from '@lib/events';
 import { readonlyRefs } from '@lib/reactivity';
 import { request } from '@services/request';
@@ -18,7 +19,7 @@ export function useHistory(): typeof exposed {
  * Listens to the changes of the history position. Returns the unsubscribe.
  */
 export function listen(): () => void {
-    return on('history:changed', apply);
+    return on(HistoryChanged, apply);
 }
 
 /**

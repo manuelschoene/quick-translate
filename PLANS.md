@@ -305,7 +305,9 @@ for the first load.
 - **Per service on both sides:**
   - Go: name constants in `service.go`, registered with `application.RegisterEvent` in `init()`. It is not done
     in the constructor, because `RegisterEvent` panics on a duplicate name.
-  - Frontend: the names live in the composable, which has a `listen()` that returns its own unsubscribe.
+  - Frontend: *(done)* the composables import the generated name constants from `@events`
+    (`bindings/events/index.ts`, written by the bindings generator since Wails 3.0.0) and each has a `listen()`
+    that returns its own unsubscribe.
 - **A typed `on()` helper in `lib/`** accepts only `keyof Events.CustomEvents`. `Events.On` accepts any string
   and silently turns `data` into `any`.
 

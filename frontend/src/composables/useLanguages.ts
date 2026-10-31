@@ -2,6 +2,7 @@ import { languageState } from '@/state';
 import type { Options as OptionsModel, Selection as SelectionModel } from '@bind/language';
 import { Detect, Options, Selection, SetSource, SetTarget, Switch } from '@bind/language/service';
 import { Language } from '@bind/models';
+import { LanguagesChanged, SelectionChanged } from '@events';
 import { on } from '@lib/events';
 import { readonlyRefs } from '@lib/reactivity';
 import { request } from '@services/request';
@@ -114,7 +115,7 @@ export function useLanguages(): typeof exposed {
  * name. Returns the unsubscribe.
  */
 export function listen(): () => void {
-    const offs = [on('languages:changed', applyOptions), on('selection:changed', applySelection)];
+    const offs = [on(LanguagesChanged, applyOptions), on(SelectionChanged, applySelection)];
 
     return () => {
         offs.forEach((off) => {

@@ -2,6 +2,7 @@ import { route } from '@/router';
 import { translationState } from '@/state';
 import type { Translation } from '@bind/models';
 import { Copy, Current, Retranslate } from '@bind/translation/service';
+import { TranslationChanged, TranslationFailed, TranslationStarted } from '@events';
 import { on } from '@lib/events';
 import { readonlyRefs } from '@lib/reactivity';
 import { report } from '@services/report';
@@ -22,17 +23,17 @@ export function useTranslation(): typeof exposed {
  */
 export function listen(): () => void {
     const offs = [
-        on('translation:started', () => {
+        on(TranslationStarted, () => {
             translationState.pending = true;
             route('translation');
         }),
-        on('translation:changed', (translation) => {
+        on(TranslationChanged, (translation) => {
             apply(translation);
             translationState.pending = false;
             route('translation');
         }),
         // The previous translation stays, to return to from the error view.
-        on('translation:failed', (message) => {
+        on(TranslationFailed, (message) => {
             translationState.pending = false;
             report(message);
         }),

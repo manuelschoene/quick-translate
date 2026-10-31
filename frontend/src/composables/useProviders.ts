@@ -2,6 +2,7 @@ import { providerState } from '@/state';
 import { ProviderID } from '@bind/models';
 import type { Info, State } from '@bind/provider';
 import { Current, Providers, Select } from '@bind/provider/service';
+import { ProviderChanged } from '@events';
 import { on } from '@lib/events';
 import { readonlyRefs } from '@lib/reactivity';
 import { Globe } from '@lucide/vue';
@@ -60,7 +61,7 @@ export function useProviders(): typeof exposed {
  * Listens to provider switches. Returns the unsubscribe.
  */
 export function listen(): () => void {
-    return on('provider:changed', apply);
+    return on(ProviderChanged, apply);
 }
 
 /**

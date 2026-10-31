@@ -13,7 +13,8 @@
             "@services/*": ["./src/services/*"],
             "@use/*": ["./src/composables/*"],
             "@views/*": ["./src/views/*"],
-            "@bind/*": ["./bindings/quick-translate/internal/*"]
+            "@bind/*": ["./bindings/quick-translate/internal/*"],
+            "@events": ["./bindings/events/index.ts"]
         },
         "allowImportingTsExtensions": true,
         "noEmit": true,
