@@ -41,9 +41,9 @@ Under Wayland, most desktops ask you to grant the shortcut and allow you to chan
 The binary answers a few commands on the command line:
 
 ```sh
-@APP_NAME@ --version   # the version this binary was built as
-@APP_NAME@ --status    # what the application has put where on your system
-@APP_NAME@ --help      # every command the binary understands
+@APP_NAME@ version   # the version this binary was built as
+@APP_NAME@ status    # what the application has put where on your system
+@APP_NAME@ help      # every command the binary understands
 ```
 
 ## Uninstall
@@ -51,7 +51,7 @@ The binary answers a few commands on the command line:
 ### Remove your files
 
 ```sh
-@APP_NAME@ --purge
+@APP_NAME@ purge
 ```
 
 Quit the application first. This removes everything it wrote for you: your configuration, your

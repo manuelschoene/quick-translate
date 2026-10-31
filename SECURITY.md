@@ -6,7 +6,7 @@ seriously all the same.
 ## Supported versions
 
 Only the latest release is supported. Fixes land on `main` and go out with the next release. Run
-`quick-translate --version` to see which build you have.
+`quick-translate version` to see which build you have.
 
 ## Reporting a vulnerability
 
@@ -17,7 +17,7 @@ Only the latest release is supported. Fixes land on `main` and go out with the n
   **[open a pull request](https://github.com/manuelschoene/quick-translate/pulls)**.
 
 Please include what an attacker could achieve, the steps to reproduce (with distribution, desktop and session
-type), the output of `quick-translate --version`, and a fix if you have one.
+type), the output of `quick-translate version`, and a fix if you have one.
 
 There is no guaranteed response time and no bug bounty. I will acknowledge your report, tell you honestly
 whether I consider it a vulnerability, and credit you in the release notes unless you prefer otherwise.
@@ -30,7 +30,7 @@ whether I consider it a vulnerability, and credit you in the release notes unles
   it, but anything running as your user can. Moving it into the OS keyring is planned.
 - **History:** every text you translated and its translation, stored **unencrypted** in
   `~/.local/share/quick-translate/history.db`. `history.max_entries: 0` turns it off, and
-  `quick-translate --purge` deletes it.
+  `quick-translate purge` deletes it.
 - **Cache:** `~/.cache/quick-translate` only holds the languages a provider supports.
 - **Permissions:** every directory above is created with mode `0700`, every file with `0600`.
 - **Clipboard:** read and written through an external program (`wl-paste`/`wl-copy`, `xclip` or `xsel`),

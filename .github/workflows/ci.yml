@@ -193,6 +193,6 @@ jobs:
           home=$(mktemp -d)
           export XDG_DATA_HOME="$home/data" XDG_CONFIG_HOME="$home/config" XDG_CACHE_HOME="$home/cache"
 
-          ./bin/quick-translate --version
-          ./bin/quick-translate --help
-          ./bin/quick-translate --status
+          ./bin/quick-translate version
+          ./bin/quick-translate help
+          ./bin/quick-translate status

@@ -98,13 +98,13 @@ scaffolds this.
 2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, `go vet`, `go test`,
    `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that `internal/store/db/` is current
    (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`), validates the desktop entry,
-   checks that `frontend/bindings/` is current and runs `--version`, `--help` and `--status` on the built binary.
+   checks that `frontend/bindings/` is current and runs `version`, `help` and `status` on the built binary.
 
 ## Reporting bugs
 
 [Open an issue](https://github.com/manuelschoene/quick-translate/issues/new/choose) with the bug report form.
 The desktop integration and the clipboard behave differently on nearly every setup, so the form asks for
-`--version`, `--status`, your distribution, desktop and session type. For security problems, read
+`version`, `status`, your distribution, desktop and session type. For security problems, read
 [SECURITY.md](SECURITY.md) first.
 
 ## License

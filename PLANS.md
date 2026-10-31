@@ -161,7 +161,7 @@ internal/store/migrations/
   back with the transaction (verified), so a failed migration is retried on the next start.
 - **Checked before running:** only `.sql` files named `<number>_<name>.sql`, starting at 1 with no gaps and no
   duplicates. Otherwise every start fails.
-- **A `user_version` above the newest file is refused**, with the hint to update or run `--purge`.
+- **A `user_version` above the newest file is refused**, with the hint to update or run `purge`.
 - **Up only, SQL only.** Go migrations get added to the engine only when a data migration needs one.
 - **No migration from before the store:** `0001` creates the schema from scratch.
 

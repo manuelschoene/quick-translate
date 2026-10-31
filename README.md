@@ -98,10 +98,12 @@ On Linux, the text is read from the *primary selection* (whatever is marked with
 The binary also answers a few commands:
 
 ```sh
-quick-translate --help      # every command
-quick-translate --status    # what is installed where
-quick-translate --version   # which build this is
+quick-translate help      # every command
+quick-translate status    # what is installed where
+quick-translate version   # which build this is
 ```
+
+`quick-translate help <command>` shows the flags of one command. The global flags go before the command: `-verbose` also shows what the application does in detail, `-silent` shows nothing but errors and questions (for example `quick-translate -silent status`).
 
 ## Configuration
 
@@ -140,8 +142,10 @@ provider:
 Quit Quick Translate first. To remove everything it wrote for you (configuration, history, cache, autostart entry and KWin rules), run the purge while the binary is still there. It lists what it removes and asks first:
 
 ```sh
-quick-translate --purge
+quick-translate purge
 ```
+
+`quick-translate purge -yes` removes everything without asking, for scripts.
 
 > [!CAUTION]
 > Purging cannot be undone. Your history and your configuration, auth keys included, are gone for good.
@@ -166,7 +170,7 @@ The popup asks for no title bar, to stay on top and to open centered. Under Wayl
 - show up in the task bar or the window switcher,
 - open somewhere other than the center of the screen.
 
-**KDE Plasma:** on every start, the application merges a window rule into `~/.config/kwinrulesrc` that removes the border, keeps the popup on top and hides it from the task bar, the pager and the window switcher. Your own rules are left untouched, and `quick-translate --purge` removes the rule again.
+**KDE Plasma:** on every start, the application merges a window rule into `~/.config/kwinrulesrc` that removes the border, keeps the popup on top and hides it from the task bar, the pager and the window switcher. Your own rules are left untouched, and `quick-translate purge` removes the rule again.
 
 **Other desktops** get no such rule yet. If the popup looks wrong on yours, please [open an issue](https://github.com/manuelschoene/quick-translate/issues/new/choose) with your desktop and session type.
 

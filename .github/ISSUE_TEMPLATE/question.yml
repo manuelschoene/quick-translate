@@ -21,6 +21,6 @@ body:
       label: Anything that helps answer it
       description: |
         Your distribution and desktop environment if the question is about installing or the shortcut, and
-        the output of `quick-translate --status` if it is about an installation that already exists.
+        the output of `quick-translate status` if it is about an installation that already exists.
     validations:
       required: false

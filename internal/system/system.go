@@ -13,7 +13,7 @@ const ApplicationID = "io.github.manuelschoene.QuickTranslate"
 const AppName = "Quick Translate"
 
 // Used for path creation and directory names
-var appSlug = strings.ToLower(strings.ReplaceAll(AppName, " ", "-"))
+var AppSlug = strings.ToLower(strings.ReplaceAll(AppName, " ", "-"))
 
 // The keys the application asks the desktop for.
 const Shortcut = "Super+Shift+T"

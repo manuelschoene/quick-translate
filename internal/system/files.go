@@ -301,15 +301,15 @@ func (e *entry) modeFor(path string) os.FileMode {
 
 // The entries every operating system shares, built from base directories. Operating systems that have different base directories must define their own entries() instead.
 func userEntries() []entry {
-	configRoot := filepath.Join(xdg.ConfigHome, appSlug)
-	dataRoot := filepath.Join(xdg.DataHome, appSlug)
+	configRoot := filepath.Join(xdg.ConfigHome, AppSlug)
+	dataRoot := filepath.Join(xdg.DataHome, AppSlug)
 	notificationsRoot := filepath.Join(xdg.ConfigHome, AppName)
 
 	return []entry{
 		{resource: ConfigRoot, name: "Configuration", path: configRoot, mode: 0700, category: data, directory: true},
 		{resource: DataRoot, name: "Application data", path: dataRoot, mode: 0700, category: data, directory: true},
 		{resource: NotificationRoot, name: "Notifications", path: notificationsRoot, mode: 0700, category: data, directory: true},
-		{resource: Database, path: filepath.Join(dataRoot, appSlug+".db"), mode: 0600, category: internal, parent: DataRoot},
+		{resource: Database, path: filepath.Join(dataRoot, AppSlug+".db"), mode: 0600, category: internal, parent: DataRoot},
 		{resource: Settings, path: filepath.Join(configRoot, "config.yml"), mode: 0600, category: internal, parent: ConfigRoot},
 		{resource: NotificationCategories, path: filepath.Join(notificationsRoot, "notification-categories.json"), mode: 0600, category: internal, parent: NotificationRoot},
 	}
