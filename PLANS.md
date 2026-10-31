@@ -19,12 +19,12 @@ Every service lives in `internal/<domain>/service.go` (bindings: `@bind/<domain>
 | `clipboard` | The backend (program or library), selected at startup | – | `Read(ctx)`, `Write(ctx, text)` |
 | `translation` | Current translation, clipboard, history limit and cursor | `Current()`, `Retranslate()`, `Copy()`, `Navigation()`, `Previous()`, `Next()` | `TranslateSelection()`, `Latest()` |
 | `store` | SQLite connection, repositories | – | `NewHistory()`, `NewLanguage()` |
-| `system.IntegrationService` | unchanged | – | – |
+| `system` | Desktop integration (autostart, shortcut, tray, KWin rules), locale | – | `Locale()` |
 
 - **Registration:** a type is registered with Wails only if the frontend calls it or it needs
   `ServiceStartup`/`ServiceShutdown`. Every exported method the frontend must not reach carries `//wails:ignore`.
   `store` and `config` are registered for their lifecycle only; `config` never exposes provider
-  configuration. `system.FileService` is not registered.
+  configuration. `system.Files` is not registered.
 - **No window service.** The frontend hides itself with `Window.Hide()` from `@wailsio/runtime` (verified).
   Showing stays in Go.
 - `core`, `transport`, the DTOs and `history.History` are removed.
@@ -69,7 +69,7 @@ actions := system.Actions{
   - Reason: Wails' production logger discards everything (`logger_prod.go`).
   - Inside the Wails lifecycle, everything logs through `app.Logger`. A service that does not hold the app is
     handed `app.Logger` by `main.go`.
-  - `system.NewFileService()` takes no logger; it calls `NewLogger()` itself, because the CLI builds one before
+  - `system.NewFiles()` takes no logger; it calls `NewLogger()` itself, because the CLI builds one before
     any app exists. The CLI's own output stays on `fmt`.
   - Configured before `application.New` and not in a service: Wails logs `Platform Info` from `application.New`
     and some errors from `Run` before any `ServiceStartup` (verified in a production build).
@@ -187,7 +187,7 @@ replaced inside `provider` *(done)*; `core` does not build until it is removed.
 
 - **`system.AppName = "Quick Translate"`**, next to `ApplicationID`. *(done)*
   - `main.go` takes `Options.Name` and the window title from it, and `TrayLabel` becomes `AppName`.
-  - The constant is what keeps `FileService` and the CLI free of the app instance.
+  - The constant is what keeps `Files` and the CLI free of the app instance.
 - **Rows:** *(done)*
   - `History` becomes `Database`.
   - `DataRoot` is reported as **"Application data"**.
@@ -257,7 +257,7 @@ its `Collection` was built for, the translator carries it in `Info()`.
 - *(done)* The `Collection` and its builder are replaced by an immutable catalog per provider, which carries the
   ID and builds its matchers once, and a `Selection` value. Detection is a boolean (`Selection.Detection`), no
   longer the virtual `"auto"` tag. Every rule maps a selection to a new one, so a failure changes nothing.
-- The locale the target language falls back to comes from `system.IntegrationService.Locale()`, read once.
+- The locale the target language falls back to comes from `system.Service.Locale()`, read once.
 
 ## Translation and history
 

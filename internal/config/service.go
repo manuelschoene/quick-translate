@@ -11,12 +11,12 @@ import (
 
 type Service struct {
 	config *config
-	files  *system.FileService
+	files  *system.Files
 	logger *slog.Logger
 }
 
 // Creates a new config service instance. The config file is read on application startup.
-func New(files *system.FileService, logger *slog.Logger) *Service {
+func New(files *system.Files, logger *slog.Logger) *Service {
 	return &Service{
 		files:  files,
 		logger: logger.With("category", "config"),

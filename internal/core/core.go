@@ -22,7 +22,7 @@ type clip interface {
 
 type Core struct {
 	clipboard    clip
-	files        *system.FileService
+	files        *system.Files
 	factory      func(slug string) (models.Provider, error)
 	history      *history.History
 	langs        *language.Collection
@@ -36,7 +36,7 @@ type Core struct {
 }
 
 // Creates a new core and initializes every service the application is built on. The providers the application knows about are matched against the ones configured in the configuration file, and the configuration is then used to set up the clipboard, the history and the languages of the default provider. Returns an error for every problem that stops the application from running, so a core that is returned is ready to translate.
-func NewCore(files *system.FileService) (*Core, error) {
+func NewCore(files *system.Files) (*Core, error) {
 	detection := provider.All()
 	known := slices.Sorted(maps.Keys(detection))
 

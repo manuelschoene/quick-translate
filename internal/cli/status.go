@@ -9,9 +9,9 @@ import (
 
 // Prints the application's integration into the system. Installed files and modifications are listed with their state, name and path.
 func printStatus(out interaction, _ string, _ []string) error {
-	files := system.NewFileService()
+	files := system.NewFiles()
 
-	report, err := system.Status(files)
+	report, err := files.Status()
 	if err != nil {
 		return err
 	}

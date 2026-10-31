@@ -25,13 +25,13 @@ const eventRestored = "restored"
 
 type Adapter struct {
 	app   *application.App
-	files *system.FileService
+	files *system.Files
 	core  *core.Core
 	mutex sync.Mutex
 }
 
 // Creates a new adapter and builds the core it works on. A core that can not be built does not stop the application: the reason is almost always a configuration the user has yet to finish, and a window that says so is worth more than a process that exits and is restarted by the service manager for as long as the session lasts. The adapter answers every call with that reason instead, and tries again on the next one.
-func NewAdapter(app *application.App, files *system.FileService) *Adapter {
+func NewAdapter(app *application.App, files *system.Files) *Adapter {
 	application.RegisterEvent[application.Void](eventTranslating)
 	application.RegisterEvent[*TranslationDto](eventTranslation)
 	application.RegisterEvent[string](eventError)

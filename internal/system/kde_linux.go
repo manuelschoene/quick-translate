@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -186,7 +187,7 @@ func ruleBody() []string {
 }
 
 // Ensures the window rules are part of the user's rule file. Earlier versions of the window rules are replaced. KWin is asked to be reconfigured for the rules to take effect without a logout. It is only written when the file does not have the rules installed. Returns an error if the rule file can not be read or written.
-func ensureRules(files *FileService) error {
+func ensureRules(files *Files) error {
 	content, err := files.Read(WindowRules)
 	if err != nil {
 		return err
@@ -203,16 +204,16 @@ func ensureRules(files *FileService) error {
 		return err
 	}
 
-	files.logger.Info(fmt.Sprintf("Merged the window rules of Quick Translate into '%s'.", files.Path(WindowRules)))
+	files.logger.Info("merged window rules", slog.String("path", files.Path(WindowRules)))
 	if err := reconfigureKWin(); err != nil {
-		files.logger.Warn(err.Error())
+		files.logger.Warn("reload window rules", slog.Any("error", err))
 	}
 
 	return nil
 }
 
 // Removes the window rules from the user's rule file and reports whether the file had to be changed, so the caller only tells KWin about it when something has moved. A rule file that does not exist means there is nothing to remove. Returns an error if the file can not be read or written.
-func removeRules(files *FileService) (bool, error) {
+func removeRules(files *Files) (bool, error) {
 	content, err := files.Read(WindowRules)
 	if err != nil || len(content) == 0 {
 		return false, err
@@ -233,7 +234,7 @@ func removeRules(files *FileService) (bool, error) {
 }
 
 // Reports whether the application's window rules are part of the user's rule file.
-func rulesInstalled(files *FileService) bool {
+func rulesInstalled(files *Files) bool {
 	content, err := files.Read(WindowRules)
 	if err != nil || len(content) == 0 {
 		return false
@@ -246,7 +247,7 @@ func rulesInstalled(files *FileService) bool {
 func reconfigureKWin() error {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
-		return fmt.Errorf("Could not reach the session bus to reload the window rules: %w", err)
+		return fmt.Errorf("system: connect session bus: %w", err)
 	}
 	defer conn.Close()
 
@@ -262,7 +263,7 @@ func reconfigureKWin() error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("Could not ask KWin to reload the window rules: %w", err)
+		return fmt.Errorf("system: reconfigure kwin: %w", err)
 	}
 
 	return nil

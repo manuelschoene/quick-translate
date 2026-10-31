@@ -18,13 +18,13 @@ var migrations embed.FS
 
 type Service struct {
 	conn    *sql.DB
-	files   *system.FileService
+	files   *system.Files
 	logger  *slog.Logger
 	queries *db.Queries
 }
 
 // Creates a new store service instance. The service will not be connected to the database yet. Connection is established on application startup.
-func New(f *system.FileService, l *slog.Logger) *Service {
+func New(f *system.Files, l *slog.Logger) *Service {
 	return &Service{
 		files:  f,
 		logger: l.With("category", "store"),

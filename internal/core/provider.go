@@ -61,7 +61,7 @@ func (c *Core) setProvider(slug string) error {
 }
 
 // Creates the provider for the given slug and fills it with its section of the configuration file. Returns an error if the slug is not implemented or the configuration can not be read.
-func buildProvider(files *system.FileService, slug string) (models.Provider, error) {
+func buildProvider(files *system.Files, slug string) (models.Provider, error) {
 	switch slug {
 	case provider.SlugDeepl:
 		return decodeProvider(files, slug, provider.NewDeepl())
@@ -71,7 +71,7 @@ func buildProvider(files *system.FileService, slug string) (models.Provider, err
 }
 
 // Reads the configuration of the given provider into the instance and returns it. The instance is returned by value, so a provider that was handed out can not be reconfigured through the core. Returns an error if the provider is not configured in the configuration file.
-func decodeProvider[T models.Provider](files *system.FileService, slug string, instance *T) (models.Provider, error) {
+func decodeProvider[T models.Provider](files *system.Files, slug string, instance *T) (models.Provider, error) {
 	if err := config.LoadProvider(files, slug, instance); err != nil {
 		return nil, err
 	}

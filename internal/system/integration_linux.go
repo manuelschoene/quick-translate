@@ -6,7 +6,7 @@ import (
 )
 
 // Integrates with the part of the system the user owns. For KDE Plasma, window rules are merged into KWin's settings. For other desktops, there is nothing to integrate yet. Returns an error if the rule file cannot be read or written.
-func integrate(files *FileService) error {
+func integrate(files *Files) error {
 	if !isKDE() {
 		return nil
 	}

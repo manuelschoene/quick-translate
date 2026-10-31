@@ -12,7 +12,7 @@ import (
 )
 
 // Manages file operations and abstracts the paths of the running operating systems
-type FileService struct {
+type Files struct {
 	table  []entry
 	logger *slog.Logger
 }
@@ -56,15 +56,15 @@ const (
 )
 
 // Returned if the requested resource is not available on the running operating system.
-var errNoRow = errors.New("Quick Translate does not know where to keep one of its files on this operating system.")
+var errNoRow = errors.New("system: resource has no path on this operating system")
 
 // Creates a new file service configured with the paths for the running operating system. Resolves the base paths once as they do not change.
-func NewFileService() *FileService {
-	return &FileService{table: entries(), logger: NewLogger()}
+func NewFiles() *Files {
+	return &Files{table: entries(), logger: NewLogger().With("category", "system")}
 }
 
 // Returns the location of a resource with the given parts appended. Returns an empty path for a non-existing resource on the running operating system.
-func (f *FileService) Path(r Resource, parts ...string) string {
+func (f *Files) Path(r Resource, parts ...string) string {
 	row := f.row(r)
 	if row == nil {
 		return ""
@@ -74,7 +74,7 @@ func (f *FileService) Path(r Resource, parts ...string) string {
 }
 
 // Reports whether a resource is in place. A path that can not be read at all counts as missing.
-func (f *FileService) Exists(r Resource, parts ...string) bool {
+func (f *Files) Exists(r Resource, parts ...string) bool {
 	path := f.Path(r, parts...)
 	if len(path) == 0 {
 		return false
@@ -86,7 +86,7 @@ func (f *FileService) Exists(r Resource, parts ...string) bool {
 }
 
 // Reads a resource. A file that does not exist is answered as empty without error. Returns an error on read-failure.
-func (f *FileService) Read(r Resource, parts ...string) ([]byte, error) {
+func (f *Files) Read(r Resource, parts ...string) ([]byte, error) {
 	row := f.row(r)
 	if row == nil {
 		return nil, errNoRow
@@ -100,14 +100,14 @@ func (f *FileService) Read(r Resource, parts ...string) ([]byte, error) {
 			return nil, nil
 		}
 
-		return nil, row.failure("read", path, err)
+		return nil, fmt.Errorf("system: read file: %w", err)
 	}
 
 	return content, nil
 }
 
 // Writes a resource with targeted permissions while creating missing directories to it. Returns an error on write-failure.
-func (f *FileService) Write(r Resource, content []byte, parts ...string) error {
+func (f *Files) Write(r Resource, content []byte, parts ...string) error {
 	row := f.row(r)
 	if row == nil {
 		return errNoRow
@@ -120,14 +120,14 @@ func (f *FileService) Write(r Resource, content []byte, parts ...string) error {
 	}
 
 	if err := os.WriteFile(path, content, row.modeFor(path)); err != nil {
-		return row.failure("write", path, err)
+		return fmt.Errorf("system: write file: %w", err)
 	}
 
 	return nil
 }
 
 // Creates the directories to a resource on demand. If the directory already exists, nothing is done. Does not change permissions of existing directories.
-func (f *FileService) EnsureDirectory(r Resource, parts ...string) error {
+func (f *Files) EnsureDirectory(r Resource, parts ...string) error {
 	row := f.row(r)
 	if row == nil {
 		return errNoRow
@@ -136,14 +136,14 @@ func (f *FileService) EnsureDirectory(r Resource, parts ...string) error {
 	path := f.Path(r, parts...)
 
 	if err := os.MkdirAll(path, row.mode); err != nil {
-		return fmt.Errorf("Could not create the directory '%s': %w", path, err)
+		return fmt.Errorf("system: create directory: %w", err)
 	}
 
 	return nil
 }
 
 // Creates the file on demand. For an existing file, narrows the permissions of the path and returns true. For a missing file, the content is written and false is returned. Returns an error if the file can not be written.
-func (f *FileService) EnsureFile(r Resource, content []byte, parts ...string) (bool, error) {
+func (f *Files) EnsureFile(r Resource, content []byte, parts ...string) (bool, error) {
 	if !f.Exists(r, parts...) {
 		return true, f.Write(r, content, parts...)
 	}
@@ -158,7 +158,7 @@ func (f *FileService) EnsureFile(r Resource, content []byte, parts ...string) (b
 }
 
 // Narrows the permissions of a resource to the targeted ones. A path that is narrow enough is not modified. Failing to narrow reports the error and continues, as the application can still run.
-func (f *FileService) Narrow(r Resource, parts ...string) {
+func (f *Files) Narrow(r Resource, parts ...string) {
 	row := f.row(r)
 	if row == nil {
 		return
@@ -178,22 +178,22 @@ func (f *FileService) Narrow(r Resource, parts ...string) {
 	}
 
 	if err := os.Chmod(path, mode); err != nil {
-		f.logger.Warn(fmt.Sprintf("Could not narrow the permissions of '%s': %v", path, err))
+		f.logger.Warn("narrow permissions", slog.String("path", path), slog.Any("error", err))
 		return
 	}
 
-	f.logger.Info(fmt.Sprintf("Narrowed the permissions of '%s', which is not meant to be readable by other users.", path))
+	f.logger.Info("narrowed permissions", slog.String("path", path), slog.String("mode", mode.String()))
 }
 
 // Removes a resource and reports whether it existed. Merged and installed categories are not removed. Directories are only removed at the path of a directory row. Returns an error if the resource cannot be removed.
-func (f *FileService) Remove(r Resource, parts ...string) (bool, error) {
+func (f *Files) Remove(r Resource, parts ...string) (bool, error) {
 	row := f.row(r)
 	if row == nil {
 		return false, errNoRow
 	}
 
 	if row.category == installed || row.category == merged {
-		return false, fmt.Errorf("Refusing to remove the %s at '%s', which is not Quick Translate's to remove.", row.name, row.path)
+		return false, fmt.Errorf("system: remove %s: not owned by the application", row.path)
 	}
 
 	path := f.Path(r, parts...)
@@ -205,25 +205,25 @@ func (f *FileService) Remove(r Resource, parts ...string) (bool, error) {
 
 	if !info.IsDir() {
 		if err := os.Remove(path); err != nil {
-			return false, row.failure("remove", path, err)
+			return false, fmt.Errorf("system: remove file: %w", err)
 		}
 
 		return true, nil
 	}
 
 	if !row.directory || path != row.path {
-		return false, fmt.Errorf("Refusing to remove '%s', which is not a directory of Quick Translate.", path)
+		return false, fmt.Errorf("system: remove %s: not a directory of the application", path)
 	}
 
 	if err := os.RemoveAll(path); err != nil {
-		return false, row.failure("remove", path, err)
+		return false, fmt.Errorf("system: remove directory: %w", err)
 	}
 
 	return true, nil
 }
 
 // Returns the row of a resource, or nil when the running operating system has none for it.
-func (f *FileService) row(r Resource) *entry {
+func (f *Files) row(r Resource) *entry {
 	for i := range f.table {
 		if f.table[i].resource == r {
 			return &f.table[i]
@@ -234,7 +234,7 @@ func (f *FileService) row(r Resource) *entry {
 }
 
 // Creates the parent directory the given path sits in, with its corresponding permissions. Defaults to 0755 when not defined by the row.
-func (f *FileService) ensureDirectoryOf(row *entry, path string) error {
+func (f *Files) ensureDirectoryOf(row *entry, path string) error {
 	mode := os.FileMode(0755)
 
 	switch {
@@ -249,14 +249,14 @@ func (f *FileService) ensureDirectoryOf(row *entry, path string) error {
 	directory := filepath.Dir(path)
 
 	if err := os.MkdirAll(directory, mode); err != nil {
-		return fmt.Errorf("Could not create the directory '%s': %w", directory, err)
+		return fmt.Errorf("system: create directory: %w", err)
 	}
 
 	return nil
 }
 
 // Returns the resources of the given categories, in the order of the table.
-func (f *FileService) resources(categories ...category) []Resource {
+func (f *Files) resources(categories ...category) []Resource {
 	found := make([]Resource, 0, len(f.table))
 
 	for _, row := range f.table {
@@ -269,7 +269,7 @@ func (f *FileService) resources(categories ...category) []Resource {
 }
 
 // Returns all files of the given categories in order of the table. Merged categories report whether the file is present, but not whether the application's part is in place.
-func (f *FileService) report(categories ...category) []File {
+func (f *Files) report(categories ...category) []File {
 	found := f.resources(categories...)
 
 	files := make([]File, 0, len(found))
@@ -281,7 +281,7 @@ func (f *FileService) report(categories ...category) []File {
 }
 
 // Returns a file description for the given resource with its presence.
-func (f *FileService) file(r Resource, present bool) File {
+func (f *Files) file(r Resource, present bool) File {
 	row := f.row(r)
 	if row == nil {
 		return File{}
@@ -297,15 +297,6 @@ func (e *entry) modeFor(path string) os.FileMode {
 	}
 
 	return e.mode & 0666
-}
-
-// Returns the error of an operation on the row, which names the file when the user knows it by a name and gives the path alone otherwise.
-func (e *entry) failure(verb string, path string, err error) error {
-	if len(e.name) == 0 {
-		return fmt.Errorf("Could not %s '%s': %w", verb, path, err)
-	}
-
-	return fmt.Errorf("Could not %s the %s at '%s': %w", verb, e.name, path, err)
 }
 
 // The entries every operating system shares, built from base directories. Operating systems that have different base directories must define their own entries() instead.
