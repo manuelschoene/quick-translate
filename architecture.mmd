@@ -1,14 +1,9 @@
 classDiagram
     namespace models {
-        class Translation {
-            +int ID
-            +time.Time CreatedAt
-            +string Source
-            +string Target
-            +string Text
-            +string Translation
-            +string DetectedSource
-            +string Provider
+        class ProviderID {
+            <<enum>>
+            DeepL = 1
+            +String() string
         }
 
         class Language {
@@ -19,342 +14,34 @@ classDiagram
             +bool Stable
         }
 
-        class LanguagePreferences {
-            +string Source
-            +string Target
-        }
-
-        class Provider <<interface>> {
-            +Translate(source string, target string, text string) (string, string, error)
-            +Languages() ([]*Language, error)
-        }
-    }
-
-    namespace provider {
-        class ProviderPackage {
-            +SlugDeepl string
-            +All() map~string, bool~
-            +NewDeepl() *Deepl
-        }
-
-        class Deepl {
-            +string AuthKey
-            +bool FreeVersion
-            +bool FastMode
-            +string Formality
-
-            +Translate(source string, target string, text string) (string, string, error)
-            +Languages() ([]*Language, error)
-        }
-    }
-
-    Deepl ..|> Provider
-    Provider ..> Language
-
-    namespace language {
-        class LanguagePackage {
-            +LanguageDetectionTag string
-            +NewBuilder() *CollectionBuilder
-            +DetectionLanguage() *Language
-        }
-
-        class CollectionBuilder {
-            -languageDetection bool
-            -preferences *LanguagePreferences
-            -source string
-            -detectedSource string
-            -target string
-
-            +SetLanguageDetection(languageDetection bool) *CollectionBuilder
-            +SetPreferences(preferences *LanguagePreferences) *CollectionBuilder
-            +SetSource(source string, detectedSource string) *CollectionBuilder
-            +SetTarget(target string) *CollectionBuilder
-            +Build(providerSlug string, provider Provider, providerSlugs []string) (*Collection, error)
-        }
-
-        class Collection {
-            -languageDetection bool
-            -provider Provider
-            -preferences *LanguagePreferences
-            -providerSlug string
-            -source string
-            -target string
-            -detectedSource string
-            -sourceLangs []*Language
-            -targetLangs []*Language
-
-            +SourceLanguages() []*Language
-            +TargetLanguages() []*Language
-            +PreferredSource() string
-            +PreferredTarget() string
-            +Source() string
-            +Target() string
-            +DetectedSource() string
-            +SwitchLanguages() error
-            +SetSource(source string, detectedSource string) error
-            +SetTarget(target string) error
-        }
-    }
-
-    CollectionBuilder ..> Provider
-    CollectionBuilder ..> LanguagePreferences
-    Collection ..> Provider
-    Collection ..> LanguagePreferences
-    Collection ..> Language
-
-    namespace history {
-        class HistoryPackage {
-            +ErrDisabled error
-            +NewHistory(limit int) *History
-        }
-
-        class History {
-            -limit int
-            -database *db
-            -mutex sync.Mutex
-
-            +Enabled() bool
-            +Append(translation *Translation) (int, error)
-            +Previous(id int) (*Translation, error)
-            +Next(id int) (*Translation, error)
-            +HasPrevious(id int) (bool, error)
-            +HasNext(id int) (bool, error)
-            +Close()
-        }
-    }
-
-    History ..> Translation
-
-    namespace clipboard {
-        class ClipboardPackage {
-            +ErrNoTool error
-            +NewClipboard() (*Clipboard, error)
-        }
-
-        class backend <<interface>> {
-            -read() (string, error)
-            -write(text string) error
-            -name() string
-        }
-
-        class Clipboard {
-            -backend backend
-            -mutex sync.Mutex
-
-            +Read() (string, error)
-            +Write(text string) error
-            +Backend() string
-        }
-    }
-
-    Clipboard ..> backend
-
-    namespace config {
-        class ConfigPackage {
-            +DefaultProvider() (string, error)
-            +ListProviders(slugs []string) ([]string, error)
-            +LoadProvider~T~(slug string, config *T) error
-            +PreferredLanguages() (*LanguagePreferences, error)
-            +HistoryLimit() (int, error)
-        }
-    }
-
-    ConfigPackage ..> LanguagePreferences
-    ConfigPackage ..> Provider
-
-    namespace core {
-        class CorePackage {
-            +ErrNothingSelected error
-            +ErrNoTranslation error
-            +ErrNoTargetLanguage error
-            +ErrNoSourceLanguage error
-            +NewCore() (*Core, error)
-        }
-
-        class clip <<interface>> {
-            +Read() (string, error)
-            +Write(text string) error
-        }
-
-        class Core {
-            -clipboard clip
-            -files *FileService
-            -factory func(slug string) (Provider, error)
-            -history *History
-            -langs *Collection
-            -preferences *LanguagePreferences
-            -detection map~string, bool~
-            -providerList []string
-            -providerSlug string
-            -provider Provider
-            -translation *Translation
-            -mutex sync.Mutex
-
-            +Close()
-            +Providers() []string
-            +CurrentProvider() string
-            +SetProvider(slug string) error
-            +SourceLanguages() []*Language
-            +TargetLanguages() []*Language
-            +LanguageDetection() *Language
-            +PreferredSource() string
-            +PreferredTarget() string
-            +Source() string
-            +Target() string
-            +DetectedSource() string
-            +SetSource(tag string) error
-            +SetTarget(tag string) error
-            +SwitchLanguages() error
-            +TranslateFromClipboard() (*Translation, error)
-            +TranslateFromHistory() (*Translation, error)
-            +CopyTranslation() error
-            +CurrentTranslation() *Translation
-            +HistoryEnabled() bool
-            +Navigation() (bool, bool, error)
-            +PreviousTranslation() (*Translation, bool, bool, error)
-            +LatestTranslation() (*Translation, bool, bool, error)
-            +NextTranslation() (*Translation, bool, bool, error)
-        }
-    }
-
-    Core ..> clip
-    Core ..> Provider
-    Core ..> LanguagePreferences
-    Core ..> Language
-    Core ..> Translation
-    Core ..> Collection
-    Core ..> History
-    Clipboard ..|> clip
-
-    namespace transport {
-        class TransportPackage {
-            +NewAdapter(app *application.App) *Adapter
-        }
-
-        class TranslationDto {
-            +string Source
-            +string Target
-            +string DetectedSource
+        class Translation {
+            +int64 ID
+            +string Text
             +string Translation
-            +bool HasPrevious
-            +bool HasNext
-        }
-
-        class LanguageDto {
-            +string PreferredSource
-            +string PreferredTarget
-            +*Language Detection
-            +[]*Language SourceLanguages
-            +[]*Language TargetLanguages
-        }
-
-        class ProviderDto {
-            +string Current
-            +[]string Providers
-        }
-
-        class FullDto {
-            +*ProviderDto Provider
-            +*LanguageDto Languages
-            +*TranslationDto Translation
-        }
-
-        class Adapter {
-            -app *application.App
-            -files *FileService
-            -core *Core
-            -mutex sync.Mutex
-
-            +ServiceShutdown() error
-            +Show()
-            +Restore()
-            +Hide()
-            +State() *FullDto
-            +ChangeProvider(slug string) (*FullDto, error)
-            +ChangeSource(tag string) (*TranslationDto, error)
-            +ChangeTarget(tag string) (*TranslationDto, error)
-            +SwitchLanguages() (*TranslationDto, error)
-            +PreviousTranslation() (*FullDto, error)
-            +NextTranslation() (*FullDto, error)
-            +CopyTranslation() error
+            +time.Time CreatedAt
+            +ProviderID ProviderID
+            +*string SourceTag
+            +string TargetTag
+            +bool Detection
         }
     }
-
-    Adapter ..> Core
-    Adapter ..> TranslationDto
-    Adapter ..> LanguageDto
-    Adapter ..> ProviderDto
-    Adapter ..> FullDto
-    FullDto ..> ProviderDto
-    FullDto ..> TranslationDto
-    FullDto ..> LanguageDto
-    LanguageDto ..> Language
 
     namespace system {
-        class SystemPackage {
-            +ApplicationID string
-            +ErrUnsupported error
-            -integrate(files *FileService) error
-            +Purge(files *FileService) ([]File, error)
-            +Removals(files *FileService) ([]File, error)
-            +Status(files *FileService) (*Report, error)
-        }
-
-        class Resource {
-            <<enumeration>>
-            ConfigRoot
-            Settings
-            DataRoot
-            History
-            CacheRoot
-            Languages
-            Launcher
-            Icon
-            Autostart
-            WindowRules
-        }
-
-        class FileService {
-            -table []entry
-
-            +NewFileService() *FileService
+        class Files {
             +Path(r Resource, parts ...string) string
-            +Exists(r Resource, parts ...string) bool
             +Read(r Resource, parts ...string) ([]byte, error)
             +Write(r Resource, content []byte, parts ...string) error
-            +EnsureDirectory(r Resource, parts ...string) error
             +EnsureFile(r Resource, content []byte, parts ...string) (bool, error)
-            +Narrow(r Resource, parts ...string)
             +Remove(r Resource, parts ...string) (bool, error)
+            +Purge() ([]File, error)
+            +Removals() ([]File, error)
+            +Status() (*Report, error)
         }
 
-        class category {
-            <<enumeration>>
-            internal
-            data
-            registered
-            installed
-            merged
-        }
-
-        class entry {
-            -resource Resource
-            -name string
-            -path string
-            -mode os.FileMode
-            -category category
-            -parent Resource
-        }
-
-        class Integration {
-            -app *application.App
-            -files *FileService
-            -actions Actions
-            -trayIcon []byte
-
-            +ServiceStartup(ctx context.Context, options ServiceOptions) error
-            -ensureAutostart() error
-            -showInTray()
+        class SystemService {
+            <<service>>
+            +ServiceStartup() error
+            +Locale() (string, error)
         }
 
         class Actions {
@@ -362,10 +49,11 @@ classDiagram
             +func() Open
         }
 
-        class File {
-            +string Name
-            +string Path
-            +bool Present
+        class Notifier {
+            <<service>>
+            +ServiceStartup() error
+            +ServiceShutdown() error
+            +StartupFailed(err error)
         }
 
         class Report {
@@ -376,21 +64,154 @@ classDiagram
         }
     }
 
-    SystemPackage ..> Report
-    SystemPackage ..> File
-    SystemPackage ..> FileService
-    FileService ..> entry
-    FileService ..> File
-    entry ..> Resource
-    Integration ..> SystemPackage
-    Integration ..> Actions
-    Report ..> File
-    ConfigPackage ..> FileService
-    HistoryPackage ..> FileService
-    LanguagePackage ..> FileService
-    CorePackage ..> FileService
-    Adapter ..> FileService
-    CliPackage ..> FileService
+    namespace store {
+        class StoreService {
+            <<service>>
+            +ServiceStartup() error
+            +ServiceShutdown() error
+            +NewHistory() *HistoryRepository
+            +NewLanguage() *LanguageRepository
+        }
+
+        class HistoryRepository {
+            +Append(ctx, t *Translation) error
+            +Previous(ctx, ID, window) (Translation, error)
+            +Next(ctx, ID) (Translation, error)
+            +Latest(ctx) (Translation, error)
+            +HasPrevious(ctx, ID, window) (bool, error)
+            +HasNext(ctx, ID) (bool, error)
+        }
+
+        class LanguageRepository {
+            +Get(ctx, ID) ([]Language, error)
+            +Put(ctx, ID, languages []Language) error
+            +FetchedAt(ctx, IDs) (map~ProviderID, time.Time~, error)
+            +Delete(ctx, ID) error
+        }
+    }
+
+    namespace config {
+        class ConfigService {
+            <<service>>
+            +ServiceStartup() error
+            +DefaultProvider() (ProviderID, error)
+            +Providers() ([]ProviderID, error)
+            +Provider(ID) (decode func(any) error, error)
+            +Preferences() LanguagePreferences
+            +HistoryLimit() int
+        }
+
+        class LanguagePreferences {
+            +string Source
+            +string Target
+        }
+    }
+
+    namespace provider {
+        class ProviderService {
+            <<service>>
+            +Providers() ([]Info, error)
+            +Current() (Info, error)
+            +Select(ID) error
+            +Translator() (*Translator, error)
+            +Fetcher(ID) (*Fetcher, error)
+            +OnChange(hook func(*Fetcher) error)
+        }
+
+        class Info {
+            +ProviderID ID
+            +string Name
+            +bool Detection
+        }
+
+        class Translator {
+            +Info() Info
+            +Translate(ctx, Request) (Result, error)
+        }
+
+        class Fetcher {
+            +Info() Info
+            +Languages(ctx) ([]Language, error)
+        }
+
+        class implementation {
+            <<interface>>
+            -translate(ctx, Request) (Result, error)
+            -languages(ctx) ([]Language, error)
+        }
+
+        class deepl
+    }
+
+    namespace language {
+        class LanguageService {
+            <<service>>
+            +Options() (Options, error)
+            +Selection() (Selection, error)
+            +SetSource(tag string) error
+            +Detect() error
+            +SetTarget(tag string) error
+            +Switch() error
+            +Snapshot() (Snapshot, error)
+            +Adopt(entry Translation) error
+            +SetDetected(ID, tag string)
+        }
+
+        class Selection {
+            +bool Detection
+            +string Source
+            +string Target
+            +string Detected
+        }
+
+        class catalog {
+            -ProviderID provider
+            -[]Language sources
+            -[]Language targets
+            -matcher sourceMatcher
+            -matcher targetMatcher
+        }
+
+        class refresher {
+            +Start(ctx)
+            +Trigger()
+            +Wait()
+        }
+    }
+
+    namespace clipboard {
+        class ClipboardService {
+            <<service>>
+            +ServiceStartup() error
+            +Read(ctx) (string, error)
+            +Write(ctx, text string) error
+        }
+
+        class backend {
+            <<interface>>
+            -read(ctx) (string, error)
+            -write(ctx, text string) error
+        }
+    }
+
+    namespace translation {
+        class TranslationService {
+            <<service>>
+            +Current() *Translation
+            +Retranslate(ctx) error
+            +Copy(ctx) error
+            +Navigation(ctx) (Navigation, error)
+            +Previous(ctx) error
+            +Next(ctx) error
+            +TranslateSelection()
+            +Latest() error
+        }
+
+        class Navigation {
+            +bool HasPrevious
+            +bool HasNext
+        }
+    }
 
     namespace cli {
         class CliPackage {
@@ -400,26 +221,56 @@ classDiagram
         class interaction {
             <<interface>>
             +Write(p []byte) (int, error)
-            +confirm(question confirmation) bool
+            -confirm(question confirmation) bool
         }
 
-        class confirmation {
-            -string question
-            -string prompt
-            -bool fallback
-        }
-
-        class terminal {
-            -out io.Writer
-            -in *bufio.Reader
-
-            +Write(p []byte) (int, error)
-            +confirm(question confirmation) bool
-        }
+        class terminal
     }
 
-    CliPackage ..> SystemPackage
-    CliPackage ..> Report
+    Translation ..> ProviderID
+    Info ..> ProviderID
+
+    SystemService ..> Files
+    SystemService ..> Actions
+    Notifier ..> Files
+    Files ..> Report
+
+    StoreService ..> Files
+    StoreService ..> Notifier
+    StoreService ..> HistoryRepository
+    StoreService ..> LanguageRepository
+    HistoryRepository ..> Translation
+    LanguageRepository ..> Language
+
+    ConfigService ..> Files
+    ConfigService ..> Notifier
+    ConfigService ..> LanguagePreferences
+
+    ProviderService ..> ConfigService : configuration
+    ProviderService ..> Translator
+    ProviderService ..> Fetcher
+    Translator ..> implementation
+    Fetcher ..> implementation
+    deepl ..|> implementation
+
+    LanguageService ..> ConfigService : configuration
+    LanguageService ..> LanguageRepository : storage
+    LanguageService ..> ProviderService : OnChange hook
+    LanguageService ..> SystemService : Locale
+    LanguageService ..> catalog
+    LanguageService ..> Selection
+    LanguageService ..> refresher
+
+    ClipboardService ..> Notifier
+    ClipboardService ..> backend
+
+    TranslationService ..> ProviderService : Translator, Select
+    TranslationService ..> LanguageService : Snapshot, Adopt, SetDetected
+    TranslationService ..> ClipboardService : Read, Write
+    TranslationService ..> HistoryRepository
+    TranslationService ..> ConfigService : HistoryLimit
+    TranslationService ..> Navigation
+
+    CliPackage ..> Files
     CliPackage ..> interaction
     terminal ..|> interaction
-    interaction ..> confirmation

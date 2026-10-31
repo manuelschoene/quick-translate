@@ -107,7 +107,7 @@ quick-translate version   # which build this is
 
 ## Configuration
 
-The configuration lives in `~/.config/quick-translate/config.yml` and is created with a commented template on the first start. The application then exits until you have filled it in; it also refuses to start while the file cannot be read.
+The configuration lives in `~/.config/quick-translate/config.yml` and is created with a commented template on the first start. The application then exits until you have filled it in; it also refuses to start while the file cannot be read. Either way, a desktop notification tells you why. Changes take effect on the next start.
 
 | Key                                    | Meaning                                                                                          |
 |----------------------------------------|--------------------------------------------------------------------------------------------------|
@@ -137,9 +137,19 @@ provider:
     free_version: true
 ```
 
+## Upgrading from a 0.1.0-alpha release
+
+Versions after the 0.1.0-alpha releases keep the history and the language lists in a new database and no longer read the old files. Before installing the new version, purge with the **old** binary, which still knows where its files are:
+
+```sh
+quick-translate --purge
+```
+
+This also removes your configuration, so write it again after the first start of the new version.
+
 ## Uninstalling
 
-Quit Quick Translate first. To remove everything it wrote for you (configuration, history, cache, autostart entry and KWin rules), run the purge while the binary is still there. It lists what it removes and asks first:
+Quit Quick Translate first. To remove everything it wrote for you (configuration, the database with your history, the notification settings, the autostart entry and the KWin rules), run the purge while the binary is still there. It lists what it removes and asks first:
 
 ```sh
 quick-translate purge

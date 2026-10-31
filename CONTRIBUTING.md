@@ -33,8 +33,9 @@ bun run format   # Prettier
 ## There are no tests
 
 The repository has **no test suite**, so nothing catches a regression for you. **Verify your change by running
-the application.** Tests are very welcome as a contribution of their own: `internal/language/matching.go`,
-`internal/system/kde_linux.go` and `internal/history/db.go` would profit first.
+the application.** Tests are very welcome as a contribution of their own: the selection rules in
+`internal/language/selection.go`, the KWin rule merge in `internal/system/kde_linux.go` and the migrations in
+`internal/store/migration.go` would profit first.
 
 Take `bun run types` seriously. `verbatimModuleSyntax` is on, so a type imported as a value breaks the whole
 frontend at runtime, and the type check is the only thing that notices. `bun run build` does not run it.
@@ -49,15 +50,19 @@ Matching the code around your change matters more than any rule below.
   with `%w` for context (`config: decode file: …`).
 - **Failures that only cost a feature** are printed and swallowed. Only failures that make the application
   unusable are returned.
-- **Frontend:** the same prose style in TSDoc. Components only talk to composables, and `services/wire.ts` is
-  the only module that knows Go field names.
+- **Frontend:** the same prose style in TSDoc. Components only talk to composables; each composable owns one
+  state group and fills it from its backend events.
+- **Backend services:** one per package in `internal/<domain>/service.go`. An exported method the frontend must
+  not call carries `//wails:ignore`. Only failures that make the application unusable are returned from
+  `ServiceStartup`, because that shuts it down.
 - **Files and paths:** every path and permission comes from the table in `internal/system/files.go`. Never
   build a path of your own.
 - **Platform-specific code** goes behind build tags, like `internal/clipboard/linux.go`.
 - **Import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
 - **Commit generated files:**
-  - `frontend/bindings/`, after changing an exported method on `transport.Adapter`, a DTO or a registered
+  - `frontend/bindings/`, after changing an exported method of a service, a type it returns or a registered
     event. CI fails when they are stale.
+  - `internal/store/db/`, after changing a migration or a query in `internal/store/`.
   - `art/tray.png` and `art/wordmark.svg`, after changing a source in `art/`.
 - **`architecture.mmd`:** update it when backend types or package boundaries change.
 

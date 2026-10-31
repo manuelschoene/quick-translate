@@ -28,10 +28,10 @@ whether I consider it a vulnerability, and credit you in the release notes unles
   request for its language list. Nothing else is sent anywhere.
 - **Auth key:** stored **in plain text** in `~/.config/quick-translate/config.yml`. Other users cannot read
   it, but anything running as your user can. Moving it into the OS keyring is planned.
-- **History:** every text you translated and its translation, stored **unencrypted** in
-  `~/.local/share/quick-translate/history.db`. `history.max_entries: 0` turns it off, and
-  `quick-translate purge` deletes it.
-- **Cache:** `~/.cache/quick-translate` only holds the languages a provider supports.
+- **Database:** `~/.local/share/quick-translate/quick-translate.db` always exists. It holds the languages each
+  provider supports and the **history**: every text you translated and its translation, stored
+  **unencrypted**. `history.max_entries: 0` stops new entries from being stored (entries already stored stay),
+  and `quick-translate purge` deletes the database.
 - **Notifications:** `~/.config/Quick Translate/notification-categories.json` is written by the notification
   service on every shutdown and holds no data of yours.
 - **Permissions:** every directory above is created with mode `0700`, every file with `0600`.

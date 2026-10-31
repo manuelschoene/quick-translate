@@ -26,11 +26,24 @@ cp -r share ~/.local/
 Do not rename any of the files below `share/`: your desktop grants the global shortcut to the
 application these names identify, and under different ones the shortcut stops working.
 
+## Upgrading from a 0.1.0-alpha release
+
+This version keeps the history and the language lists in a new database and no longer reads the
+old files. Purge with the **old** binary before you install this one, then write your
+configuration again:
+
+```sh
+@APP_NAME@ --purge
+```
+
 ## Usage
 
 An icon in the system tray shows that the application is running and offers general options. KDE
 Plasma shows it out of the box. GNOME needs the AppIndicator extension. For other desktops, please
 check yourself.
+
+Start it once by hand. The first start writes a commented configuration to
+`~/.config/quick-translate/config.yml` and exits, with a notification, until you have filled it in.
 
 The shortcut is <kbd>Super</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (some desktops call the key "Meta").
 The application registers it with your desktop session on start, so there is nothing to bind by hand.
@@ -54,8 +67,8 @@ The binary answers a few commands on the command line:
 @APP_NAME@ purge
 ```
 
-Quit the application first. This removes everything it wrote for you: your configuration, your
-history, the cache and more. **It cannot be undone.**
+Quit the application first. This removes everything it wrote for you: your configuration, the
+database with your history, the autostart entry and more. **It cannot be undone.**
 
 ### Remove the application
 
