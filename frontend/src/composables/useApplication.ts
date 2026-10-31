@@ -1,47 +1,49 @@
-import { Hide, State } from '@bind/transport/adapter';
-import { listen, silence } from '@services/events';
 import { request, requestQuietly } from '@services/request';
-import { applyFull } from '@services/wire';
+import * as history from '@use/useHistory';
+import * as languages from '@use/useLanguages';
+import * as providers from '@use/useProviders';
+import * as translation from '@use/useTranslation';
+import { Window } from '@wailsio/runtime';
+
+const domains = [providers, languages, translation, history];
+
+/**
+ * The unsubscribes of every domain, collected on start.
+ */
+let offs: (() => void)[] = [];
 
 const exposed = { start, stop, hide };
 
 /**
- * Gives the components what belongs to the application as a whole: the ways to bring it up and take
- * it down again and the way to dismiss it.
+ * Gives the components what belongs to the application as a whole: bringing it up and down and dismissing it.
  */
 export function useApplication(): typeof exposed {
     return exposed;
 }
 
 /**
- * Brings the application up: listen to the events first, then fill it with the current state.
+ * Listens to every domain first, so a shortcut pressed meanwhile is not lost, then fetches the state. A getter
+ * that fails, such as one asked before a provider is configured, shows the error view.
  */
 async function start(): Promise<void> {
-    listen();
-    await load();
+    offs = domains.map((domain) => domain.listen());
+
+    await Promise.all(domains.map((domain) => request(domain.load)));
 }
 
 /**
- * Takes it down again, as far as there is anything to take down in the frontend.
+ * Stops listening. Needed in `wails dev`, where the frontend is mounted again.
  */
 function stop(): void {
-    silence();
+    offs.forEach((off) => {
+        off();
+    });
+    offs = [];
 }
 
 /**
- * Fetches the whole state. Meant for the first render and for a frontend that was reloaded while a
- * translation was on screen. Nothing is translated by it, the language lists come from the cache of
- * the backend.
- */
-async function load(): Promise<void> {
-    await request(State, applyFull);
-}
-
-/**
- * Hides the window without stopping the application and answers whether it worked. Asked for
- * quietly: a window that refuses to go away is worth keeping the message, but not the error view in
- * the window that is still standing.
+ * Hides the window without stopping the application and answers whether it worked.
  */
 async function hide(): Promise<boolean> {
-    return await requestQuietly(Hide);
+    return await requestQuietly(() => Window.Hide());
 }

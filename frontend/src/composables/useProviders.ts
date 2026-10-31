@@ -1,76 +1,99 @@
 import { providerState } from '@/state';
-import { ChangeProvider } from '@bind/transport/adapter';
+import { ProviderID } from '@bind/models';
+import type { Info, State } from '@bind/provider';
+import { Current, Providers, Select } from '@bind/provider/service';
+import { on } from '@lib/events';
 import { readonlyRefs } from '@lib/reactivity';
 import { Globe } from '@lucide/vue';
 import { request } from '@services/request';
-import { applyFull } from '@services/wire';
-import { computed, type Component } from 'vue';
+import { retranslate } from '@use/useTranslation';
+import { computed, type Component, type DeepReadonly } from 'vue';
 import { DeepLIcon } from 'vue3-simple-icons';
 
 interface Provider {
     icon: Component;
     label: string;
-    slug: string;
+    id: ProviderID;
 }
 
 /**
- * The providers this frontend has an icon and a label for. The backend only ever names a slug, so
- * this is the whole of what the application knows about how a provider looks.
+ * The icons this frontend has for a provider. The name comes from the backend.
  */
-const known: Provider[] = [
-    {
-        icon: DeepLIcon,
-        label: 'DeepL',
-        slug: 'deepl',
-    },
-];
+const icons: Partial<Record<ProviderID, Component>> = {
+    [ProviderID.DeepL]: DeepLIcon,
+};
+
+/**
+ * Shown while the backend has not answered.
+ */
+const placeholder: Provider = { icon: Globe, label: '', id: ProviderID.$zero };
 
 const { current, providers } = readonlyRefs(providerState);
 
 /**
- * The providers the backend has registered, in the shape they are shown in.
+ * The configured providers, in the shape they are shown in.
  */
 const registered = computed(() => providers.value.map(describe));
 
 /**
- * The provider that is in use. Falls back to the first registered one and then to the first known
- * one, so there is always something to display while the backend has not answered.
+ * The provider in use. Falls back to the first configured one, then to the placeholder.
  */
 const provider = computed(
-    () => registered.value.find((p) => p.slug === current.value) ?? registered.value.at(0) ?? known[0],
+    () => registered.value.find((p) => p.id === current.value?.id) ?? registered.value.at(0) ?? placeholder,
 );
 
 /**
- * The providers that can be switched to, which is every registered one except the one in use.
- *
- * Compared against the resolved provider and not against the raw slug: the slug is still empty until
- * the backend answers, and comparing against it would offer the only provider as an alternative to
- * itself.
+ * The providers that can be switched to: every configured one except the one in use.
  */
-const alternatives = computed(() => registered.value.filter((p) => p.slug !== provider.value.slug));
+const alternatives = computed(() => registered.value.filter((p) => p.id !== provider.value.id));
 
 const exposed = { provider, alternatives, changeProvider };
 
 /**
- * Gives the components the provider that is in use, the ones that can be switched to and the way to
- * switch. Switching translates the current text again and brings new languages along.
+ * Gives the components the provider in use, the ones to switch to and the way to switch.
  */
 export function useProviders(): typeof exposed {
     return exposed;
 }
 
 /**
- * Switches to the given provider and translates the current text with it.
+ * Listens to provider switches. Returns the unsubscribe.
  */
-async function changeProvider(slug: string): Promise<void> {
-    await request(() => ChangeProvider(slug), applyFull);
+export function listen(): () => void {
+    return on('provider:changed', apply);
 }
 
 /**
- * Brings a slug into the shape the components show it in. A slug without an entry keeps working and
- * is shown with a generic icon and the slug itself, which is better than dropping a provider the
- * backend offers without a word.
+ * Fetches the providers, for the first render. Fails while no provider is configured, which the error view
+ * then shows.
  */
-function describe(slug: string): Provider {
-    return known.find((p) => p.slug === slug) ?? { icon: Globe, label: slug, slug };
+export async function load(): Promise<void> {
+    const [all, selected] = await Promise.all([Providers(), Current()]);
+
+    apply({ current: selected, providers: all });
+}
+
+/**
+ * Switches to the given provider and translates the shown text with it. The languages follow as events.
+ */
+async function changeProvider(id: ProviderID): Promise<void> {
+    await request(async () => {
+        await Select(id);
+        await retranslate();
+    });
+}
+
+/**
+ * Takes the providers over.
+ */
+function apply(state: State): void {
+    providerState.current = state.current;
+    providerState.providers = state.providers;
+}
+
+/**
+ * Brings a provider into the shape it is shown in. One without an icon gets a generic one.
+ */
+function describe(info: DeepReadonly<Info>): Provider {
+    return { icon: icons[info.id] ?? Globe, label: info.name, id: info.id };
 }

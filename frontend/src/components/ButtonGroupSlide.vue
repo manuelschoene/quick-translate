@@ -37,9 +37,9 @@ const hasAlternatives = computed(() => alternatives.value.length > 0);
             <div class="flex min-w-0 divide-x divide-white/10 overflow-hidden">
                 <Button
                     class="transition-colors hover:bg-linear-to-br hover:from-gray-500 hover:to-gray-600"
-                    :action="() => changeProvider(alternative.slug)"
+                    :action="() => changeProvider(alternative.id)"
                     :icon="alternative.icon"
-                    :key="alternative.slug"
+                    :key="alternative.id"
                     :title="`Switch to ${alternative.label}`"
                     inline
                     v-for="alternative in alternatives"

@@ -59,7 +59,7 @@ actions := system.Actions{
 }
 ```
 
-## Startup, errors and logging - Half done
+## Startup, errors and logging - Done
 
 - **Registration order:** notifications, store, config, provider, language, clipboard, translation, integration.
   Wails starts services in this order and shuts them down in reverse.
@@ -171,7 +171,7 @@ internal/store/migrations/
 
 Postponed until the other packages are moved onto the services. `internal/models` holds `ProviderID` with its slug
 mapping, `Language` and `Translation`; the stored `Provider` is removed *(done)*. The old `Provider` interface was
-replaced inside `provider` *(done)*; `core` does not build until it is removed.
+replaced inside `provider` *(done)*.
 `LanguagePreferences` moved to `config` *(done)*.
 
 - **Constraint:** `ProviderID` must stay in a package `store/db` can import without a cycle; `store` itself is
@@ -309,8 +309,12 @@ for the first load.
 - **A typed `on()` helper in `lib/`** accepts only `keyof Events.CustomEvents`. `Events.On` accepts any string
   and silently turns `data` into `any`.
 
-## Frontend
+## Frontend - Done
 
+- *(done)* Each domain composable exports `listen()` and `load()` beside its returned object and writes its own
+  state group. `lib/events.ts` holds `on()`. Detection is listed as a frontend-only source entry with the tag
+  `@detection`; `changeSource` turns it into `Detect()`. `retranslate()` in `useTranslation` only calls the
+  backend while a translation is shown, because `Retranslate()` fails without one.
 - **Never read state right after `await`.** A promise resolves before the events of its own call arrive
   (verified; always for payloads over 8 KB, such as `languages:changed` at 17.6 KB). Components are reactive
   and unaffected.
@@ -341,12 +345,12 @@ including the provider key. This goes into the release notes and `build/linux/IN
    and the gob cache go once their consumers use the repositories (step 4).
 3. **`config.Service`:** *(done)* the YAML file read once in `ServiceStartup`, getters on the service, provider IDs
    instead of slugs. `core` keeps calling the removed free functions until step 4 replaces it.
-4. **Backend services with the adapter as a facade.** The adapter delegates and keeps building the DTOs, so the
+4. *(done)* **Backend services with the adapter as a facade.** The adapter delegates and keeps building the DTOs, so the
    frontend stays untouched while locks and hooks are checked.
-5. **Events and getters, notifications service, registration order.** The adapter and the new bindings run side
+5. *(done)* **Events and getters, notifications service, registration order.** The adapter and the new bindings run side
    by side.
-6. **Frontend, domain by domain:** history, translation, languages and provider, first load.
-7. **Delete** the adapter, DTOs, `core` and `transport`; regenerate the bindings.
+6. *(done)* **Frontend, domain by domain:** history, translation, languages and provider, first load.
+7. *(done)* **Delete** the adapter, DTOs, `core` and `transport`; regenerate the bindings.
 8. **Docs:**
    - `architecture.mmd`
    - `CLAUDE.md`: architecture, runtime files, commands, conventions

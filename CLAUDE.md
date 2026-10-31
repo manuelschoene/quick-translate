@@ -289,40 +289,44 @@ Vue 3 `<script setup>` + Tailwind v4 (no vue-router, no Pinia). Data flows one w
 ```
 views / components          only ever talk to composables
         ↓
-composables/                read-only refs + derived computeds + actions   (one per domain)
-        ↓            ↓
-    state.ts      lib/ · router.ts                                         (no domain knowledge)
-        ↑
- services/wire.ts           the only module that knows Go field names
-        ↑
- services/events.ts · bindings/
+composables/                read-only refs + derived computeds + actions + listen()/load()   (one per domain)
+        ↓            ↓                ↓
+    state.ts      lib/ · router.ts   services/ · bindings/ · lib/events.ts
 ```
 
-The split is vertical by domain in `composables/` and horizontal by role below it. The one seam that
-has to stay central is `services/wire.ts`: a `TranslationDto` carries the chosen languages, the
-translated text and the history flags at once, so whoever unpacks it reaches into three state groups
-anyway.
+The split is vertical by domain. Each composable owns its state group: it maps its own backend events and its
+getters onto it, and nothing else writes there. State reaches the frontend **only through events**; mutations
+answer nothing, and the getters are only used for the first load. A promise resolves before the events of its
+own call arrive, so never read state right after an `await`.
 
-- `src/state.ts` — the `reactive` state groups, the only mutable state in the app. Written by `services/`,
-  read through the composables.
+- `src/state.ts` — the `reactive` state groups, the only mutable state in the app. Each group is written by
+  its composable, read by components through it.
 - `src/router.ts` — `ViewName`, the `ViewName → Component` table and `route()`. The single door to
   navigation; there is no vue-router. `component` is a `ref` the App renders with `<component :is>`.
 - `composables/use*.ts` — the only thing views and components import. Each hands out read-only refs
   of its state group, the computeds derived from it (labels, sorted lists, resolved providers) and
   the actions that change it. The returned object is built once at module level and handed out as
-  `typeof`, so it neither rebuilds per component nor needs its type written out.
-- `services/request.ts` — wraps every backend call. `request()` counts into `requestState.pending`
-  and sends a failure to the error view; `requestQuietly()` does neither and is for the calls beside
-  the translation (copy, hide). Both **report errors instead of throwing**, so no caller above needs
-  try/catch. The shortcut translation is a flag, not a count, because the frontend only sees its two
-  ends as events.
+  `typeof`, so it neither rebuilds per component nor needs its type written out. Each domain module also
+  exports `listen()` (returns its unsubscribe) and `load()`, which `useApplication.start()` calls in that
+  order; they are not part of the returned object.
+  - Mutations compose with the retranslation themselves:
+    `request(async () => { await SetSource(tag); await retranslate(); })`. `retranslate()` from
+    `useTranslation` only calls the backend while a translation is shown.
+  - Pending and routing come from `translation:started` → `:changed`/`:failed`, whatever started the
+    translation (shortcut, retranslation, history step, second launch).
+  - Detection is a boolean in the backend; `useLanguages` lists it as a frontend-only entry with the tag
+    `@detection`, which `changeSource` turns into `Detect()`.
+  - Providers are keyed by `ProviderID`; the name comes from the backend, the icon from `useProviders`.
+- `services/request.ts` — wraps the backend calls. `request()` sends a failure to the error view,
+  `requestQuietly()` only notes it and is for the calls beside the translation (copy, hide). Both **report
+  errors instead of throwing**, so no caller above needs try/catch.
 - `services/report.ts` — `report()` notes a failure and shows the error view, `reportQuietly()` only
   notes it.
-- `services/wire.ts` — the only place that knows Go field names; maps DTOs onto state.
-- `services/events.ts` — the four backend events, mirrored from `internal/transport/adapter.go`.
-- `lib/` — pure helpers with no app state: `cn`, `keyboard` (`onKey`), `search`, and `reactivity`
-  (`readonlyRefs`, which wraps a state group in `readonly` + `toRefs` so components can only read).
-- Types live with what owns them: `Language` and the DTOs in the generated `@bind` modules, `ViewName` in
+- `lib/` — pure helpers with no app state: `cn`, `keyboard` (`onKey`), `search`, `events` (`on()`, which
+  only accepts the event names the bindings declare, unlike `Events.On`), and `reactivity` (`readonlyRefs`,
+  which wraps a state group in `readonly` + `toRefs` so components can only read).
+- Types live with what owns them: `Language`, `Translation` and the service models in the generated `@bind`
+  modules, `ViewName` in
   `router.ts`, `ButtonProps` in a plain `<script>` block of `Button.vue`. There is no types-only module.
 - A component that is styled from the outside declares a `class` prop and merges it with `cn()`
   (`Button`, `Panel`, `LoadingTextarea`, and the toolbars, which forward it down to `Panel`); one that
