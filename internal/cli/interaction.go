@@ -21,8 +21,10 @@ type confirmation struct {
 }
 
 type terminal struct {
-	in  *bufio.Reader // Buffered reader of the input stream to capture answers, which have not been asked for yet but are already provided. Not replaced per question.
-	out io.Writer     // Writer to the output stream to display messages
+	in        *bufio.Reader // Buffered reader of the input stream to capture answers, which have not been asked for yet but are already provided. Not replaced per question.
+	out       io.Writer     // Writer to the output stream to display messages, discarding them when silent
+	prompt    io.Writer     // Writer to the output stream for questions, which are shown even when silent
+	assumeYes bool          // Answers every question with yes without asking, set by -yes
 }
 
 const (
@@ -30,9 +32,14 @@ const (
 	answerNo  = 'n'
 )
 
-// Creates the interaction over the given streams.
-func newTerminal(in io.Reader, out io.Writer) *terminal {
-	return &terminal{in: bufio.NewReader(in), out: out}
+// Creates the interaction over the given streams. Silent discards the messages, but still asks the questions.
+func newTerminal(in io.Reader, out io.Writer, level verbosity, assumeYes bool) *terminal {
+	messages := out
+	if level == silent {
+		messages = io.Discard
+	}
+
+	return &terminal{in: bufio.NewReader(in), out: messages, prompt: out, assumeYes: assumeYes}
 }
 
 // Renders the answer keys by showing the fallback answer in upper case. Does include the brackets, but no spacing around them.
@@ -49,16 +56,20 @@ func (t *terminal) Write(p []byte) (int, error) {
 	return t.out.Write(p)
 }
 
-// Asks the user the question and reads the answer, asking again if the answer cannot be interpreted as yes or no. Returns true for yes, false for no, and the fallback answer if no answer was given at all.
+// Asks the user the question and reads the answer, asking again if the answer cannot be interpreted as yes or no. Returns true for yes, false for no, and the fallback answer if no answer was given at all. With -yes, nothing is asked and true is returned.
 func (t *terminal) confirm(question confirmation) bool {
-	fmt.Fprintf(t, "\n%s\n", question.question)
+	if t.assumeYes {
+		return true
+	}
+
+	fmt.Fprintf(t.prompt, "\n%s\n", question.question)
 
 	for {
-		fmt.Fprintf(t, "\n%s %s: ", question.prompt, question.answerKeys())
+		fmt.Fprintf(t.prompt, "\n%s %s: ", question.prompt, question.answerKeys())
 
 		answer, err := t.in.ReadString('\n')
 		if err != nil && len(answer) == 0 {
-			fmt.Fprintln(t)
+			fmt.Fprintln(t.prompt)
 
 			return question.fallback
 		}

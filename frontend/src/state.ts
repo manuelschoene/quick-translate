@@ -1,57 +1,59 @@
 import type { Language } from '@bind/models';
+import type { Info } from '@bind/provider';
 import { reactive } from 'vue';
 
 interface ProviderState {
-    current: string;
-    providers: string[];
+    current: Info | null;
+    providers: Info[];
 }
 
 interface LanguageState {
-    source: string;
-    target: string;
-    detectedSource: string;
+    detection: boolean;
     preferredSource: string;
     preferredTarget: string;
-    detection: Language | null;
     sourceLanguages: Language[];
     targetLanguages: Language[];
+    detecting: boolean;
+    source: string;
+    target: string;
+    detected: string;
 }
 
 /**
- * The translation services that are configured, held as slugs. What a slug is shown with belongs to
- * the frontend and is not part of this.
+ * The configured providers and the one in use. Null until the backend answered.
  */
 export const providerState: ProviderState = reactive({
-    current: '',
+    current: null,
     providers: [],
 });
 
 /**
- * What the current provider offers and what is chosen of it. The lists change with the provider, the
- * chosen tags with every translation, and `detection` stays null for a provider that does not detect
- * the source language on its own.
+ * What the current provider offers (`languages:changed`) and what is chosen of it (`selection:changed`).
+ * `detection` says the provider can detect, `detecting` that it does; `source` is empty while it does.
  */
 export const languageState: LanguageState = reactive({
-    source: '',
-    target: '',
-    detectedSource: '',
+    detection: false,
     preferredSource: '',
     preferredTarget: '',
-    detection: null,
     sourceLanguages: [],
     targetLanguages: [],
+    detecting: false,
+    source: '',
+    target: '',
+    detected: '',
 });
 
 /**
- * What came back for the text that was translated last. Empty until the first translation was made.
+ * The translation on screen and whether one is being made. `shown` stays false until the first one arrived.
  */
 export const translationState = reactive({
     translation: '',
+    shown: false,
+    pending: false,
 });
 
 /**
- * Whether there is a stored translation to step to, in either direction. Both stay false while the
- * history is turned off.
+ * Whether there is a stored translation to step to. Both stay false while the history is turned off.
  */
 export const historyState = reactive({
     hasPrevious: false,
@@ -59,16 +61,7 @@ export const historyState = reactive({
 });
 
 /**
- * Whether the backend is working on what is shown. Not true for the calls beside the translation,
- * which leave the view as it is.
- */
-export const requestState = reactive({
-    pending: false,
-});
-
-/**
- * The failure that was reported last. It stays until the next one, so the error view can be left and
- * reached again without losing it.
+ * The failure that was reported last. It stays until the next one, so the error view can be reached again.
  */
 export const errorState = reactive({
     message: '',

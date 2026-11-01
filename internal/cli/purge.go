@@ -16,9 +16,9 @@ recovered. Quit the application before continuing, otherwise files and modificat
 
 // Removes all application files and modifications. Asks for user confirmation as the action cannot be undone. Returns an error if the files and modifications can not be determined or removed.
 func purge(out interaction, _ string, _ []string) error {
-	files := system.NewFileService()
+	files := system.NewFiles()
 
-	removals, err := system.Removals(files)
+	removals, err := files.Removals()
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func purge(out interaction, _ string, _ []string) error {
 
 	fmt.Fprintln(out)
 
-	removed, err := system.Purge(files)
+	removed, err := files.Purge()
 
 	printRemovals(out, "Removed:", removed)
 	fmt.Fprintln(out)
@@ -59,6 +59,6 @@ func printRemovals(out io.Writer, heading string, removals []system.File) {
 	fmt.Fprintln(out)
 
 	for _, file := range removals {
-		fmt.Fprintf(out, "  %-15s %s\n", file.Name, file.Path)
+		fmt.Fprintf(out, "  %-17s %s\n", file.Name, file.Path)
 	}
 }

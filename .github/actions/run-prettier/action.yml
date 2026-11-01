@@ -1,5 +1,5 @@
 name: Run Prettier
-author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+author: Manuel Schöne <schoene-manuel@gmx.de>
 description: Runs Prettier over the frontend, with its cache restored.
 
 inputs:

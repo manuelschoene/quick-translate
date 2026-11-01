@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { component } from '@/router';
 import { useApplication } from '@use/useApplication';
 import { onMounted, onUnmounted } from 'vue';
+import { RouterView } from 'vue-router';
 
 const { start, stop } = useApplication();
 
@@ -10,5 +10,5 @@ onUnmounted(stop);
 </script>
 
 <template>
-    <component :is="component" />
+    <RouterView />
 </template>

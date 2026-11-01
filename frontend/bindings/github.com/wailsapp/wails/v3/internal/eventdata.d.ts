@@ -7,15 +7,27 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as transport$0 from "../../../../../quick-translate/internal/transport/models.js";
+import type * as language$0 from "../../../../../quick-translate/internal/language/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as models$0 from "../../../../../quick-translate/internal/models/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as provider$0 from "../../../../../quick-translate/internal/provider/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as translation$0 from "../../../../../quick-translate/internal/translation/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "error": string;
-            "restored": transport$0.FullDto | null;
-            "translating": void;
-            "translation": transport$0.TranslationDto | null;
+            "history:changed": translation$0.Navigation;
+            "languages:changed": language$0.Options;
+            "provider:changed": provider$0.State;
+            "selection:changed": language$0.Selection;
+            "translation:changed": models$0.Translation;
+            "translation:failed": string;
+            "translation:started": void;
         }
     }
 }

@@ -1,5 +1,5 @@
 name: Setup Wails
-author: Manuel Schöne <manuel.schoene@schoene-reisen.de>
+author: Manuel Schöne <schoene-manuel@gmx.de>
 description: Installs the GTK4 and WebKitGTK 6.0 development packages, optionally UPX, and the wails3 CLI. Expects Go to be set up already.
 
 inputs:

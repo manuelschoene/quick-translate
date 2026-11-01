@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => ({
             '@use': '/src/composables',
             '@views': '/src/views',
             '@bind': '/bindings/quick-translate/internal',
+            '@events': '/bindings/events/index.ts',
         },
     },
 }));

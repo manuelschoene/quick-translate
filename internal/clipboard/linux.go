@@ -13,21 +13,26 @@ const (
 	sessionX11     = "x11"
 )
 
-// Creates the backend for Linux by picking the first installed program that fits the current session. Returns ErrNoTool if none of the supported programs is installed.
+// Picks the first installed tool that fits the session. Returns ErrNoTool if none is installed.
 func newBackend() (backend, error) {
 	return selectTool(sessionType(), exec.LookPath)
 }
 
-// Returns the first of the candidates whose programs are both installed. The lookup is handed in so the selection can be checked without the programs being installed. Returns ErrNoTool if none of the candidates is installed.
+// Returns the first candidate with both programs installed, with their resolved paths. Returns ErrNoTool if
+// there is none.
 func selectTool(session string, lookup func(string) (string, error)) (backend, error) {
 	for _, candidate := range candidates(session) {
-		if _, err := lookup(candidate.readBinary); err != nil {
+		readPath, err := lookup(candidate.readBinary)
+		if err != nil {
 			continue
 		}
 
-		if _, err := lookup(candidate.writeBinary); err != nil {
+		writePath, err := lookup(candidate.writeBinary)
+		if err != nil {
 			continue
 		}
+
+		candidate.readPath, candidate.writePath = readPath, writePath
 
 		return candidate, nil
 	}
@@ -35,7 +40,8 @@ func selectTool(session string, lookup func(string) (string, error)) (backend, e
 	return nil, ErrNoTool
 }
 
-// Returns the supported tools in the order they should be tried for the given session type. An unknown session type is treated like a Wayland session, and the tools of the other session type stay in the list as a fallback, because the X11 programs also work under XWayland.
+// Returns the tools in the order they are tried. An unknown session counts as Wayland; the other session's tools
+// stay as a fallback, because the X11 programs also work under XWayland.
 func candidates(session string) []*tool {
 	if session == sessionX11 {
 		return []*tool{xclipTool(), xselTool(), waylandTool()}
@@ -44,7 +50,8 @@ func candidates(session string) []*tool {
 	return []*tool{waylandTool(), xclipTool(), xselTool()}
 }
 
-// Returns the type of the graphical session the application runs in. The session variable is missing when the application is started as a systemd user unit that does not know the graphical environment, so the display variables are used as a fallback. Returns an empty string if the session type can not be determined.
+// Returns the session type, falling back to the display variables when XDG_SESSION_TYPE is missing, as in a
+// systemd user unit. Empty if it cannot be determined.
 func sessionType() string {
 	switch strings.ToLower(os.Getenv("XDG_SESSION_TYPE")) {
 	case sessionWayland:
@@ -64,7 +71,7 @@ func sessionType() string {
 	return ""
 }
 
-// Returns the tool for the 'wl-clipboard' package, which is used in Wayland sessions. The selection is read without the newline the program appends on its own.
+// Returns the 'wl-clipboard' tool for Wayland. Reads without the newline wl-paste appends.
 func waylandTool() *tool {
 	return &tool{
 		label:        "wl-clipboard",
@@ -76,7 +83,7 @@ func waylandTool() *tool {
 	}
 }
 
-// Returns the tool for the 'xclip' package, which is used in X11 sessions.
+// Returns the 'xclip' tool for X11.
 func xclipTool() *tool {
 	return &tool{
 		label:        "xclip",
@@ -88,7 +95,7 @@ func xclipTool() *tool {
 	}
 }
 
-// Returns the tool for the 'xsel' package, which is used in X11 sessions. The program stays silent and succeeds on an empty selection, so it does not need a marker for it.
+// Returns the 'xsel' tool for X11. It succeeds silently on an empty selection, so it needs no marker.
 func xselTool() *tool {
 	return &tool{
 		label:        "xsel",

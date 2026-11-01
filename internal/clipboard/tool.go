@@ -13,35 +13,43 @@ import (
 	"time"
 )
 
-// The time an external program gets to answer before it is killed.
+// How long a program gets to answer before it is killed.
 const commandTimeout = 2 * time.Second
 
 type tool struct {
-	label        string   // Name of the package the programs belong to.
-	readBinary   string   // Program that prints the primary selection.
-	readArgs     []string // Arguments that make the program print the primary selection unchanged.
-	writeBinary  string   // Program that takes the text on its standard input.
-	writeArgs    []string // Arguments that make the program fill the regular clipboard.
-	emptyMarkers []string // Messages the read program prints when nothing is selected.
+	label        string // Package the programs belong to
+	readBinary   string // Prints the primary selection
+	readArgs     []string
+	writeBinary  string // Fills the regular clipboard from stdin
+	writeArgs    []string
+	emptyMarkers []string // What the read program prints when nothing is selected
+	readPath     string   // Resolved at selection, so a later PATH cannot swap the program
+	writePath    string
 }
 
-// Returns the name of the package the programs of this tool belong to.
+// Returns the package name.
 func (t *tool) name() string {
 	return t.label
 }
 
-// Returns the content of the primary selection by running the read program. The read programs print the selection and exit without leaving a process behind, so their output is collected in buffers. Returns an empty text if nothing is selected and an error if the program fails or does not answer in time.
-func (t *tool) read() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+// Returns the primary selection by running the read program, empty if nothing is selected. Fails if the program
+// fails, does not answer in time or ctx is done.
+func (t *tool) read(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", fmt.Errorf("clipboard: read: %w", err)
+	}
+
+	timeout, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
 	var stdout, stderr bytes.Buffer
 
-	cmd := exec.CommandContext(ctx, t.readBinary, t.readArgs...)
+	cmd := exec.CommandContext(timeout, t.readPath, t.readArgs...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// A program that leaves a process behind would keep the pipes of the buffers open and hold up the call even after the timeout has killed it, so the pipes are released once the timeout has passed.
+	// A program that leaves a process behind would keep the pipes open past the kill, so they are released after
+	// the wait delay.
 	cmd.WaitDelay = commandTimeout
 
 	err := cmd.Run()
@@ -49,27 +57,38 @@ func (t *tool) read() (string, error) {
 		return stdout.String(), nil
 	}
 
-	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("Could not read the primary selection because '%s' did not answer within %s. Please make sure the display server is running and reachable.", t.readBinary, commandTimeout)
+	if ctx.Err() != nil {
+		return "", fmt.Errorf("clipboard: read: %w", ctx.Err())
 	}
 
-	// An empty selection is reported as a failure by some of the programs, which is the normal state and not an error.
+	if errors.Is(timeout.Err(), context.DeadlineExceeded) {
+		return "", fmt.Errorf("clipboard: '%s' did not answer within %s, is the display server reachable", t.readBinary, commandTimeout)
+	}
+
+	// Some programs fail on an empty selection, which is the normal state.
 	if stdout.Len() == 0 && t.reportsEmpty(stderr.String()) {
 		return "", nil
 	}
 
-	return "", fmt.Errorf("Could not read the primary selection with '%s': %w. The program reported: %s", t.readBinary, err, message(stderr.String()))
+	return "", fmt.Errorf("clipboard: read with '%s' (%s): %w", t.readBinary, message(stderr.String()), err)
 }
 
-// Writes the text to the regular clipboard by running the write program. Returns an error if the program does not take the text or does not start in time.
-func (t *tool) write(text string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+// Writes the text to the regular clipboard by running the write program. Fails if the program does not take the
+// text, does not start in time or ctx is done.
+func (t *tool) write(ctx context.Context, text string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("clipboard: write: %w", err)
+	}
+
+	timeout, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, t.writeBinary, t.writeArgs...)
+	cmd := exec.CommandContext(timeout, t.writePath, t.writeArgs...)
 	cmd.Stdin = strings.NewReader(text)
 
-	// The write programs fork into the background to serve the clipboard until another application takes it over. A buffer for the output would be filled through a pipe that the forked program inherits, which would keep the call waiting until the clipboard is taken over, so the output is dropped and the error output is passed on as a file. The wait delay releases the pipe of the standard input in case a program forks before it has read the whole text.
+	// The write programs fork into the background to serve the clipboard. A pipe for the output would be inherited
+	// by the fork and keep the call waiting until the clipboard is taken over, so the output is dropped and the
+	// error output passed on as a file. The wait delay releases stdin if a program forks before reading all of it.
 	cmd.Stdout = nil
 	cmd.Stderr = os.Stderr
 	cmd.WaitDelay = commandTimeout
@@ -79,10 +98,14 @@ func (t *tool) write(text string) error {
 		return nil
 	}
 
-	return fmt.Errorf("Could not write to the clipboard with '%s': %w. Please make sure the display server is running and reachable.", t.writeBinary, err)
+	if ctx.Err() != nil {
+		return fmt.Errorf("clipboard: write: %w", ctx.Err())
+	}
+
+	return fmt.Errorf("clipboard: write with '%s', is the display server reachable: %w", t.writeBinary, err)
 }
 
-// Checks if the error output of the read program says that nothing is selected.
+// Reports whether the error output says nothing is selected.
 func (t *tool) reportsEmpty(output string) bool {
 	for _, marker := range t.emptyMarkers {
 		if strings.Contains(output, marker) {
@@ -93,13 +116,13 @@ func (t *tool) reportsEmpty(output string) bool {
 	return false
 }
 
-// Returns the last line the program has written to its error output, or a placeholder if it stayed silent.
+// Returns the last line of the error output, or a placeholder if it is empty.
 func message(output string) string {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 
 	last := strings.TrimSpace(lines[len(lines)-1])
 	if last == "" {
-		return "nothing"
+		return "no output"
 	}
 
 	return last

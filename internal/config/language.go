@@ -1,31 +1,14 @@
 package config
 
-import (
-	"fmt"
-	"quick-translate/internal/models"
-	"quick-translate/internal/system"
-)
-
-type preferenceConfig struct {
-	LanguagePreferences struct {
-		Source string `yaml:"source"`
-		Target string `yaml:"target"`
-	} `yaml:"language_preferences"`
+// The preferred languages as BCP 47 tags. Not validated besides being strings; empty means no preference.
+type LanguagePreferences struct {
+	Source string `yaml:"source"`
+	Target string `yaml:"target"`
 }
 
-// Reads the preferred languages from the configuration file. The language tags are not validated besides being strings. Returns an error if the reading the configuration file fails.
-func PreferredLanguages(files *system.FileService) (*models.LanguagePreferences, error) {
-	if err := initFile(files); err != nil {
-		return nil, err
-	}
-
-	config := &preferenceConfig{}
-	if err := readStruct(files, config); err != nil {
-		return nil, fmt.Errorf("Could not read language preferences: %w", err)
-	}
-
-	return &models.LanguagePreferences{
-		Source: config.LanguagePreferences.Source,
-		Target: config.LanguagePreferences.Target,
-	}, nil
+// Returns the preferred source and target languages.
+//
+//wails:ignore
+func (s *Service) Preferences() LanguagePreferences {
+	return s.config.preferences
 }

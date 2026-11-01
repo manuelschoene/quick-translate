@@ -38,7 +38,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Output of `quick-translate --version`
+      label: Output of `quick-translate version`
       description: Which build this is. Please say so even when you built it yourself.
       placeholder: Quick Translate 0.1.0-alpha
     validations:
@@ -47,7 +47,7 @@ body:
   - type: textarea
     id: status
     attributes:
-      label: Output of `quick-translate --status`
+      label: Output of `quick-translate status`
       description: Shows what is installed where.
       render: text
     validations:

@@ -6,7 +6,7 @@ seriously all the same.
 ## Supported versions
 
 Only the latest release is supported. Fixes land on `main` and go out with the next release. Run
-`quick-translate --version` to see which build you have.
+`quick-translate version` to see which build you have.
 
 ## Reporting a vulnerability
 
@@ -17,7 +17,7 @@ Only the latest release is supported. Fixes land on `main` and go out with the n
   **[open a pull request](https://github.com/manuelschoene/quick-translate/pulls)**.
 
 Please include what an attacker could achieve, the steps to reproduce (with distribution, desktop and session
-type), the output of `quick-translate --version`, and a fix if you have one.
+type), the output of `quick-translate version`, and a fix if you have one.
 
 There is no guaranteed response time and no bug bounty. I will acknowledge your report, tell you honestly
 whether I consider it a vulnerability, and credit you in the release notes unless you prefer otherwise.
@@ -28,15 +28,18 @@ whether I consider it a vulnerability, and credit you in the release notes unles
   request for its language list. Nothing else is sent anywhere.
 - **Auth key:** stored **in plain text** in `~/.config/quick-translate/config.yml`. Other users cannot read
   it, but anything running as your user can. Moving it into the OS keyring is planned.
-- **History:** every text you translated and its translation, stored **unencrypted** in
-  `~/.local/share/quick-translate/history.db`. `history.max_entries: 0` turns it off, and
-  `quick-translate --purge` deletes it.
-- **Cache:** `~/.cache/quick-translate` only holds the languages a provider supports.
+- **Database:** `~/.local/share/quick-translate/quick-translate.db` always exists. It holds the languages each
+  provider supports and the **history**: every text you translated and its translation, stored
+  **unencrypted**. `history.max_entries: 0` stops new entries from being stored (entries already stored stay),
+  and `quick-translate purge` deletes the database.
+- **Notifications:** `~/.config/Quick Translate/notification-categories.json` is written by the notification
+  service on every shutdown and holds no data of yours.
 - **Permissions:** every directory above is created with mode `0700`, every file with `0600`.
 - **Clipboard:** read and written through an external program (`wl-paste`/`wl-copy`, `xclip` or `xsel`),
   looked up on `PATH`.
-- **Session bus:** nothing of yours goes over it. The application owns two names and, under Wayland, holds
-  one portal session:
+- **Session bus:** nothing of yours goes over it, except the error message of a failed start, which can name a
+  file path and is sent to the notification daemon (`org.freedesktop.Notifications`). The application owns two
+  names and, under Wayland, holds one portal session:
   - `io.github.manuelschoene.QuickTranslate.SingleInstance`, so that a second start reaches the running one
   - `org.kde.StatusNotifierItem-<pid>-1` for the tray icon
   - a session with the desktop portal for the global shortcut

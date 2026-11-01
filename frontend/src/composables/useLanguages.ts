@@ -1,28 +1,48 @@
 import { languageState } from '@/state';
-import type { Language } from '@bind/models';
-import { ChangeSource, ChangeTarget, SwitchLanguages } from '@bind/transport/adapter';
+import type { Options as OptionsModel, Selection as SelectionModel } from '@bind/language';
+import { Detect, Options, Selection, SetSource, SetTarget, Switch } from '@bind/language/service';
+import { Language } from '@bind/models';
+import { LanguagesChanged, SelectionChanged } from '@events';
+import { on } from '@lib/events';
 import { readonlyRefs } from '@lib/reactivity';
 import { request } from '@services/request';
-import { applyTranslation } from '@services/wire';
+import { retranslate } from '@use/useTranslation';
 import { computed, type DeepReadonly } from 'vue';
 
+/**
+ * The tag the detection entry is listed with. Detection is no language of the provider, only a flag, so it gets
+ * a tag of its own that no BCP 47 tag can be.
+ */
+const detectionTag = '@detection';
+
+/**
+ * The entry that turns detection on, listed among the source languages.
+ */
+const detectionEntry = new Language({ tag: detectionTag, name: 'Auto', source: true, stable: true });
+
 const {
-    source,
-    target,
-    detectedSource,
+    detection,
     preferredSource,
     preferredTarget,
-    detection,
     sourceLanguages,
     targetLanguages,
+    detecting,
+    source: selectedSource,
+    target,
+    detected,
 } = readonlyRefs(languageState);
 
 /**
- * Every language that can be chosen as the source, sorted by name. Detection is part of it although
- * it is no language of the provider: to the user it is one more entry to pick from.
+ * The tag of the chosen source, the detection entry while detecting.
+ */
+const source = computed(() => (detecting.value ? detectionTag : selectedSource.value));
+
+/**
+ * Every language that can be chosen as the source, sorted by name, with the detection entry if the provider
+ * detects.
  */
 const sourceOptions = computed(() =>
-    sortByName(detection.value ? [detection.value, ...sourceLanguages.value] : sourceLanguages.value),
+    sortByName(detection.value ? [detectionEntry, ...sourceLanguages.value] : sourceLanguages.value),
 );
 
 /**
@@ -31,10 +51,9 @@ const sourceOptions = computed(() =>
 const targetOptions = computed(() => sortByName(targetLanguages.value));
 
 /**
- * The source languages to keep within reach: detection first, because it is what most texts are
- * translated with, then the language the user configured.
+ * The source languages to keep within reach: detection first, then the configured one.
  */
-const pinnedSource = computed(() => tags(detection.value?.tag, preferredSource.value));
+const pinnedSource = computed(() => tags(detection.value ? detectionTag : undefined, preferredSource.value));
 
 /**
  * The target language to keep within reach.
@@ -42,25 +61,24 @@ const pinnedSource = computed(() => tags(detection.value?.tag, preferredSource.v
 const pinnedTarget = computed(() => tags(preferredTarget.value));
 
 /**
- * The text the source language button shows: the name behind the tag, what detection made of the
- * last text in brackets, or a hint to pick one at all.
+ * The text of the source button: the language name, detection with what it detected last in brackets, or a hint.
  */
 const sourceLabel = computed(() => {
-    if (source.value.length === 0) {
+    if (detecting.value) {
+        const found = findByTag(detected.value, sourceLanguages.value);
+
+        return found ? `${detectionEntry.name} (${found.name})` : detectionEntry.name;
+    }
+
+    if (selectedSource.value.length === 0) {
         return 'Not selected';
     }
 
-    if (detection.value?.tag === source.value) {
-        const detected = findByTag(detectedSource.value, sourceLanguages.value);
-
-        return detected ? `${detection.value.name} (${detected.name})` : detection.value.name;
-    }
-
-    return findByTag(source.value, sourceLanguages.value)?.name ?? source.value;
+    return findByTag(selectedSource.value, sourceLanguages.value)?.name ?? selectedSource.value;
 });
 
 /**
- * The text the target language button shows: the name behind the tag, or a hint to pick one at all.
+ * The text of the target button: the language name or a hint.
  */
 const targetLabel = computed(() => {
     if (target.value.length === 0) {
@@ -85,53 +103,104 @@ const exposed = {
 };
 
 /**
- * Gives the components the languages of the current provider, the ones that are chosen, the text
- * they are shown with and the ways to change them. Every change translates the current text again,
- * so a component only picks a language and reads the new state.
+ * Gives the components the languages of the current provider, the chosen ones, their labels and the ways to
+ * change them. Every change translates the shown text again.
  */
 export function useLanguages(): typeof exposed {
     return exposed;
 }
 
 /**
- * Sets the source language and translates the current text again.
+ * Listens to the language lists and the selection. The lists always arrive first, so a selected tag finds its
+ * name. Returns the unsubscribe.
+ */
+export function listen(): () => void {
+    const offs = [on(LanguagesChanged, applyOptions), on(SelectionChanged, applySelection)];
+
+    return () => {
+        offs.forEach((off) => {
+            off();
+        });
+    };
+}
+
+/**
+ * Fetches the lists and the selection, for the first render.
+ */
+export async function load(): Promise<void> {
+    const [options, selection] = await Promise.all([Options(), Selection()]);
+
+    applyOptions(options);
+    applySelection(selection);
+}
+
+/**
+ * Sets the source language, or turns detection on for the detection entry, and translates again.
  */
 async function changeSource(tag: string): Promise<void> {
-    await request(() => ChangeSource(tag), applyTranslation);
+    await request(async () => {
+        await (tag === detectionTag ? Detect() : SetSource(tag));
+        await retranslate();
+    });
 }
 
 /**
- * Sets the target language and translates the current text again.
+ * Sets the target language and translates again.
  */
 async function changeTarget(tag: string): Promise<void> {
-    await request(() => ChangeTarget(tag), applyTranslation);
+    await request(async () => {
+        await SetTarget(tag);
+        await retranslate();
+    });
 }
 
 /**
- * Swaps source and target and translates the current text in the other direction.
+ * Swaps source and target and translates in the other direction.
  */
 async function switchLanguages(): Promise<void> {
-    await request(SwitchLanguages, applyTranslation);
+    await request(async () => {
+        await Switch();
+        await retranslate();
+    });
 }
 
 /**
- * Collects the tags that are worth pinning and drops what is not set, so a provider without
- * detection and a user without a preference end up with fewer entries in front, not with empty ones.
+ * Takes over what the provider offers.
+ */
+function applyOptions(options: OptionsModel): void {
+    languageState.detection = options.detection;
+    languageState.preferredSource = options.preferredSource;
+    languageState.preferredTarget = options.preferredTarget;
+    languageState.sourceLanguages = options.sourceLanguages;
+    languageState.targetLanguages = options.targetLanguages;
+}
+
+/**
+ * Takes over what is chosen.
+ */
+function applySelection(selection: SelectionModel): void {
+    languageState.detecting = selection.detection;
+    languageState.source = selection.source;
+    languageState.target = selection.target;
+    languageState.detected = selection.detected;
+}
+
+/**
+ * Collects the set tags, so a missing preference leaves fewer pinned entries instead of empty ones.
  */
 function tags(...candidates: (string | undefined)[]): string[] {
     return candidates.filter((tag): tag is string => tag !== undefined && tag.length > 0);
 }
 
 /**
- * Sorts a copy of the languages by name, which is what the user reads, not by tag.
+ * Sorts a copy of the languages by name.
  */
 function sortByName(languages: readonly DeepReadonly<Language>[]): DeepReadonly<Language>[] {
     return languages.slice().sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
- * Looks a language up by its tag. Returns nothing for a tag that is not in the list, which is the
- * regular case while the backend has not answered yet.
+ * Looks a language up by its tag. Nothing for an unknown tag, the regular case before the backend answered.
  */
 function findByTag(tag: string, languages: readonly DeepReadonly<Language>[]): DeepReadonly<Language> | undefined {
     return languages.find((language) => language.tag === tag);

@@ -41,3 +41,72 @@ export class Language {
         return new Language($$parsedSource as Partial<Language>);
     }
 }
+
+/**
+ * Referenced in the sqlc.yml for overrides. Used inside the database as primary key for the providers table. Do not use Iota and do not change the values, as they are stored in the database and referenced by other tables.
+ */
+export enum ProviderID {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    DeepL = 1,
+};
+
+export class Translation {
+    "id": number;
+    "text": string;
+    "translation": string;
+    "createdAt": Date;
+    "providerId": ProviderID;
+
+    /**
+     * Detected language while detecting; nil if it was not resolved
+     */
+    "sourceTag": string | null;
+    "targetTag": string;
+    "detection": boolean;
+
+    /** Creates a new Translation instance. */
+    constructor($$source: Partial<Translation> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("text" in $$source)) {
+            this["text"] = "";
+        }
+        if (!("translation" in $$source)) {
+            this["translation"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = new Date("0001-01-01T00:00:00.000Z");
+        }
+        if (!("providerId" in $$source)) {
+            this["providerId"] = ProviderID.$zero;
+        }
+        if (!("sourceTag" in $$source)) {
+            this["sourceTag"] = null;
+        }
+        if (!("targetTag" in $$source)) {
+            this["targetTag"] = "";
+        }
+        if (!("detection" in $$source)) {
+            this["detection"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Translation instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Translation {
+        const $$createField3_0 = $Create.DateFromTime;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("createdAt" in $$parsedSource) {
+            $$parsedSource["createdAt"] = $$createField3_0($$parsedSource["createdAt"]);
+        }
+        return new Translation($$parsedSource as Partial<Translation>);
+    }
+}

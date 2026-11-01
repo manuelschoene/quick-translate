@@ -124,6 +124,10 @@ jobs:
               with:
                   upx: "true"
 
+            # The build regenerates internal/store/db and fails without sqlc.
+            - name: Setup sqlc
+              uses: ./.github/actions/setup-sqlc
+
             # Check to prevent a release-please misconfiguration from shipping the wrong version, and to make sure the
             # extra-files updater is still working after a change to the release-please config.
             - name: Check build/config.yml against the release

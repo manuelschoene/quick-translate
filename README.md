@@ -12,7 +12,7 @@
 		<img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-blue.svg">
 	</a>
 	<a href="https://go.dev">
-		<img alt="Go" src="https://img.shields.io/badge/Go-1.26.8-00ADD8?logo=go&logoColor=white">
+		<img alt="Go" src="https://img.shields.io/badge/Go-1.27.3-00ADD8?logo=go&logoColor=white">
 	</a>
 	<a href="https://vuejs.org">
 		<img alt="Vue.js" src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js">
@@ -65,14 +65,15 @@ cp -r share ~/.local/
 
 Build requirements, besides the packages above:
 
-- **Go** >= 1.26.8 and **Bun** >= 1.3.14
+- **Go** >= 1.27.3 and **Bun** >= 1.3.14
 - **gcc** and **pkgconf**, for the cgo bindings to GTK and WebKit
 - The development packages of **GTK4** and **WebKitGTK 6.0** (`libgtk-4-dev libwebkitgtk-6.0-dev` on Debian and Ubuntu)
 - **UPX** >= 5.2.0, which compresses release builds. `DEV=true` or `UPX=false` skip it.
-- The **Wails CLI** at the version in `go.mod`, and **Task**:
+- The **Wails CLI** at the version in `go.mod`, **sqlc** 1.31.1, which generates the database code, and **Task**:
 
 ```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.23
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 go install github.com/go-task/task/v3/cmd/task@latest
 ```
 
@@ -97,14 +98,16 @@ On Linux, the text is read from the *primary selection* (whatever is marked with
 The binary also answers a few commands:
 
 ```sh
-quick-translate --help      # every command
-quick-translate --status    # what is installed where
-quick-translate --version   # which build this is
+quick-translate help      # every command
+quick-translate status    # what is installed where
+quick-translate version   # which build this is
 ```
+
+`quick-translate help <command>` shows the flags of one command. The global flags go before the command: `-verbose` also shows what the application does in detail, `-silent` shows nothing but errors and questions (for example `quick-translate -silent status`).
 
 ## Configuration
 
-The configuration lives in `~/.config/quick-translate/config.yml` and is created with a commented template on the first start.
+The configuration lives in `~/.config/quick-translate/config.yml` and is created with a commented template on the first start. The application then exits until you have filled it in; it also refuses to start while the file cannot be read. Either way, a desktop notification tells you why. Changes take effect on the next start.
 
 | Key                                    | Meaning                                                                                          |
 |----------------------------------------|--------------------------------------------------------------------------------------------------|
@@ -134,13 +137,25 @@ provider:
     free_version: true
 ```
 
-## Uninstalling
+## Upgrading from a 0.1.0-alpha release
 
-Quit Quick Translate first. To remove everything it wrote for you (configuration, history, cache, autostart entry and KWin rules), run the purge while the binary is still there. It lists what it removes and asks first:
+Versions after the 0.1.0-alpha releases keep the history and the language lists in a new database and no longer read the old files. Before installing the new version, purge with the **old** binary, which still knows where its files are:
 
 ```sh
 quick-translate --purge
 ```
+
+This also removes your configuration, so write it again after the first start of the new version.
+
+## Uninstalling
+
+Quit Quick Translate first. To remove everything it wrote for you (configuration, the database with your history, the notification settings, the autostart entry and the KWin rules), run the purge while the binary is still there. It lists what it removes and asks first:
+
+```sh
+quick-translate purge
+```
+
+`quick-translate purge -yes` removes everything without asking, for scripts.
 
 > [!CAUTION]
 > Purging cannot be undone. Your history and your configuration, auth keys included, are gone for good.
@@ -165,7 +180,7 @@ The popup asks for no title bar, to stay on top and to open centered. Under Wayl
 - show up in the task bar or the window switcher,
 - open somewhere other than the center of the screen.
 
-**KDE Plasma:** on every start, the application merges a window rule into `~/.config/kwinrulesrc` that removes the border, keeps the popup on top and hides it from the task bar, the pager and the window switcher. Your own rules are left untouched, and `quick-translate --purge` removes the rule again.
+**KDE Plasma:** on every start, the application merges a window rule into `~/.config/kwinrulesrc` that removes the border, keeps the popup on top and hides it from the task bar, the pager and the window switcher. Your own rules are left untouched, and `quick-translate purge` removes the rule again.
 
 **Other desktops** get no such rule yet. If the popup looks wrong on yours, please [open an issue](https://github.com/manuelschoene/quick-translate/issues/new/choose) with your desktop and session type.
 
