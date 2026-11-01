@@ -22,6 +22,12 @@ task common:generate:db         # regenerate internal/store/db/ with sqlc
 task --list                     # everything else
 ```
 
+Go code is formatted with **goimports**, pinned as a tool in `go.mod`, after `gofmt -s`:
+
+```sh
+gofmt -s -w . && go tool goimports -local github.com/manuelschoene/quick-translate -w .
+```
+
 The frontend uses **bun**, not npm. From `frontend/`:
 
 ```sh
@@ -58,7 +64,9 @@ Matching the code around your change matters more than any rule below.
 - **Files and paths:** every path and permission comes from the table in `internal/system/files.go`. Never
   build a path of your own.
 - **Platform-specific code** goes behind build tags, like `internal/system/files_linux.go`.
-- **Import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
+- **Go imports are goimports' job:** the standard library, then this module, then third-party packages, each
+  group separated by a blank line. Point your editor at goimports with the same `-local` flag.
+- **Frontend import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
 - **Commit generated files:**
   - `frontend/bindings/`, after changing an exported method of a service, a type it returns or a registered
     event. CI fails when they are stale.
@@ -98,9 +106,9 @@ scaffolds this.
 
 ### What CI does
 
-1. **Fix:** runs `gofmt -s -w`, ESLint and Prettier and commits the result to your branch. It never fails.
-   From a fork it cannot push, so run `gofmt -s -w .` and `bun run format` yourself.
-2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, `go vet`, `go test`,
+1. **Fix:** runs `gofmt -s -w`, goimports, ESLint and Prettier and commits the result to your branch. It never
+   fails. From a fork it cannot push, so run the Go formatters above and `bun run format` yourself.
+2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, goimports, `go vet`, `go test`,
    `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that `internal/store/db/` is current
    (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`), validates the desktop entry,
    checks that `frontend/bindings/` is current and runs `version`, `help` and `status` on the built binary.

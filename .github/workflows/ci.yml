@@ -39,6 +39,12 @@ jobs:
         continue-on-error: true
         run: gofmt -s -w .
 
+      # After gofmt, because goimports does not simplify. Pinned through the tool directive in go.mod.
+      - name: Run goimports
+        shell: bash
+        continue-on-error: true
+        run: go tool goimports -local github.com/manuelschoene/quick-translate -w .
+
       - name: Run ESLint
         uses: ./.github/actions/run-eslint
         continue-on-error: true
@@ -141,9 +147,9 @@ jobs:
       - name: Check formatting
         shell: bash
         run: |
-          unformatted=$(gofmt -s -l .)
+          unformatted=$( { gofmt -s -l .; go tool goimports -local github.com/manuelschoene/quick-translate -l .; } | sort -u)
           if [[ -n "$unformatted" ]]; then
-            echo "::error::These files are not gofmt-clean. Run 'gofmt -s -w .':"
+            echo "::error::These files are not formatted. Run 'gofmt -s -w . && go tool goimports -local github.com/manuelschoene/quick-translate -w .':"
             echo "$unformatted"
             exit 1
           fi

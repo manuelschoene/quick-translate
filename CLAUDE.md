@@ -157,7 +157,10 @@ views / components  →  composables/use*.ts  →  state.ts · router.ts · lib/
 - Logging goes through the `*slog.Logger` handed in (`system.NewLogger()`, stderr). Only `cli` prints.
 - `import type` for type-only imports: `verbatimModuleSyntax` lets a value-style type import break the whole
   module graph at runtime.
-- Import order is ESLint's job (`perfectionist`, `unused-imports`). Never add an import-sorting Prettier plugin.
+- Go formatting is `gofmt -s`, then `go tool goimports -local github.com/manuelschoene/quick-translate` (pinned
+  by the `tool` directive in `go.mod`): stdlib, this module, third-party, one group each. CI fixes and checks both.
+- Frontend import order is ESLint's job (`perfectionist`, `unused-imports`). Never add an import-sorting Prettier
+  plugin.
 - Run `bun run format`; never hand-sort attributes or Tailwind classes.
 
 ## Documentation is part of the change
