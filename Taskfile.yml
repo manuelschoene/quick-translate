@@ -1,6 +1,6 @@
 # This file mostly delegates: the work happens in build/Taskfile.yml and in one Taskfile per operating
 # system. Supporting another one means adding its Taskfile under build/<os>/ and including it below.
-# The exception is `art`, which belongs to no operating system and therefore runs here.
+# The exceptions are `art`, `format` and `lint`, which belong to no operating system and therefore run here.
 
 version: '3'
 
@@ -62,6 +62,38 @@ tasks:
     summary: Starts the frontend dev server and the application, rebuilding both as sources change.
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  format:
+    desc: Formats the Go code
+    summary: Runs `gofmt -s`, then goimports, which groups the standard library, this module and third-party imports. With CHECK=true it changes nothing, lists the unformatted files and fails if there are any.
+    silent: true
+    vars:
+      MODULE:
+        sh: go list -m
+    cmds:
+      - |
+        {{if eq .CHECK "true"}}
+        unformatted=$( { gofmt -s -l .; go tool goimports -local {{.MODULE}} -l .; } | sort -u)
+        if [ -n "$unformatted" ]; then
+          echo "These files are not formatted, run 'task format':"
+          echo "$unformatted"
+          exit 1
+        fi
+        {{else}}
+        gofmt -s -w .
+        go tool goimports -local {{.MODULE}} -w .
+        {{end}}
+
+  lint:
+    desc: Lints the Go code
+    summary: Runs golangci-lint with .golangci.yml. Type-checks like `go vet`, so it needs the GTK4 and WebKitGTK 6.0 development packages.
+    preconditions:
+      - sh: command -v golangci-lint
+        msg: "golangci-lint not found."
+      - sh: 'golangci-lint version | grep -q "has version v\\?2\\."' # A v1 binary would reject the configuration with an error that does not name the version.
+        msg: "golangci-lint v2 is required, .golangci.yml is a v2 configuration."
+    cmds:
+      - golangci-lint run ./...
 
   run:
     desc: Runs the built application

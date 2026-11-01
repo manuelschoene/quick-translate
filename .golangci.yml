@@ -1,0 +1,15 @@
+# The linters golangci-lint enables by default (errcheck, govet, ineffassign, staticcheck, unused).
+# Formatting is not configured here: `task format` runs gofmt and goimports directly.
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      # Terminal output and closes on error paths or in a defer: there is nothing left to do with their error.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - (io.Closer).Close
+        - (*database/sql.DB).Close
+        - (*github.com/godbus/dbus/v5.Conn).Close

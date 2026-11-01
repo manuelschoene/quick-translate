@@ -32,18 +32,16 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
 
+      # The test job gets Task from the Wails CLI, which this job does not need otherwise.
+      - name: Setup Task
+        uses: go-task/setup-task@v2
+
       # Every step below fixes rather than checks, and none of them may fail the job: this job is a
       # courtesy for a contributor who forgot to run the formatters, not a gate. The test job checks.
-      - name: Run gofmt
-        shell: bash
+      # golangci-lint is not among them: it type-checks, which needs the GTK packages of the test job.
+      - name: Format Go code
         continue-on-error: true
-        run: gofmt -s -w .
-
-      # After gofmt, because goimports does not simplify. Pinned through the tool directive in go.mod.
-      - name: Run goimports
-        shell: bash
-        continue-on-error: true
-        run: go tool goimports -local github.com/manuelschoene/quick-translate -w .
+        run: task format
 
       - name: Run ESLint
         uses: ./.github/actions/run-eslint
@@ -145,17 +143,16 @@ jobs:
           fi
 
       - name: Check formatting
-        shell: bash
-        run: |
-          unformatted=$( { gofmt -s -l .; go tool goimports -local github.com/manuelschoene/quick-translate -l .; } | sort -u)
-          if [[ -n "$unformatted" ]]; then
-            echo "::error::These files are not formatted. Run 'gofmt -s -w . && go tool goimports -local github.com/manuelschoene/quick-translate -w .':"
-            echo "$unformatted"
-            exit 1
-          fi
+        run: wails3 task format CHECK=true
 
       - name: Run go vet
         run: go vet ./...
+
+      - name: Setup golangci-lint
+        uses: ./.github/actions/setup-golangci-lint
+
+      - name: Run golangci-lint
+        run: wails3 task lint
 
       - name: Run go test
         run: go test ./...

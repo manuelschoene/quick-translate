@@ -19,13 +19,17 @@ task archive                    # -> bin/*.tar.gz, everything a release ships
 task art                        # re-render art/tray.png and art/wordmark.svg (needs Inkscape)
 task common:generate:bindings   # regenerate frontend/bindings/
 task common:generate:db         # regenerate internal/store/db/ with sqlc
+task format [CHECK=true]        # gofmt -s and goimports, or only list what is unformatted
+task lint                       # golangci-lint, configured in .golangci.yml
 task --list                     # everything else
 ```
 
-Go code is formatted with **goimports**, pinned as a tool in `go.mod`, after `gofmt -s`:
+goimports is pinned as a tool in `go.mod` and runs through `go tool`, so there is nothing to install.
+`task lint` needs **golangci-lint** at the version CI uses and, like `go vet`, the GTK4 and WebKitGTK 6.0
+development packages:
 
 ```sh
-gofmt -s -w . && go tool goimports -local github.com/manuelschoene/quick-translate -w .
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 ```
 
 The frontend uses **bun**, not npm. From `frontend/`:
@@ -106,12 +110,13 @@ scaffolds this.
 
 ### What CI does
 
-1. **Fix:** runs `gofmt -s -w`, goimports, ESLint and Prettier and commits the result to your branch. It never
-   fails. From a fork it cannot push, so run the Go formatters above and `bun run format` yourself.
-2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, goimports, `go vet`, `go test`,
-   `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that `internal/store/db/` is current
-   (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`), validates the desktop entry,
-   checks that `frontend/bindings/` is current and runs `version`, `help` and `status` on the built binary.
+1. **Fix:** runs `task format`, ESLint and Prettier and commits the result to your branch. It never fails.
+   From a fork it cannot push, so run `task format` and `bun run format` yourself.
+2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, `task format CHECK=true`, `go vet`,
+   `task lint`, `go test`, `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that
+   `internal/store/db/` is current (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`),
+   validates the desktop entry, checks that `frontend/bindings/` is current and runs `version`, `help` and
+   `status` on the built binary.
 
 ## Reporting bugs
 

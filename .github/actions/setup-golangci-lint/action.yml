@@ -1,0 +1,14 @@
+name: Setup golangci-lint
+author: Manuel Schöne <schoene-manuel@gmx.de>
+description: Installs golangci-lint at the version the code is checked with. Running it is `task lint`'s job.
+
+runs:
+  using: composite
+  steps:
+    # Pinned, because a new release can enable new checks and fail the job without a change to the code.
+    # Only installed: `task lint` runs it, so CI and a local run share the same arguments.
+    - name: Setup golangci-lint
+      uses: golangci/golangci-lint-action@v9
+      with:
+        version: v2.15.0
+        install-only: true
