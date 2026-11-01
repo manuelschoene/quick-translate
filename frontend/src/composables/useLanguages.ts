@@ -18,7 +18,7 @@ const detectionTag = '@detection';
 /**
  * The entry that turns detection on, listed among the source languages.
  */
-const detectionEntry = new Language({ tag: detectionTag, name: 'Detect language', source: true, stable: true });
+const detectionEntry = new Language({ tag: detectionTag, name: 'Auto', source: true, stable: true });
 
 const {
     detection,
