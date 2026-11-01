@@ -78,7 +78,7 @@ func (files *Files) Purge() ([]File, error) {
 func (files *Files) Removals() ([]File, error) {
 	all := append(files.report(data, registered), files.file(WindowRules, rulesInstalled(files)))
 
-	var removals []File = make([]File, 0, len(all))
+	removals := make([]File, 0, len(all))
 	for _, file := range all {
 		if file.Present {
 			removals = append(removals, file)
