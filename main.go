@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"quick-translate/internal/cli"
-	"quick-translate/internal/clipboard"
 	"quick-translate/internal/config"
 	"quick-translate/internal/language"
 	"quick-translate/internal/provider"
@@ -97,7 +96,6 @@ func wireServices(app *application.App, window *application.WebviewWindow) func(
 	storage := store.New(files, notifier, app.Logger)
 	cfg := config.New(files, notifier, app.Logger)
 	prov := provider.New(app, cfg, app.Logger)
-	clip := clipboard.New(notifier, app.Logger)
 
 	// Declared before the system service, which the language service reads the locale fromsyso the actions can close over it.
 	var translations *translation.Service
@@ -118,7 +116,7 @@ func wireServices(app *application.App, window *application.WebviewWindow) func(
 
 	sys := system.New(app, files, actions, trayIcon, app.Logger)
 	lang := language.New(app, cfg, storage, prov, sys, app.Logger)
-	translations = translation.New(app, storage, cfg, prov, lang, clip, app.Logger)
+	translations = translation.New(app, storage, cfg, prov, lang, notifier, app.Logger)
 
 	// Started in this order and shut down in reverse. The notifier comes first, so a failing service can still reach the user.
 	app.RegisterService(application.NewService(notifier))
@@ -126,7 +124,6 @@ func wireServices(app *application.App, window *application.WebviewWindow) func(
 	app.RegisterService(application.NewService(cfg))
 	app.RegisterService(application.NewService(prov))
 	app.RegisterService(application.NewService(lang))
-	app.RegisterService(application.NewService(clip))
 	app.RegisterService(application.NewService(translations))
 	app.RegisterService(application.NewService(sys))
 
