@@ -7,16 +7,16 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as language$0 from "../../../../../quick-translate/internal/language/models.js";
+import type * as language$0 from "../../../../manuelschoene/quick-translate/internal/language/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as models$0 from "../../../../../quick-translate/internal/models/models.js";
+import type * as models$0 from "../../../../manuelschoene/quick-translate/internal/models/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as provider$0 from "../../../../../quick-translate/internal/provider/models.js";
+import type * as provider$0 from "../../../../manuelschoene/quick-translate/internal/provider/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as translation$0 from "../../../../../quick-translate/internal/translation/models.js";
+import type * as translation$0 from "../../../../manuelschoene/quick-translate/internal/translation/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {

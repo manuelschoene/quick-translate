@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 // Fetches the languages of one provider. Immutable, so several can fetch concurrently.

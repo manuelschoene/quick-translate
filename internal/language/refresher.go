@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 // How many providers are fetched at the same time.

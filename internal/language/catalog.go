@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"slices"
 
-	"quick-translate/internal/config"
-	"quick-translate/internal/models"
-	"quick-translate/internal/provider"
+	"github.com/manuelschoene/quick-translate/internal/config"
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/provider"
 
 	"golang.org/x/text/language"
 )

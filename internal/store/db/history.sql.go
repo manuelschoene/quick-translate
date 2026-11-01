@@ -8,7 +8,7 @@ package db
 import (
 	"context"
 
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 const appendTranslation = `-- name: AppendTranslation :one

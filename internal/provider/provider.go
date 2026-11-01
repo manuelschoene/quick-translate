@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 // How long a provider gets to answer. Go applies no timeout of its own.

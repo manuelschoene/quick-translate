@@ -5,7 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"quick-translate/internal/store/db"
+
+	"github.com/manuelschoene/quick-translate/internal/store/db"
 )
 
 // Wraps queries in a transaction. Commits when fn succeeds, rolls back otherwise, also on a panic. Use the argument of fn directly, not the instance provided to this function.

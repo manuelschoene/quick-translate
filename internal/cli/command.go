@@ -7,7 +7,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"quick-translate/internal/system"
+
+	"github.com/manuelschoene/quick-translate/internal/system"
 )
 
 type command struct {

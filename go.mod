@@ -1,4 +1,4 @@
-module quick-translate
+module github.com/manuelschoene/quick-translate
 
 go 1.27.3
 

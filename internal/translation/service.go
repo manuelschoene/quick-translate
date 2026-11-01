@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"quick-translate/internal/language"
-	"quick-translate/internal/models"
-	"quick-translate/internal/provider"
-	"quick-translate/internal/store"
+	"github.com/manuelschoene/quick-translate/internal/language"
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/provider"
+	"github.com/manuelschoene/quick-translate/internal/store"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

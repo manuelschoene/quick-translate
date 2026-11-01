@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"quick-translate/internal/config"
-	"quick-translate/internal/models"
-	"quick-translate/internal/provider"
-	"quick-translate/internal/store"
+	"github.com/manuelschoene/quick-translate/internal/config"
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/provider"
+	"github.com/manuelschoene/quick-translate/internal/store"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

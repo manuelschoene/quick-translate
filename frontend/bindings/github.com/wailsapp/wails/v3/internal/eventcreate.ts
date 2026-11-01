@@ -8,16 +8,16 @@ import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as language$0 from "../../../../../quick-translate/internal/language/models.js";
+import * as language$0 from "../../../../manuelschoene/quick-translate/internal/language/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as models$0 from "../../../../../quick-translate/internal/models/models.js";
+import * as models$0 from "../../../../manuelschoene/quick-translate/internal/models/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as provider$0 from "../../../../../quick-translate/internal/provider/models.js";
+import * as provider$0 from "../../../../manuelschoene/quick-translate/internal/provider/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as translation$0 from "../../../../../quick-translate/internal/translation/models.js";
+import * as translation$0 from "../../../../manuelschoene/quick-translate/internal/translation/models.js";
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {

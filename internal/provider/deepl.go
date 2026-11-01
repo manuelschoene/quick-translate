@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strings"
 
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 const (

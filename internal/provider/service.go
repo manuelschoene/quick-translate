@@ -8,7 +8,7 @@ import (
 	"slices"
 	"sync"
 
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
