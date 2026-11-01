@@ -8,8 +8,6 @@ import (
 
 	"quick-translate/internal/models"
 	"quick-translate/internal/store"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
@@ -34,18 +32,18 @@ type configuration interface {
 	HistoryLimit() int
 }
 
-// Reads the history limit and takes the repository. Never fails; without a store the history stays disabled.
-func (s *Service) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
+// Reads the history limit and takes the repository. Without a store the history stays disabled.
+func (s *Service) startHistory() {
 	limit := s.config.HistoryLimit()
 	if limit <= 0 {
 		s.logger.Info("history disabled")
-		return nil
+		return
 	}
 
 	repo := s.store.NewHistory()
 	if repo == nil {
 		s.logger.Error("store not started, the history is disabled")
-		return nil
+		return
 	}
 
 	s.history.Lock()
@@ -53,8 +51,6 @@ func (s *Service) ServiceStartup(_ context.Context, _ application.ServiceOptions
 	s.history.Unlock()
 
 	s.logger.Info("history enabled", slog.Int("limit", limit))
-
-	return nil
 }
 
 // Returns whether there is a translation to step to. Both are false while the history is disabled.

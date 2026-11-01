@@ -64,14 +64,14 @@ Imports (`go list -f '{{.Imports}}'`), always downward:
 translation → language, provider, store, models
 language    → config, provider, store, models
 provider    → models
-store, config, clipboard, cli → system
+store, config, cli → system
 main.go     → every service, wires them
 ```
 
-Calls reach further than imports: `translation` uses `config` and `clipboard`, `provider` uses `config`, and
+Calls reach further than imports: `translation` uses `config` and the notifier, `provider` uses `config`, and
 `language` uses `system`, each through an interface the consumer declares. The full picture with types is
-`architecture.mmd`. Each package is one Wails service in
-`internal/<domain>/service.go`; `main.go` (`wireServices`) only constructs and registers them.
+`architecture.mmd`. Each package is one Wails service in `internal/<domain>/service.go`; `main.go`
+(`wireServices`) only constructs and registers them.
 
 | Package | Owns | Notes |
 |---|---|---|
@@ -81,8 +81,7 @@ Calls reach further than imports: `translation` uses `config` and `clipboard`, `
 | `config` | the YAML file, read once at startup | template in `internal/config/file.go` |
 | `provider` | the registry, the current `*Translator` | one file per provider |
 | `language` | catalog per provider, selection, background refresh | pure rules in `selection.go` |
-| `clipboard` | the backend (external program or library) | |
-| `translation` | current translation, history and its cursor | lock order in `service.go` |
+| `translation` | current translation, history and its cursor, the clipboard | lock order in `service.go` |
 | `cli` | subcommands, the only terminal output | table in `internal/cli/command.go` |
 
 Rules:
@@ -96,8 +95,8 @@ Rules:
   registered.
 - **Order:** services start in registration order and shut down in reverse. The notifier comes first, so it can
   still report a failing startup.
-- **A non-nil `ServiceStartup` error shuts the app down.** Only `store`, `config` and `clipboard` may return one,
-  and they call `notifier.StartupFailed(err)` first. Everything else logs and degrades.
+- **A non-nil `ServiceStartup` error shuts the app down.** Only `store`, `config` and `translation` (no clipboard)
+  may return one, and they call `notifier.StartupFailed(err)` first. Everything else logs and degrades.
 - **Events are the only way state reaches the frontend.** Mutations return only an error, getters serve the
   first load. Emit while holding the state's lock. Whatever a later event is resolved against is emitted
   first (`languages:changed` before `selection:changed`). Every `translation:started` gets exactly one

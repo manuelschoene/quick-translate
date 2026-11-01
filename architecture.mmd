@@ -179,24 +179,10 @@ classDiagram
         }
     }
 
-    namespace clipboard {
-        class ClipboardService {
-            <<service>>
-            +ServiceStartup() error
-            +Read(ctx) (string, error)
-            +Write(ctx, text string) error
-        }
-
-        class backend {
-            <<interface>>
-            -read(ctx) (string, error)
-            -write(ctx, text string) error
-        }
-    }
-
     namespace translation {
         class TranslationService {
             <<service>>
+            +ServiceStartup() error
             +Current() *Translation
             +Retranslate(ctx) error
             +Copy(ctx) error
@@ -261,12 +247,9 @@ classDiagram
     LanguageService ..> Selection
     LanguageService ..> refresher
 
-    ClipboardService ..> Notifier
-    ClipboardService ..> backend
-
     TranslationService ..> ProviderService : Translator, Select
     TranslationService ..> LanguageService : Snapshot, Adopt, SetDetected
-    TranslationService ..> ClipboardService : Read, Write
+    TranslationService ..> Notifier : StartupFailed
     TranslationService ..> HistoryRepository
     TranslationService ..> ConfigService : HistoryLimit
     TranslationService ..> Navigation

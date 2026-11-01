@@ -5,14 +5,13 @@ The binary `@BINARY@` is built against GTK4 and WebKitGTK 6.0.
 ## Requirements
 
 Install the requirements before you install the application. It does not start without WebKitGTK
-6.0 and GTK 4.10 or newer, not even its CLI commands. Reading the selection needs wl-clipboard in a
-Wayland session, and xclip or xsel in an X11 session.
+6.0 and GTK 4.10 or newer, not even its CLI commands. Reading the selection needs no extra tool.
+Under Wayland it needs a compositor with the data-control protocol (GNOME 49 or newer, KDE Plasma,
+wlroots compositors); under older ones XWayland is used.
 
 |           | Debian / Ubuntu      | Fedora            | Arch              |
 |-----------|----------------------|-------------------|-------------------|
 | WebKitGTK | `libwebkitgtk-6.0-4` | `webkitgtk6.0`    | `webkitgtk-6.0`   |
-| Wayland   | `wl-clipboard`       | `wl-clipboard`    | `wl-clipboard`    |
-| X11       | `xclip` or `xsel`    | `xclip` or `xsel` | `xclip` or `xsel` |
 
 ## Installation
 

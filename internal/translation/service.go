@@ -50,10 +50,9 @@ type languages interface {
 	Adopt(entry models.Translation) error
 }
 
-// The part of the clipboard service the service uses.
-type clipboard interface {
-	Read(ctx context.Context) (string, error)
-	Write(ctx context.Context, text string) error
+// The part of the notifier the service uses.
+type notifier interface {
+	StartupFailed(err error)
 }
 
 // Lock order: work → history → provider, language → mutex.
@@ -63,7 +62,7 @@ type Service struct {
 	config    configuration
 	providers providers
 	languages languages
-	clipboard clipboard
+	notifier  notifier
 	logger    *slog.Logger
 
 	work sync.Mutex // Serializes translations, from started to changed or failed.
@@ -78,16 +77,29 @@ type Service struct {
 }
 
 // Creates the service.
-func New(app *application.App, store storage, config configuration, providers providers, languages languages, clipboard clipboard, logger *slog.Logger) *Service {
+func New(app *application.App, store storage, config configuration, providers providers, languages languages, notifier notifier, logger *slog.Logger) *Service {
 	return &Service{
 		app:       app,
 		store:     store,
 		config:    config,
 		providers: providers,
 		languages: languages,
-		clipboard: clipboard,
+		notifier:  notifier,
 		logger:    logger.With("category", "translation"),
 	}
+}
+
+// Connects to the clipboard and enables the history. Fails only if the clipboard cannot be reached, which
+// notifies the user and shuts the application down.
+func (s *Service) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
+	if err := startClipboard(); err != nil {
+		s.notifier.StartupFailed(err)
+		return err
+	}
+
+	s.startHistory()
+
+	return nil
 }
 
 // Returns the translation that is shown, nil before the first one.
@@ -124,7 +136,7 @@ func (s *Service) Copy(ctx context.Context) error {
 		return ErrNoTranslation
 	}
 
-	return s.clipboard.Write(ctx, current.Translation)
+	return writeClipboard(ctx, current.Translation)
 }
 
 // Translates the selected text. Failures only reach the frontend as an event.
@@ -245,7 +257,7 @@ func (s *Service) detected(ID models.ProviderID, tag string) *string {
 
 // Reads the selected text, trimmed.
 func (s *Service) selection(ctx context.Context) (string, error) {
-	text, err := s.clipboard.Read(ctx)
+	text, err := readSelection(ctx)
 	if err != nil {
 		return "", err
 	}
