@@ -35,8 +35,8 @@ whether I consider it a vulnerability, and credit you in the release notes unles
 - **Notifications:** `~/.config/Quick Translate/notification-categories.json` is written by the notification
   service on every shutdown and holds no data of yours.
 - **Permissions:** every directory above is created with mode `0700`, every file with `0600`.
-- **Clipboard:** read and written through an external program (`wl-paste`/`wl-copy`, `xclip` or `xsel`),
-  looked up on `PATH`.
+- **Clipboard:** read and written by the application itself over its Wayland or X11 connection, without an
+  external program.
 - **Session bus:** nothing of yours goes over it, except the error message of a failed start, which can name a
   file path and is sent to the notification daemon (`org.freedesktop.Notifications`). The application owns two
   names and, under Wayland, holds one portal session:

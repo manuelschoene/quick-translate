@@ -57,7 +57,7 @@ Matching the code around your change matters more than any rule below.
   `ServiceStartup`, because that shuts it down.
 - **Files and paths:** every path and permission comes from the table in `internal/system/files.go`. Never
   build a path of your own.
-- **Platform-specific code** goes behind build tags, like `internal/clipboard/linux.go`.
+- **Platform-specific code** goes behind build tags, like `internal/system/files_linux.go`.
 - **Import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
 - **Commit generated files:**
   - `frontend/bindings/`, after changing an exported method of a service, a type it returns or a registered

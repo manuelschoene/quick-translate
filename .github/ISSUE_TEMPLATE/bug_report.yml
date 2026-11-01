@@ -104,21 +104,6 @@ body:
     validations:
       required: true
 
-  - type: dropdown
-    id: clipboard
-    attributes:
-      label: Which clipboard tools are installed
-      description: Check with `command -v wl-paste xclip xsel`. Pick all that apply.
-      multiple: true
-      options:
-        - wl-clipboard
-        - xclip
-        - xsel
-        - None of them
-        - I do not know
-    validations:
-      required: false
-
   - type: checkboxes
     id: confirmations
     attributes:

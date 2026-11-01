@@ -35,13 +35,11 @@ Quick Translate translates your selected text, triggered by a global shortcut. I
 
 Quick Translate needs **WebKitGTK 6.0** and **GTK 4.10 or newer**, which means Ubuntu 24.04, Debian 13 or newer, or a current Fedora or Arch. It does not start without them, not even for its command-line options.
 
-It also needs a clipboard tool: `wl-clipboard` in a Wayland session, `xclip` or `xsel` in an X11 session.
+The selection is read without any extra tool. Under Wayland that needs a compositor with the data-control protocol (GNOME 49 or newer, KDE Plasma, Sway, Hyprland and other wlroots compositors); under older ones XWayland is used.
 
 | Package   | Debian / Ubuntu      | Fedora            | Arch              |
 |-----------|----------------------|-------------------|-------------------|
 | WebKitGTK | `libwebkitgtk-6.0-4` | `webkitgtk6.0`    | `webkitgtk-6.0`   |
-| Wayland   | `wl-clipboard`       | `wl-clipboard`    | `wl-clipboard`    |
-| X11       | `xclip` or `xsel`    | `xclip` or `xsel` | `xclip` or `xsel` |
 
 ## Installation
 
@@ -93,7 +91,7 @@ Select some text and press **Super+Shift+T** (KDE Plasma calls the key *Meta*). 
 
 While it runs, a tray icon opens the last translation, translates the selection or quits. KDE Plasma shows the icon out of the box, GNOME needs the AppIndicator extension.
 
-On Linux, the text is read from the *primary selection* (whatever is marked with the mouse), and the translation is written to the regular clipboard, ready for <kbd>Ctrl</kbd>+<kbd>V</kbd>.
+On Linux, the text is read from the *primary selection* (whatever is marked with the mouse), or from the regular clipboard where the session has no primary selection, and the translation is written to the regular clipboard, ready for <kbd>Ctrl</kbd>+<kbd>V</kbd>.
 
 The binary also answers a few commands:
 
