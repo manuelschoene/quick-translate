@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.0-alpha.3](https://github.com/manuelschoene/quick-translate/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2026-11-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* Removed external clipboard dependency
+* storage moved to a new database; the CLI uses subcommands instead of flags
+
+### Features
+
+* Remove external program clipboard dependency ([#10](https://github.com/manuelschoene/quick-translate/issues/10)) ([7a0cbb0](https://github.com/manuelschoene/quick-translate/commit/7a0cbb0f6b67451b341438863cbd104c9d3e5c02))
+* Split the backend into services and moved all storage into SQLite  ([#8](https://github.com/manuelschoene/quick-translate/issues/8)) ([c6336e3](https://github.com/manuelschoene/quick-translate/commit/c6336e3ca48c127c5237dd6177bc5e1481045032))
+
 ## [0.1.0-alpha.2](https://github.com/manuelschoene/quick-translate/compare/v0.1.0-alpha.1...v0.1.0-alpha.2) (2026-09-25)
 
 
