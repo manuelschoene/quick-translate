@@ -59,6 +59,6 @@ func printRemovals(out io.Writer, heading string, removals []system.File) {
 	fmt.Fprintln(out)
 
 	for _, file := range removals {
-		fmt.Fprintf(out, "  %-15s %s\n", file.Name, file.Path)
+		fmt.Fprintf(out, "  %-17s %s\n", file.Name, file.Path)
 	}
 }

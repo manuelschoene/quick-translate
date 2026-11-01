@@ -44,6 +44,6 @@ func printFiles(out io.Writer, heading string, present string, files []system.Fi
 			state = present
 		}
 
-		fmt.Fprintf(out, "  %-*s  %-15s %s\n", 9, state, file.Name, file.Path)
+		fmt.Fprintf(out, "  %-*s  %-17s %s\n", 9, state, file.Name, file.Path)
 	}
 }
