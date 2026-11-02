@@ -3,8 +3,8 @@ package config
 import (
 	"fmt"
 
-	"quick-translate/internal/models"
-	"quick-translate/internal/system"
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/system"
 
 	"go.yaml.in/yaml/v4"
 )

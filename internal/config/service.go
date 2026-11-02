@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"quick-translate/internal/system"
+
+	"github.com/manuelschoene/quick-translate/internal/system"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

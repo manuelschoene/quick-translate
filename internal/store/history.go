@@ -3,9 +3,10 @@ package store
 import (
 	"context"
 	"fmt"
-	"quick-translate/internal/models"
-	"quick-translate/internal/store/db"
 	"time"
+
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/store/db"
 )
 
 type HistoryRepository struct {

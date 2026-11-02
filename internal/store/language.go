@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"quick-translate/internal/models"
-	"quick-translate/internal/store/db"
 	"time"
+
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/store/db"
 )
 
 type LanguageRepository struct {

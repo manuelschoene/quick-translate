@@ -21,6 +21,8 @@ task build [DEV=true|UPX=false] # -> bin/quick-translate
 task archive                    # -> bin/quick-translate-<version>-linux-amd64.tar.gz
 task common:generate:bindings   # -> frontend/bindings/   (tracked, CI checks it)
 task common:generate:db         # -> internal/store/db/   (tracked, CI checks it with sqlc diff)
+task format [CHECK=true]        # gofmt -s + goimports; CHECK only lists
+task lint                       # golangci-lint, .golangci.yml
 go vet ./...
 bun run types | lint | format | build   # types is the only type check, build does not run it
 ```
@@ -34,11 +36,12 @@ Traps:
   because `-b` imports the runtime from `/wails/runtime.js`, which `vue-tsc` cannot resolve.
 - **Versions pinned in pairs:** `@wailsio/runtime` in `package.json` is the exact Wails version in `go.mod`.
   sqlc is pinned in `.github/actions/setup-sqlc` (bare version, no `v`), because every generated file names it.
+  golangci-lint is pinned in `.github/actions/setup-golangci-lint` (with `v`) and in `CONTRIBUTING.md`.
 - **Event types:** `bindings/github.com/wailsapp/wails/v3/internal/eventdata.d.ts` types `Events.CustomEvents`
   (hence `bindings/**/*.d.ts` in `tsconfig.json`); `eventcreate.ts` is loaded by the Wails Vite plugin, not by an
   import.
-- **Builds need GTK ≥ 4.10 and WebKitGTK 6.0 dev packages**, also for `go vet`: Wails compiles its Linux part
-  through cgo without a build tag. The version is stamped from `build/config.yml`.
+- **Builds need GTK ≥ 4.10 and WebKitGTK 6.0 dev packages**, also for `go vet` and `task lint`: Wails compiles
+  its Linux part through cgo without a build tag. The version is stamped from `build/config.yml`.
 - `lint:fix` in `package.json` ends in `|| true` for CI; never point a human at it.
 
 ## CI and releases
@@ -157,7 +160,11 @@ views / components  →  composables/use*.ts  →  state.ts · router.ts · lib/
 - Logging goes through the `*slog.Logger` handed in (`system.NewLogger()`, stderr). Only `cli` prints.
 - `import type` for type-only imports: `verbatimModuleSyntax` lets a value-style type import break the whole
   module graph at runtime.
-- Import order is ESLint's job (`perfectionist`, `unused-imports`). Never add an import-sorting Prettier plugin.
+- Go formatting is `task format`: `gofmt -s`, then goimports with `-local` set to the module: stdlib, this
+  module, third-party, one group each. goimports is a `tool` directive in `go.mod`, run through
+  `go tool`. CI fixes the format, then checks it and `task lint`.
+- Frontend import order is ESLint's job (`perfectionist`, `unused-imports`). Never add an import-sorting Prettier
+  plugin.
 - Run `bun run format`; never hand-sort attributes or Tailwind classes.
 
 ## Documentation is part of the change

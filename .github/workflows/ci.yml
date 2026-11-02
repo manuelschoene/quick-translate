@@ -32,12 +32,16 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
 
+      # The test job gets Task from the Wails CLI, which this job does not need otherwise.
+      - name: Setup Task
+        uses: go-task/setup-task@v2
+
       # Every step below fixes rather than checks, and none of them may fail the job: this job is a
       # courtesy for a contributor who forgot to run the formatters, not a gate. The test job checks.
-      - name: Run gofmt
-        shell: bash
+      # golangci-lint is not among them: it type-checks, which needs the GTK packages of the test job.
+      - name: Format Go code
         continue-on-error: true
-        run: gofmt -s -w .
+        run: task format
 
       - name: Run ESLint
         uses: ./.github/actions/run-eslint
@@ -139,17 +143,16 @@ jobs:
           fi
 
       - name: Check formatting
-        shell: bash
-        run: |
-          unformatted=$(gofmt -s -l .)
-          if [[ -n "$unformatted" ]]; then
-            echo "::error::These files are not gofmt-clean. Run 'gofmt -s -w .':"
-            echo "$unformatted"
-            exit 1
-          fi
+        run: wails3 task format CHECK=true
 
       - name: Run go vet
         run: go vet ./...
+
+      - name: Setup golangci-lint
+        uses: ./.github/actions/setup-golangci-lint
+
+      - name: Run golangci-lint
+        run: wails3 task lint
 
       - name: Run go test
         run: go test ./...

@@ -13,14 +13,14 @@ import * as $models from "./models.js";
  * Lets the provider detect the source language. Fails if it cannot.
  */
 export function Detect(): $CancellablePromise<void> {
-    return $Call.ByID(2578163846);
+    return $Call.ByID(387729167);
 }
 
 /**
  * Returns what the current provider offers.
  */
 export function Options(): $CancellablePromise<$models.Options> {
-    return $Call.ByID(387915449).then(($result: any) => {
+    return $Call.ByID(2245225918).then(($result: any) => {
         return $$createType0($result);
     });
 }
@@ -29,7 +29,7 @@ export function Options(): $CancellablePromise<$models.Options> {
  * Returns the current selection.
  */
 export function Selection(): $CancellablePromise<$models.Selection> {
-    return $Call.ByID(3004148761).then(($result: any) => {
+    return $Call.ByID(1977557134).then(($result: any) => {
         return $$createType1($result);
     });
 }
@@ -38,21 +38,21 @@ export function Selection(): $CancellablePromise<$models.Selection> {
  * Sets the source language. A colliding target is swapped or dropped.
  */
 export function SetSource(tag: string): $CancellablePromise<void> {
-    return $Call.ByID(1396529650, tag);
+    return $Call.ByID(4153495285, tag);
 }
 
 /**
  * Sets the target language. A colliding source is swapped, replaced by detection or dropped.
  */
 export function SetTarget(tag: string): $CancellablePromise<void> {
-    return $Call.ByID(583707530, tag);
+    return $Call.ByID(4011804985, tag);
 }
 
 /**
  * Swaps source and target; while detecting, the detected language becomes the target.
  */
 export function Switch(): $CancellablePromise<void> {
-    return $Call.ByID(1790460813);
+    return $Call.ByID(1208403948);
 }
 
 // Private type creation functions

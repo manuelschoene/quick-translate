@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => ({
             '@services': '/src/services',
             '@use': '/src/composables',
             '@views': '/src/views',
-            '@bind': '/bindings/quick-translate/internal',
+            '@bind': '/bindings/github.com/manuelschoene/quick-translate/internal',
             '@events': '/bindings/events/index.ts',
         },
     },

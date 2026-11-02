@@ -17,7 +17,7 @@ import * as $models from "./models.js";
  * Returns the provider translations are made with.
  */
 export function Current(): $CancellablePromise<$models.Info> {
-    return $Call.ByID(569285113).then(($result: any) => {
+    return $Call.ByID(767776346).then(($result: any) => {
         return $$createType0($result);
     });
 }
@@ -26,7 +26,7 @@ export function Current(): $CancellablePromise<$models.Info> {
  * Returns every configured provider, sorted by ID.
  */
 export function Providers(): $CancellablePromise<$models.Info[]> {
-    return $Call.ByID(1983344046).then(($result: any) => {
+    return $Call.ByID(2121074013).then(($result: any) => {
         return $$createType1($result);
     });
 }
@@ -35,7 +35,7 @@ export function Providers(): $CancellablePromise<$models.Info[]> {
  * Switches to the provider with the given ID. Nothing changes if it cannot be built or the hook fails.
  */
 export function Select(ID: models$0.ProviderID): $CancellablePromise<void> {
-    return $Call.ByID(2067441316, ID);
+    return $Call.ByID(2843275693, ID);
 }
 
 // Private type creation functions

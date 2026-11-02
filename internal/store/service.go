@@ -6,8 +6,9 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
-	"quick-translate/internal/store/db"
-	"quick-translate/internal/system"
+
+	"github.com/manuelschoene/quick-translate/internal/store/db"
+	"github.com/manuelschoene/quick-translate/internal/system"
 
 	_ "github.com/glebarez/go-sqlite"
 	"github.com/wailsapp/wails/v3/pkg/application"

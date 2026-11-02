@@ -12,10 +12,10 @@ sql:
         omit_unused_structs: true
         overrides:
           - column: "providers.id"
-            go_type: "quick-translate/internal/models.ProviderID"
+            go_type: "github.com/manuelschoene/quick-translate/internal/models.ProviderID"
           - column: "provider_languages.provider_id"
-            go_type: "quick-translate/internal/models.ProviderID"
+            go_type: "github.com/manuelschoene/quick-translate/internal/models.ProviderID"
           - column: "translations.provider_id"
-            go_type: "quick-translate/internal/models.ProviderID"
+            go_type: "github.com/manuelschoene/quick-translate/internal/models.ProviderID"
     strict_function_checks: true
     strict_order_by: true

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"quick-translate/internal/system"
+	"github.com/manuelschoene/quick-translate/internal/system"
 )
 
 // Prints the application's integration into the system. Installed files and modifications are listed with their state, name and path.

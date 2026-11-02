@@ -19,7 +19,17 @@ task archive                    # -> bin/*.tar.gz, everything a release ships
 task art                        # re-render art/tray.png and art/wordmark.svg (needs Inkscape)
 task common:generate:bindings   # regenerate frontend/bindings/
 task common:generate:db         # regenerate internal/store/db/ with sqlc
+task format [CHECK=true]        # gofmt -s and goimports, or only list what is unformatted
+task lint                       # golangci-lint, configured in .golangci.yml
 task --list                     # everything else
+```
+
+goimports is pinned as a tool in `go.mod` and runs through `go tool`, so there is nothing to install.
+`task lint` needs **golangci-lint** at the version CI uses and, like `go vet`, the GTK4 and WebKitGTK 6.0
+development packages:
+
+```sh
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 ```
 
 The frontend uses **bun**, not npm. From `frontend/`:
@@ -58,7 +68,9 @@ Matching the code around your change matters more than any rule below.
 - **Files and paths:** every path and permission comes from the table in `internal/system/files.go`. Never
   build a path of your own.
 - **Platform-specific code** goes behind build tags, like `internal/system/files_linux.go`.
-- **Import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
+- **Go imports are goimports' job:** the standard library, then this module, then third-party packages, each
+  group separated by a blank line. Point your editor at goimports with the same `-local` flag.
+- **Frontend import sorting is ESLint's job.** Do not add an import-sorting Prettier plugin.
 - **Commit generated files:**
   - `frontend/bindings/`, after changing an exported method of a service, a type it returns or a registered
     event. CI fails when they are stale.
@@ -98,12 +110,13 @@ scaffolds this.
 
 ### What CI does
 
-1. **Fix:** runs `gofmt -s -w`, ESLint and Prettier and commits the result to your branch. It never fails.
-   From a fork it cannot push, so run `gofmt -s -w .` and `bun run format` yourself.
-2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, gofmt, `go vet`, `go test`,
-   `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that `internal/store/db/` is current
-   (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`), validates the desktop entry,
-   checks that `frontend/bindings/` is current and runs `version`, `help` and `status` on the built binary.
+1. **Fix:** runs `task format`, ESLint and Prettier and commits the result to your branch. It never fails.
+   From a fork it cannot push, so run `task format` and `bun run format` yourself.
+2. **Check:** the TypeScript check, ESLint, Prettier, the frontend build, `task format CHECK=true`, `go vet`,
+   `task lint`, `go test`, `go mod verify`, an unchanged `go mod tidy`, `govulncheck` and that
+   `internal/store/db/` is current (`sqlc diff`). Then it builds the release archive (`task archive UPX=false`),
+   validates the desktop entry, checks that `frontend/bindings/` is current and runs `version`, `help` and
+   `status` on the built binary.
 
 ## Reporting bugs
 

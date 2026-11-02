@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"quick-translate/internal/system"
+	"github.com/manuelschoene/quick-translate/internal/system"
 )
 
 var purgeConfirmation = confirmation{

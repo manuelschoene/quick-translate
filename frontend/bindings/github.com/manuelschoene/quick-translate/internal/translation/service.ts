@@ -22,14 +22,14 @@ import * as $models from "./models.js";
  * Writes the current translation to the regular clipboard.
  */
 export function Copy(): $CancellablePromise<void> {
-    return $Call.ByID(626533619);
+    return $Call.ByID(3574570140);
 }
 
 /**
  * Returns the translation that is shown, nil before the first one.
  */
 export function Current(): $CancellablePromise<models$0.Translation | null> {
-    return $Call.ByID(2558017847).then(($result: any) => {
+    return $Call.ByID(3984835666).then(($result: any) => {
         return $$createType1($result);
     });
 }
@@ -38,7 +38,7 @@ export function Current(): $CancellablePromise<models$0.Translation | null> {
  * Returns whether there is a translation to step to. Both are false while the history is disabled.
  */
 export function Navigation(): $CancellablePromise<$models.Navigation> {
-    return $Call.ByID(2387505844).then(($result: any) => {
+    return $Call.ByID(2280428619).then(($result: any) => {
         return $$createType2($result);
     });
 }
@@ -47,21 +47,21 @@ export function Navigation(): $CancellablePromise<$models.Navigation> {
  * Shows the translation after the shown one.
  */
 export function Next(): $CancellablePromise<void> {
-    return $Call.ByID(1643042835);
+    return $Call.ByID(3145251840);
 }
 
 /**
  * Shows the translation before the shown one, or the newest if the shown one is not stored.
  */
 export function Previous(): $CancellablePromise<void> {
-    return $Call.ByID(1136276531);
+    return $Call.ByID(97803776);
 }
 
 /**
  * Translates the current text again with the current provider and languages.
  */
 export function Retranslate(): $CancellablePromise<void> {
-    return $Call.ByID(867376083);
+    return $Call.ByID(3957724846);
 }
 
 // Private type creation functions

@@ -1,4 +1,4 @@
-module quick-translate
+module github.com/manuelschoene/quick-translate
 
 go 1.27.3
 
@@ -27,9 +27,15 @@ require (
 	golang.org/x/exp/shiny v0.0.0-20261014143641-f0251eb4aa3e // indirect
 	golang.org/x/image v0.47.0 // indirect
 	golang.org/x/mobile v0.0.0-20261011034528-197770444867 // indirect
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	modernc.org/libc v1.79.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.61.1 // indirect
 )
+
+tool golang.org/x/tools/cmd/goimports

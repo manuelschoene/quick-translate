@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"quick-translate/internal/models"
 	"slices"
+
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 // Returns the default provider. Fails if it is not set; whether it is configured is not checked.

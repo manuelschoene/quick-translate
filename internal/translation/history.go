@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"quick-translate/internal/models"
-	"quick-translate/internal/store"
+	"github.com/manuelschoene/quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/store"
 )
 
 var (

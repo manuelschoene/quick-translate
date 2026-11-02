@@ -5,7 +5,7 @@
 package db
 
 import (
-	"quick-translate/internal/models"
+	"github.com/manuelschoene/quick-translate/internal/models"
 )
 
 type Provider struct {
